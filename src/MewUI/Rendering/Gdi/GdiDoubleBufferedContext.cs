@@ -11,9 +11,7 @@ internal sealed class GdiDoubleBufferedContext : IGraphicsContext
 {
     private readonly nint _hwnd;
     private readonly nint _screenDc;
-    private readonly nint _memDc;
-    private readonly nint _bitmap;
-    private readonly nint _oldBitmap;
+    private readonly BackBuffer _backBuffer;
     private readonly GdiGraphicsContext _context;
     private readonly int _width;
     private readonly int _height;
@@ -21,7 +19,97 @@ internal sealed class GdiDoubleBufferedContext : IGraphicsContext
 
     public double DpiScale => _context.DpiScale;
 
-    public GdiDoubleBufferedContext(nint hwnd, nint screenDc, double dpiScale)
+    private sealed class BackBuffer : IDisposable
+    {
+        private static readonly Dictionary<nint, BackBuffer> Cache = new();
+
+        public static BackBuffer GetOrCreate(nint hwnd, nint screenDc, int width, int height)
+        {
+            if (Cache.TryGetValue(hwnd, out var existing))
+            {
+                existing.EnsureSize(screenDc, width, height);
+                return existing;
+            }
+
+            var buffer = new BackBuffer(hwnd, screenDc, width, height);
+            Cache[hwnd] = buffer;
+            return buffer;
+        }
+
+        public static void Release(nint hwnd)
+        {
+            if (!Cache.TryGetValue(hwnd, out var buffer))
+                return;
+
+            Cache.Remove(hwnd);
+            buffer.Dispose();
+        }
+
+        private readonly nint _hwnd;
+        private nint _memDc;
+        private nint _bitmap;
+        private nint _oldBitmap;
+        private int _width;
+        private int _height;
+
+        public nint MemDc => _memDc;
+        public int Width => _width;
+        public int Height => _height;
+
+        private BackBuffer(nint hwnd, nint screenDc, int width, int height)
+        {
+            _hwnd = hwnd;
+            Create(screenDc, width, height);
+        }
+
+        private void Create(nint screenDc, int width, int height)
+        {
+            _width = Math.Max(1, width);
+            _height = Math.Max(1, height);
+
+            _memDc = Gdi32.CreateCompatibleDC(screenDc);
+            _bitmap = Gdi32.CreateCompatibleBitmap(screenDc, _width, _height);
+            _oldBitmap = Gdi32.SelectObject(_memDc, _bitmap);
+        }
+
+        private void Destroy()
+        {
+            if (_memDc == 0)
+                return;
+
+            if (_oldBitmap != 0)
+                Gdi32.SelectObject(_memDc, _oldBitmap);
+
+            if (_bitmap != 0)
+                Gdi32.DeleteObject(_bitmap);
+
+            Gdi32.DeleteDC(_memDc);
+
+            _memDc = 0;
+            _bitmap = 0;
+            _oldBitmap = 0;
+            _width = 0;
+            _height = 0;
+        }
+
+        public void EnsureSize(nint screenDc, int width, int height)
+        {
+            width = Math.Max(1, width);
+            height = Math.Max(1, height);
+
+            if (width == _width && height == _height && _memDc != 0 && _bitmap != 0)
+                return;
+
+            Destroy();
+            Create(screenDc, width, height);
+        }
+
+        public void Dispose() => Destroy();
+    }
+
+    public static void ReleaseForWindow(nint hwnd) => BackBuffer.Release(hwnd);
+
+    public GdiDoubleBufferedContext(nint hwnd, nint screenDc, double dpiScale, GdiCurveQuality curveQuality)
     {
         _hwnd = hwnd;
         _screenDc = screenDc;
@@ -34,13 +122,10 @@ internal sealed class GdiDoubleBufferedContext : IGraphicsContext
         if (_width <= 0) _width = 1;
         if (_height <= 0) _height = 1;
 
-        // Create memory DC and bitmap
-        _memDc = Gdi32.CreateCompatibleDC(screenDc);
-        _bitmap = Gdi32.CreateCompatibleBitmap(screenDc, _width, _height);
-        _oldBitmap = Gdi32.SelectObject(_memDc, _bitmap);
+        _backBuffer = BackBuffer.GetOrCreate(hwnd, screenDc, _width, _height);
 
         // Create the inner context that renders to the memory DC
-        _context = new GdiGraphicsContext(hwnd, _memDc, dpiScale, false);
+        _context = new GdiGraphicsContext(hwnd, _backBuffer.MemDc, dpiScale, curveQuality, false);
     }
 
     public void Dispose()
@@ -48,13 +133,10 @@ internal sealed class GdiDoubleBufferedContext : IGraphicsContext
         if (!_disposed)
         {
             // Blit from back buffer to screen
-            Gdi32.BitBlt(_screenDc, 0, 0, _width, _height, _memDc, 0, 0, 0x00CC0020); // SRCCOPY
+            Gdi32.BitBlt(_screenDc, 0, 0, _width, _height, _backBuffer.MemDc, 0, 0, 0x00CC0020); // SRCCOPY
 
-            // Clean up
+            // Clean up per-frame state; the back buffer is cached per-window.
             _context.Dispose();
-            Gdi32.SelectObject(_memDc, _oldBitmap);
-            Gdi32.DeleteObject(_bitmap);
-            Gdi32.DeleteDC(_memDc);
 
             _disposed = true;
         }

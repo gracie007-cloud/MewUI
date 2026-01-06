@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Aprillz.MewUI.Binding;
 using Aprillz.MewUI.Controls;
 using Aprillz.MewUI.Core;
@@ -5,13 +7,18 @@ using Aprillz.MewUI.Elements;
 using Aprillz.MewUI.Markup;
 using Aprillz.MewUI.Panels;
 using Aprillz.MewUI.Primitives;
-using Aprillz.MewUI.Rendering.Direct2D;
-using Aprillz.MewUI.Rendering.Gdi;
+using Aprillz.MewUI.Rendering;
+
+var stopwatch = Stopwatch.StartNew();
 
 var vm = new DemoViewModel();
 
-//Application.DefaultGraphicsFactory = GdiGraphicsFactory.Instance;
-Application.DefaultGraphicsFactory = Direct2DGraphicsFactory.Instance;
+var isBench = Environment.GetCommandLineArgs().Any(a => a.Equals("--bench", StringComparison.OrdinalIgnoreCase));
+var useGdi = Environment.GetCommandLineArgs().Any(a => a.Equals("--gdi", StringComparison.OrdinalIgnoreCase));
+Application.DefaultGraphicsBackend = useGdi ? GraphicsBackend.Gdi : GraphicsBackend.Direct2D;
+
+double loadedMs = -1;
+var metricsText = new ObservableValue<string>("Metrics:");
 
 Window window;
 Button enabledButton = null!;
@@ -22,42 +29,48 @@ var root = new Window()
     .Ref(out window)
     .Title("Aprillz.MewUI Demo")
     .Size(620, 560)
-    .Background(Theme.Current.WindowBackground)
     .Padding(10)
-    .OnLoaded(UpdateAccentSwatches)
+    .OnLoaded(() =>
+    {
+        loadedMs = stopwatch.Elapsed.TotalMilliseconds;
+        UpdateAccentSwatches();
+    })
     .Content(
         new DockPanel()
             .LastChildFill()
             .Margin(20)
             .Children(
-                new Label()
-                    .Text("Aprillz.MewUI Demo")
-                    .FontSize(20)
-                    .Bold()
-                    .DockTop()
-                    .Margin(0, 0, 0, 12),
+                HeaderSection()
+                    .DockTop(),
 
-               Buttons().DockBottom(),
-               BindSample().DockRight(),
-               NormalControl()
+                Buttons()
+                    .DockBottom(),
+
+                BindSamples()
+                    .DockRight(),
+
+                NormalControls()
             )
     );
 
-void UpdateAccentSwatches()
-{
-    foreach (var (color, button) in accentSwatches)
-    {
-        bool selected = Theme.Current.Accent == color;
-        button.BorderThickness = selected ? 2 : 1;
-    }
-}
+window.FirstFrameRendered = WriteMetric;
 
-void ApplyAccent(Aprillz.MewUI.Primitives.Color accent)
-{
-    currentAccent = accent;
-    Theme.Current = window.Theme = window.Theme.WithAccent(accent);
-    UpdateAccentSwatches();
-}
+Application.Run(root);
+
+Element HeaderSection() => new StackPanel()
+    .Vertical()
+    .Spacing(6)
+    .Margin(0, 0, 0, 12)
+    .Children(
+        new Label()
+            .Text("Aprillz.MewUI Demo")
+            .FontSize(20)
+            .Bold(),
+
+        new Label()
+            .BindText(metricsText)
+            .FontSize(11)
+    );
 
 FrameworkElement AccentPicker() => new StackPanel()
     .Vertical()
@@ -87,7 +100,7 @@ FrameworkElement AccentPicker() => new StackPanel()
             )
     );
 
-Button AccentSwatch(string name, Aprillz.MewUI.Primitives.Color color) =>
+Button AccentSwatch(string name, Color color) =>
     new Button()
         .Content(string.Empty)
         .Background(color)
@@ -110,7 +123,7 @@ Element Buttons() => new StackPanel()
             .OnClick(() => Application.Quit())
     );
 
-Element NormalControl() => new StackPanel()
+Element NormalControls() => new StackPanel()
     .Children(
 
         new StackPanel()
@@ -136,7 +149,6 @@ Element NormalControl() => new StackPanel()
                     })
                     .CenterVertical()
             ),
-
 
         AccentPicker()
             .Margin(0, 0, 0, 12),
@@ -212,7 +224,6 @@ Element NormalControl() => new StackPanel()
                     .GroupName("group1")
             ),
 
-
             new ListBox()
                 .Items("First", "Second", "Third")
                 .SelectedIndex(1)
@@ -226,14 +237,14 @@ Element NormalControl() => new StackPanel()
                         .Text("ComboBox"),
 
                     new ComboBox()
-                        .Margin(16,0,0,0)
+                        .Margin(16, 0, 0, 0)
                         .Items("Alpha", "Beta", "Gamma", "Delta")
                         .SelectedIndex(1)
                         .Placeholder("Select...")
                 )
         ));
 
-Element BindSample() => new StackPanel()
+Element BindSamples() => new StackPanel()
     .Vertical()
     .Margin(20, 0, 0, 0)
     .Children(
@@ -326,33 +337,65 @@ Element BindSample() => new StackPanel()
                     .Spacing(10)
                     .Children(
                         new ListBox()
+                            .Ref(out var selectionListBox)
                             .Items("Alpha", "Beta", "Gamma", "Delta")
-                            .Apply(lb =>
-                            {
-                                lb.SelectionChanged = i =>
-                                    vm.SelectionText.Value = $@"SelectedIndex = {i}{Environment.NewLine}Item = {lb.SelectedItem ?? string.Empty}";
-                            })
                             .BindSelectedIndex(vm.SelectedIndex)
                             .Height(90)
                             .Width(80),
 
                         new Label()
-                            .BindText(vm.SelectionText)
+                            .BindText(vm.SelectedIndex, i => $@"SelectedIndex = {i}{Environment.NewLine}Item = {selectionListBox.SelectedItem ?? string.Empty}")
                     )
             )
 
     );
 
-Application.Run(root);
+void UpdateAccentSwatches()
+{
+    foreach (var (color, button) in accentSwatches)
+    {
+        bool selected = Theme.Current.Accent == color;
+        button.BorderThickness = selected ? 2 : 1;
+    }
+}
 
-file sealed class DemoViewModel
+void ApplyAccent(Color accent)
+{
+    currentAccent = accent;
+    Theme.Current = window.Theme = window.Theme.WithAccent(accent);
+    UpdateAccentSwatches();
+}
+
+void WriteMetric()
+{
+    var firstFrameMs = stopwatch.Elapsed.TotalMilliseconds;
+    using var p = Process.GetCurrentProcess();
+    p.Refresh();
+
+    string backend = useGdi ? "GDI" : "Direct2D";
+    double wsMb = p.WorkingSet64 / (1024.0 * 1024.0);
+    double pmMb = p.PrivateMemorySize64 / (1024.0 * 1024.0);
+
+    var loadedText = loadedMs >= 0 ? $"{loadedMs:0} ms" : "n/a";
+    metricsText.Value = $"Metrics ({backend}): Loaded {loadedText}, FirstFrame {firstFrameMs:0} ms, WS {wsMb:0.0} MB, Private {pmMb:0.0} MB";
+    var path = Path.Combine(AppContext.BaseDirectory, "metrics.log");
+    File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {metricsText.Value}{Environment.NewLine}");
+    if (isBench)
+        Application.Quit();
+}
+
+class DemoViewModel
 {
     public ObservableValue<double> Percent { get; } = new(25, v => Math.Clamp(v, 0, 100));
+
     public ObservableValue<string> Name { get; } = new("Net Core");
+
     public ObservableValue<bool> IsEnabled { get; } = new(true);
+
     public ObservableValue<string> EnabledButtonText { get; } = new("Enabled action");
+
     public ObservableValue<int> SelectedIndex { get; } = new(1, v => Math.Max(-1, v));
-    public ObservableValue<string> SelectionText { get; } = new("SelectedIndex = 1, Item = Beta");
+
     public ObservableValue<string> AsyncStatus { get; } = new("Async: idle");
 }
 

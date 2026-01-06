@@ -1,5 +1,7 @@
 using Aprillz.MewUI.Core;
 using Aprillz.MewUI.Native;
+using Aprillz.MewUI.Native.Constants;
+using Aprillz.MewUI.Native.Structs;
 using Aprillz.MewUI.Primitives;
 
 namespace Aprillz.MewUI.Rendering.Gdi;
@@ -38,11 +40,17 @@ internal sealed class GdiMeasurementContext : IGraphicsContext
         var oldFont = Gdi32.SelectObject(_hdc, gdiFont.Handle);
         try
         {
-            if (Gdi32.GetTextExtentPoint32(_hdc, text, text.Length, out var size))
-            {
-                return new Size(size.cx / _dpiScale, size.cy / _dpiScale);
-            }
-            return Size.Empty;
+            var hasLineBreaks = text.AsSpan().IndexOfAny('\r', '\n') >= 0;
+            var rect = hasLineBreaks
+                ? new RECT(0, 0, LayoutRounding.RoundToPixelInt(1_000_000, _dpiScale), 0)
+                : new RECT(0, 0, 0, 0);
+
+            uint format = hasLineBreaks
+                ? GdiConstants.DT_CALCRECT | GdiConstants.DT_WORDBREAK | GdiConstants.DT_NOPREFIX
+                : GdiConstants.DT_CALCRECT | GdiConstants.DT_SINGLELINE | GdiConstants.DT_NOPREFIX;
+
+            Gdi32.DrawText(_hdc, text, text.Length, ref rect, format);
+            return new Size(rect.Width / _dpiScale, rect.Height / _dpiScale);
         }
         finally
         {
@@ -52,14 +60,28 @@ internal sealed class GdiMeasurementContext : IGraphicsContext
 
     public Size MeasureText(string text, IFont font, double maxWidth)
     {
-        // Simple approximation - for accurate wrapping measurement, we'd need more complex logic
-        var singleLineSize = MeasureText(text, font);
-        if (singleLineSize.Width <= maxWidth)
-            return singleLineSize;
+        if (string.IsNullOrEmpty(text) || font is not GdiFont gdiFont)
+            return Size.Empty;
 
-        // Estimate wrapped text height
-        double estimatedLines = Math.Ceiling(singleLineSize.Width / maxWidth);
-        return new Size(maxWidth, singleLineSize.Height * estimatedLines);
+        if (double.IsNaN(maxWidth) || maxWidth <= 0 || double.IsInfinity(maxWidth))
+            maxWidth = 1_000_000;
+
+        var maxWidthPx = LayoutRounding.RoundToPixelInt(maxWidth, _dpiScale);
+        if (maxWidthPx <= 0)
+            maxWidthPx = LayoutRounding.RoundToPixelInt(1_000_000, _dpiScale);
+
+        var oldFont = Gdi32.SelectObject(_hdc, gdiFont.Handle);
+        try
+        {
+            var rect = new RECT(0, 0, maxWidthPx, 0);
+            Gdi32.DrawText(_hdc, text, text.Length, ref rect,
+                GdiConstants.DT_CALCRECT | GdiConstants.DT_WORDBREAK | GdiConstants.DT_NOPREFIX);
+            return new Size(rect.Width / _dpiScale, rect.Height / _dpiScale);
+        }
+        finally
+        {
+            Gdi32.SelectObject(_hdc, oldFont);
+        }
     }
 
     // Below methods are not used for measurement but required by interface

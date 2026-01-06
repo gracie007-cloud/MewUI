@@ -56,7 +56,8 @@ public abstract class Element
             // But we should still re-measure if the constraint changed significantly
         }
 
-        DesiredSize = MeasureCore(availableSize);
+        var measured = MeasureCore(availableSize);
+        DesiredSize = ApplyLayoutRounding(measured);
         IsMeasureDirty = false;
     }
 
@@ -145,6 +146,15 @@ public abstract class Element
     /// Allows an element to adjust its final arranged bounds (e.g. alignment, margin, rounding).
     /// </summary>
     protected virtual Rect GetArrangedBounds(Rect finalRect) => finalRect;
+
+    private Size ApplyLayoutRounding(Size size)
+    {
+        var root = FindVisualRoot();
+        if (root is not Window window || !window.UseLayoutRounding)
+            return size;
+
+        return LayoutRounding.RoundSizeToPixels(size, window.DpiScale);
+    }
 
     private Rect ApplyLayoutRounding(Rect rect)
     {

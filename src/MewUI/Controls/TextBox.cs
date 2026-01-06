@@ -24,7 +24,7 @@ public class TextBox : Control, IDisposable
         Background = theme.ControlBackground;
         BorderBrush = theme.ControlBorder;
         BorderThickness = 1; 
-        Padding = new Thickness(8, 4, 8, 4);
+        Padding = new Thickness(4, 2, 4, 2);
     }
 
     protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
@@ -143,7 +143,6 @@ public class TextBox : Control, IDisposable
         {
             // Calculate text position with scroll offset
             var textX = contentBounds.X - _scrollOffset;
-            var textY = contentBounds.Y + (contentBounds.Height - FontSize) / 2;
 
             // Draw selection background if any
             if (_selectionLength > 0 && IsFocused)
@@ -164,7 +163,9 @@ public class TextBox : Control, IDisposable
 
             // Draw text
             var textColor = IsEnabled ? Foreground : theme.DisabledText;
-            context.DrawText(Text, new Point(textX, textY), font, textColor);
+            // Use backend vertical centering (font metrics differ from FontSize across renderers).
+            context.DrawText(Text, new Rect(textX, contentBounds.Y, 1_000_000, contentBounds.Height), font, textColor,
+                TextAlignment.Left, TextAlignment.Center, TextWrapping.NoWrap);
         }
 
         // Draw caret if focused

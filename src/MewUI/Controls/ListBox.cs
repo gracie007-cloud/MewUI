@@ -117,7 +117,8 @@ public class ListBox : Control, IDisposable
         if (_items.Count == 0)
             return;
 
-        var contentBounds = bounds.Deflate(Padding);
+        var borderInset = GetBorderVisualInset();
+        var contentBounds = bounds.Deflate(Padding).Deflate(new Thickness(borderInset));
         context.Save();
         context.SetClip(contentBounds);
 
@@ -156,7 +157,7 @@ public class ListBox : Control, IDisposable
 
         Focus();
 
-        var contentBounds = Bounds.Deflate(Padding);
+        var contentBounds = Bounds.Deflate(Padding).Deflate(new Thickness(GetBorderVisualInset()));
         int index = (int)((e.Position.Y - contentBounds.Y) / ResolveItemHeight());
         if (index >= 0 && index < _items.Count)
         {

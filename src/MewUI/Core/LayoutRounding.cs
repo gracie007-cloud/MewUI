@@ -4,6 +4,19 @@ namespace Aprillz.MewUI.Core;
 
 internal static class LayoutRounding
 {
+    public static Size RoundSizeToPixels(Size size, double dpiScale)
+    {
+        if (dpiScale <= 0 || double.IsNaN(dpiScale) || double.IsInfinity(dpiScale))
+            return size;
+
+        if (size.IsEmpty)
+            return size;
+
+        var w = RoundToPixel(size.Width, dpiScale);
+        var h = RoundToPixel(size.Height, dpiScale);
+        return new Size(Math.Max(0, w), Math.Max(0, h));
+    }
+
     public static Rect RoundRectToPixels(Rect rect, double dpiScale)
     {
         if (dpiScale <= 0 || double.IsNaN(dpiScale) || double.IsInfinity(dpiScale))
@@ -12,12 +25,19 @@ internal static class LayoutRounding
         if (rect.IsEmpty)
             return rect;
 
-        double left = RoundToPixel(rect.Left, dpiScale);
-        double top = RoundToPixel(rect.Top, dpiScale);
-        double right = RoundToPixel(rect.Right, dpiScale);
-        double bottom = RoundToPixel(rect.Bottom, dpiScale);
+        // Round position and size independently (WPF-style) to avoid jitter introduced by
+        // rounding both edges separately (left/right), which can change size by ±1px.
+        int leftPx = RoundToPixelInt(rect.X, dpiScale);
+        int topPx = RoundToPixelInt(rect.Y, dpiScale);
+        int widthPx = RoundToPixelInt(rect.Width, dpiScale);
+        int heightPx = RoundToPixelInt(rect.Height, dpiScale);
 
-        return new Rect(left, top, Math.Max(0, right - left), Math.Max(0, bottom - top));
+        double x = leftPx / dpiScale;
+        double y = topPx / dpiScale;
+        double w = Math.Max(0, widthPx / dpiScale);
+        double h = Math.Max(0, heightPx / dpiScale);
+
+        return new Rect(x, y, w, h);
     }
 
     public static int RoundToPixelInt(double value, double dpiScale)
@@ -31,7 +51,7 @@ internal static class LayoutRounding
         return (int)Math.Round(value * dpiScale, MidpointRounding.AwayFromZero);
     }
 
-    private static double RoundToPixel(double value, double dpiScale)
+    public static double RoundToPixel(double value, double dpiScale)
     {
         if (double.IsNaN(value) || double.IsInfinity(value))
             return value;

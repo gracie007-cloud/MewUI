@@ -211,6 +211,17 @@ public abstract class Control : FrameworkElement
         return DpiHelper.GetSystemDpi();
     }
 
+    protected double GetBorderVisualInset()
+    {
+        if (BorderThickness <= 0)
+            return 0;
+
+        // For centered strokes (Direct2D default), half of the stroke is inside the bounds.
+        // Round to device pixels so 1px borders don't collapse into a "no padding" look.
+        var dpiScale = GetDpi() / 96.0;
+        return LayoutRounding.RoundToPixel(BorderThickness / 2.0, dpiScale);
+    }
+
     protected override void OnRender(IGraphicsContext context)
     {
         base.OnRender(context);

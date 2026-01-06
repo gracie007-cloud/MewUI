@@ -21,9 +21,6 @@ obj/
 *.userosscache
 *.sln.docstates
 
-# MonoDevelop/Xamarin
-*.userprefs
-
 # Visual Studio cache options
 .vs/
 .ionide/
@@ -86,21 +83,16 @@ packages/
 *.coveragexml
 coverage/
 
-# Publish outputs
-publish/
-artifacts/
+# Publish / artifacts
+.artifacts/
 
-# Azure Stream Analytics local run
-ASALocalRun/
+# Benchmark artifacts (if generated elsewhere)
+metrics*.log
+bench_report*.md
 
-# Node modules
-node_modules/
+# User-specific
+*.csproj.user
 
-# Temporary files
-*.cache
-*.diff
-*.orig
-*.rej
 
 # OS-specific files
 [Tt]humbs.db
@@ -116,12 +108,6 @@ __MACOSX/
 
 # Linux
 *~
-
-# IDE settings
-.idea/
-*.iml
-*.ipr
-*.iws
 
 # Tooling
 .vscode/

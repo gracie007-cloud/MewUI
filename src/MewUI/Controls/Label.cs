@@ -56,6 +56,8 @@ public class Label : Control, IDisposable
         set { field = value; InvalidateMeasure(); }
     } = TextWrapping.NoWrap;
 
+    private bool HasExplicitLineBreaks => Text.AsSpan().IndexOfAny('\r', '\n') >= 0;
+
     protected override Size MeasureContent(Size availableSize)
     {
         if (string.IsNullOrEmpty(Text))
@@ -66,14 +68,25 @@ public class Label : Control, IDisposable
         using var measure = BeginTextMeasurement();
 
         Size textSize;
-        if (TextWrapping == TextWrapping.NoWrap)
+        var wrapping = TextWrapping;
+        if (wrapping == TextWrapping.NoWrap && HasExplicitLineBreaks)
+            wrapping = TextWrapping.Wrap;
+
+        if (wrapping == TextWrapping.NoWrap)
         {
             textSize = measure.Context.MeasureText(Text, measure.Font);
         }
         else
         {
-            var maxWidth = availableSize.Width - Padding.HorizontalThickness;
-            textSize = measure.Context.MeasureText(Text, measure.Font, maxWidth > 0 ? maxWidth : double.PositiveInfinity);
+            double maxWidth = availableSize.Width - Padding.HorizontalThickness;
+            if (double.IsNaN(maxWidth) || maxWidth <= 0)
+                maxWidth = 0;
+
+            // Avoid passing infinity into backend implementations that convert to int pixel widths.
+            if (double.IsPositiveInfinity(maxWidth))
+                maxWidth = 1_000_000;
+
+            textSize = measure.Context.MeasureText(Text, measure.Font, maxWidth > 0 ? maxWidth : 1_000_000);
         }
 
         return textSize.Inflate(Padding);
@@ -92,8 +105,12 @@ public class Label : Control, IDisposable
         var contentBounds = Bounds.Deflate(Padding);
         var font = GetFont();
 
+        var wrapping = TextWrapping;
+        if (wrapping == TextWrapping.NoWrap && HasExplicitLineBreaks)
+            wrapping = TextWrapping.Wrap;
+
         context.DrawText(Text, contentBounds, font, Foreground,
-            TextAlignment, VerticalTextAlignment, TextWrapping);
+            TextAlignment, VerticalTextAlignment, wrapping);
     }
 
     public Label BindText(Func<string> get, Action<Action>? subscribe = null, Action<Action>? unsubscribe = null)

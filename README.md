@@ -1,18 +1,41 @@
+![Aprillz.MewUI](logo.png)
+
 # Aprillz.MewUI
 
-Minimal, code-first .NET GUI library aimed at NativeAOT + Trim.
+![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-10%2B-0078D4?logo=windows&logoColor=white)
+![NativeAOT](https://img.shields.io/badge/NativeAOT-Ready-2E7D32)
+![License: MIT](https://img.shields.io/badge/License-MIT-000000)
 
-**Status:** experimental prototype (APIs and behavior may change).
+Minimal, code-first lightweight .NET GUI library aimed at **NativeAOT + Trim**.
 
-**Note:** most of the code in this repository is written with the help of GPT.
+**Status:** 🧪 experimental prototype (APIs and behavior may change).
+
+**Note:** 🤖 most of the code in this repository is written with the help of GPT.
 
 **Sample project NativeAOT + Trimmed publish output size** (`win-x64-trimmed`): single EXE ~ `2.2 MB`
 
-This repo contains:
-- `src/MewUI` - the library (`Aprillz.MewUI`)
-- `samples/MewUI.Sample` - demo app
+| Light | Dark |
+|---|---|
+| ![Light (screenshot)](light.png) | ![Dark (screenshot)](dark.png) |
 
-## C# Markup at a Glance
+## ✨ Highlights
+
+- 🧩 Fluent **C# markup** (no XAML)
+- 🔗 Explicit **AOT-friendly binding** (`ObservableValue<T>`, delegate-based)
+- 📦 **NativeAOT + trimming** first (interop via `LibraryImport`)
+
+## 📦 Lightweight
+
+- **Executable size:** NativeAOT + Trim focused (sample `win-x64-trimmed` is ~ `2.2 MB`)
+- **Sample runtime benchmark** (NativeAOT + Trimmed, 50 launches):
+
+| Backend | Loaded avg/p95 (ms) | FirstFrame avg/p95 (ms) | WS avg/p95 (MB) | PS avg/p95 (MB) |
+|---|---:|---:|---:|---:|
+| Direct2D | 10 / 11 | 178 / 190 | 40.0 / 40.1 | 54.8 / 55.8 |
+| GDI | 15 / 21 | 54 / 67 | 15.2 / 15.3 | 4.6 / 4.8 |
+
+## 🧪 C# Markup at a Glance
 
 ```csharp
 var window = new Window()
@@ -36,49 +59,45 @@ var window = new Window()
 Application.Run(window);
 ```
 
-## Concept
+## 🎯 Concept
 
 MewUI is a code-first UI library with three priorities:
 - **Fluent C# markup** for building UI trees (no XAML)
 - **AOT-friendly binding** (`ObservableValue<T>`, delegate-based, avoid reflection)
 - **NativeAOT + trimming friendliness** (interop via `LibraryImport`)
 
-Out of scope (for now):
-- Full XAML/WPF compatibility
-- Huge control catalog and designer tooling
+Non-goals (by design):
+- WPF-style **animations**, **visual effects**, or heavy composition pipelines
+- A large, “kitchen-sink” control catalog (keep the surface area small and predictable)
+- Full XAML/WPF compatibility or designer-first workflows
 
-## Quick Start
+## 🚀 Quick Start
 
 Prerequisites: .NET SDK (`net10.0-windows`).
 
 Build:
-- `dotnet build .\\MewUI.slnx -c Release`
+- `dotnet build .\MewUI.slnx -c Release`
 
 Run sample:
-- `dotnet run --project .\\samples\\MewUI.Sample\\MewUI.Sample.csproj -c Release`
+- `dotnet run --project .\samples\MewUI.Sample\MewUI.Sample.csproj -c Release`
 
 Publish (NativeAOT + Trim, size-focused):
-- `dotnet publish .\\samples\\MewUI.Sample\\MewUI.Sample.csproj -c Release -p:PublishProfile=win-x64-trimmed`
+- `dotnet publish .\samples\MewUI.Sample\MewUI.Sample.csproj -c Release -p:PublishProfile=win-x64-trimmed`
 
-## NativeAOT / Trim
+## 🧷 NativeAOT / Trim
 
 - The library aims to be trimming-safe by default (explicit code paths, no reflection-based binding).
 - Windows interop uses source-generated P/Invoke (`LibraryImport`) for NativeAOT compatibility.
 - If you introduce new interop or dynamic features, verify with the trimmed publish profile above.
 
-This project is optimized for *publish-time size* (NativeAOT + trimming), but exact output size depends on:
-- .NET SDK version, RID, and linker/ILC settings
-- Which rendering backend you publish with (Direct2D vs GDI)
-- Fonts/resources you include
-
 To check output size locally:
-- Publish: `dotnet publish .\\samples\\MewUI.Sample\\MewUI.Sample.csproj -c Release -p:PublishProfile=win-x64-trimmed`
-- Inspect: `samples\\MewUI.Sample\\bin\\Release\\net10.0-windows\\win-x64\\publish\\trimmed\\`
+- Publish: `dotnet publish .\samples\MewUI.Sample\MewUI.Sample.csproj -c Release -p:PublishProfile=win-x64-trimmed`
+- Inspect: `.artifacts\publish\MewUI.Sample\win-x64-trimmed\`
 
 Reference (sample, `win-x64-trimmed`):
 - `Aprillz.MewUI Demo.exe` ~ `2,257 KB`
 
-## State & Binding (AOT-friendly)
+## 🔗 State & Binding (AOT-friendly)
 
 Bindings are explicit and delegate-based (no reflection):
 
@@ -92,7 +111,7 @@ var slider = new Slider().BindValue(percent);
 var label  = new Label().BindText(percent, v => $"Percent ({v:P0})");
 ```
 
-## Theme
+## 🎨 Theme
 
 Theme is split into two parts:
 - `Palette` - colors (including derived colors based on background + accent)
@@ -101,10 +120,10 @@ Theme is split into two parts:
 Accent switching:
 
 ```csharp
-Theme.Current = Theme.Current.WithAccent(Aprillz.MewUI.Primitives.Color.FromRgb(214, 176, 82));
+Theme.Current = Theme.Current.WithAccent(Color.FromRgb(214, 176, 82));
 ```
 
-## Controls / Panels
+## 🧱 Controls / Panels
 
 Controls:
 - `Label`, `Button`, `TextBox`
@@ -120,24 +139,32 @@ Panels:
 - `UniformGrid` (equal cells)
 - `WrapPanel` (wrap + item size + spacing)
 
-## Rendering Backends
+## 🖌️ Rendering Backends
 
 Rendering is abstracted through:
 - `IGraphicsFactory` / `IGraphicsContext`
 
 The sample defaults to Direct2D, with a GDI backend also available.
 
-## Platform Abstraction
+## 🪟 Platform Abstraction
 
 Windowing and the message loop are abstracted behind a platform layer. The current implementation is Windows-only (`Win32PlatformHost`), with the intent to add Linux/macOS backends later.
 
-## DPI
+## 🧭 Roadmap (TODO)
 
-The sample EXE includes an `app.manifest` enabling PerMonitorV2 DPI awareness:
-- `samples/MewUI.Sample/app.manifest`
+**Controls**
+- [ ] `Image`
+- [ ] `GroupBox`
+- [ ] `TabControl`
+- [ ] `ScrollViewer`
 
-Internally, layout is in DIPs and graphics backends convert to device pixels (with pixel snapping) for crisp 1px borders.
+**Rendering**
+- [ ] OpenGL backend
 
-## License
+**Platforms**
+- [ ] Linux
+- [ ] macOS
 
-MIT. See `LICENSE`.
+**Tooling**
+- [ ] Hot Reload (design-time oriented)
+

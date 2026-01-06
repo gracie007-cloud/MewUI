@@ -128,7 +128,7 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
             return;
 
         nint brush = GetSolidBrush(color);
-        float stroke = (float)thickness;
+        float stroke = QuantizeStrokeDip((float)thickness);
         var p0 = ToPoint2F(start);
         var p1 = ToPoint2F(end);
 
@@ -157,7 +157,7 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
             return;
 
         nint brush = GetSolidBrush(color);
-        float stroke = (float)thickness;
+        float stroke = QuantizeStrokeDip((float)thickness);
         D2D1VTable.DrawRectangle((ID2D1RenderTarget*)_renderTarget, ToStrokeRectF(rect, stroke), brush, stroke);
     }
 
@@ -176,7 +176,7 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
             return;
 
         nint brush = GetSolidBrush(color);
-        float stroke = (float)thickness;
+        float stroke = QuantizeStrokeDip((float)thickness);
         var snappedRect = ToStrokeRectF(rect, stroke);
         var snap = GetHalfPixelDipForStroke(stroke);
         var rr = new D2D1_ROUNDED_RECT(
@@ -202,7 +202,7 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
             return;
 
         nint brush = GetSolidBrush(color);
-        float stroke = (float)thickness;
+        float stroke = QuantizeStrokeDip((float)thickness);
         var snap = GetHalfPixelDipForStroke(stroke);
 
         var snapped = snap != 0
@@ -359,6 +359,18 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
 
         // Inset by half a device pixel so the centered stroke lands on pixel centers.
         return new D2D1_RECT_F(r.left + snap, r.top + snap, r.right - snap, r.bottom - snap);
+    }
+
+    private float QuantizeStrokeDip(float thickness)
+    {
+        if (thickness <= 0)
+            return 0;
+
+        // Snap stroke width to whole device pixels for consistent borders at fractional DPI scales
+        // (e.g. 125%: 1 DIP == 1.25px -> render as 1px).
+        float strokePx = thickness * (float)DpiScale;
+        float snappedPx = Math.Max(1, (float)Math.Round(strokePx, MidpointRounding.AwayFromZero));
+        return snappedPx / (float)DpiScale;
     }
 
     private float GetHalfPixelDipForStroke(float thickness)

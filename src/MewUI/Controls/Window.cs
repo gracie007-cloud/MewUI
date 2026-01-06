@@ -16,6 +16,7 @@ public class Window : ContentControl
     private IWindowBackend? _backend;
     private Size _clientSizeDip = Size.Empty;
     private readonly List<PopupEntry> _popups = new();
+    private bool _firstFrameRenderedRaised;
 
     private sealed class PopupEntry
     {
@@ -81,6 +82,7 @@ public class Window : ContentControl
     public Action<Size>? SizeChanged { get; set; }
     public Action<uint, uint>? DpiChanged { get; set; }
     public Action<Theme, Theme>? ThemeChanged { get; set; }
+    public Action? FirstFrameRendered { get; set; }
 
     #endregion
 
@@ -203,6 +205,12 @@ public class Window : ContentControl
         // Popups render last (on top).
         for (int i = 0; i < _popups.Count; i++)
             _popups[i].Element.Render(context);
+
+        if (!_firstFrameRenderedRaised)
+        {
+            _firstFrameRenderedRaised = true;
+            FirstFrameRendered?.Invoke();
+        }
     }
 
     internal void DisposeVisualTree()

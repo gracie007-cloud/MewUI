@@ -230,6 +230,9 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
     private void HandleDestroy()
     {
+        if (Window.GraphicsFactory is Rendering.Gdi.GdiGraphicsFactory gdi)
+            gdi.ReleaseWindowResources(Handle);
+
         _host.UnregisterWindow(Handle);
         Window.DisposeVisualTree();
         Handle = 0;

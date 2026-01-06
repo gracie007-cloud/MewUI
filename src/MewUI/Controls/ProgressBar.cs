@@ -122,10 +122,11 @@ public sealed class ProgressBar : Control, IDisposable
         var fillRect = new Rect(contentBounds.X, contentBounds.Y, contentBounds.Width * t, contentBounds.Height);
         if (fillRect.Width > 0)
         {
-            if (radius > 0)
+
+            if (radius - 1 > 0)
             {
-                double rx = Math.Min(radius, fillRect.Width / 2);
-                context.FillRoundedRectangle(fillRect, rx, radius, theme.Accent);
+                double rx = Math.Min(radius-1, fillRect.Width / 2.0);
+                context.FillRoundedRectangle(fillRect, rx, rx, theme.Accent);
             }
             else
             {

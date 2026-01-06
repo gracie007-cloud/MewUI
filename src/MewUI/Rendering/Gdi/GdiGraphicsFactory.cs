@@ -16,6 +16,8 @@ public sealed class GdiGraphicsFactory : IGraphicsFactory
 
     public bool IsDoubleBuffered { get; set; } = true;
 
+    public GdiCurveQuality CurveQuality { get; set; } = GdiCurveQuality.Fast;
+
     public IFont CreateFont(string family, double size, FontWeight weight = FontWeight.Normal,
         bool italic = false, bool underline = false, bool strikethrough = false)
     {
@@ -51,13 +53,21 @@ public sealed class GdiGraphicsFactory : IGraphicsFactory
 
     public IGraphicsContext CreateContext(nint hwnd, nint hdc, double dpiScale)
         => IsDoubleBuffered
-        ? new GdiDoubleBufferedContext(hwnd, hdc, dpiScale)
-        : new GdiGraphicsContext(hwnd, hdc, dpiScale);
+        ? new GdiDoubleBufferedContext(hwnd, hdc, dpiScale, CurveQuality)
+        : new GdiGraphicsContext(hwnd, hdc, dpiScale, CurveQuality);
 
 
     public IGraphicsContext CreateMeasurementContext(uint dpi)
     {
         var hdc = Native.User32.GetDC(0);
         return new GdiMeasurementContext(hdc, dpi);
+    }
+
+    public void ReleaseWindowResources(nint hwnd)
+    {
+        if (hwnd == 0)
+            return;
+
+        GdiDoubleBufferedContext.ReleaseForWindow(hwnd);
     }
 }

@@ -3,6 +3,7 @@ using Aprillz.MewUI.Platform;
 using Aprillz.MewUI.Platform.Win32;
 using Aprillz.MewUI.Rendering;
 using Aprillz.MewUI.Rendering.Direct2D;
+using Aprillz.MewUI.Rendering.Gdi;
 
 namespace Aprillz.MewUI.Core;
 
@@ -13,7 +14,8 @@ public sealed class Application
 {
     private static Application? _current;
     private static readonly object _syncLock = new();
-    private static IGraphicsFactory _defaultGraphicsFactory = Direct2DGraphicsFactory.Instance;
+    private static GraphicsBackend _defaultGraphicsBackend = GraphicsBackend.Direct2D;
+    private static IGraphicsFactory? _defaultGraphicsFactoryOverride;
     private static IPlatformHost _defaultPlatformHost = new Win32PlatformHost();
 
     /// <summary>
@@ -31,13 +33,46 @@ public sealed class Application
     public IUiDispatcher? Dispatcher { get; internal set; }
 
     /// <summary>
-    /// Gets or sets the default graphics factory used by windows/controls.
+    /// Gets or sets the default graphics backend used by windows/controls.
     /// Can be configured before <see cref="Run(Window)"/>.
+    /// </summary>
+    public static GraphicsBackend DefaultGraphicsBackend
+    {
+        get => _defaultGraphicsBackend;
+        set
+        {
+            _defaultGraphicsBackend = value;
+            _defaultGraphicsFactoryOverride = null;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the default graphics factory used by windows/controls.
+    /// Prefer <see cref="DefaultGraphicsBackend"/> for built-in backends.
     /// </summary>
     public static IGraphicsFactory DefaultGraphicsFactory
     {
-        get => _defaultGraphicsFactory;
-        set => _defaultGraphicsFactory = value ?? throw new ArgumentNullException(nameof(value));
+        get => _defaultGraphicsFactoryOverride ?? GetFactoryForBackend(_defaultGraphicsBackend);
+        set
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            // Keep existing code working, but prefer enum configuration.
+            if (ReferenceEquals(value, Direct2DGraphicsFactory.Instance))
+            {
+                DefaultGraphicsBackend = GraphicsBackend.Direct2D;
+                return;
+            }
+
+            if (ReferenceEquals(value, GdiGraphicsFactory.Instance))
+            {
+                DefaultGraphicsBackend = GraphicsBackend.Gdi;
+                return;
+            }
+
+            _defaultGraphicsFactoryOverride = value;
+        }
     }
 
     public static IPlatformHost DefaultPlatformHost
@@ -101,4 +136,11 @@ public sealed class Application
             return;
         _current.PlatformHost.DoEvents();
     }
+
+    private static IGraphicsFactory GetFactoryForBackend(GraphicsBackend backend) => backend switch
+    {
+        GraphicsBackend.Direct2D => Direct2DGraphicsFactory.Instance,
+        GraphicsBackend.Gdi => GdiGraphicsFactory.Instance,
+        _ => Direct2DGraphicsFactory.Instance,
+    };
 }
