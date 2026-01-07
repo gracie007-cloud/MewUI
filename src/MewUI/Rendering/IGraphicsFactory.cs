@@ -7,6 +7,12 @@ namespace Aprillz.MewUI.Rendering;
 public interface IGraphicsFactory
 {
     /// <summary>
+    /// Identifies which built-in backend this factory represents.
+    /// Custom factories can return <see cref="GraphicsBackend.Custom"/>.
+    /// </summary>
+    GraphicsBackend Backend { get; }
+
+    /// <summary>
     /// Creates a font resource.
     /// </summary>
     IFont CreateFont(string family, double size, FontWeight weight = FontWeight.Normal,
@@ -38,4 +44,12 @@ public interface IGraphicsFactory
     /// Creates a measurement-only graphics context for text measurement.
     /// </summary>
     IGraphicsContext CreateMeasurementContext(uint dpi);
+}
+
+/// <summary>
+/// Optional capability for factories that must release per-window resources when a window is destroyed.
+/// </summary>
+public interface IWindowResourceReleaser
+{
+    void ReleaseWindowResources(nint hwnd);
 }

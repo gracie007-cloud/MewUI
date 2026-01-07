@@ -234,21 +234,21 @@ public sealed class ComboBox : Control, IDisposable, IPopupOwner
         if (!IsEnabled)
             return;
 
-        if (e.Key == Native.Constants.VirtualKeys.VK_SPACE || e.Key == Native.Constants.VirtualKeys.VK_RETURN)
+        if (e.Key == Input.Key.Space || e.Key == Input.Key.Enter)
         {
             IsDropDownOpen = !IsDropDownOpen;
             e.Handled = true;
             return;
         }
 
-        if (e.Key == Native.Constants.VirtualKeys.VK_ESCAPE && IsDropDownOpen)
+        if (e.Key == Input.Key.Escape && IsDropDownOpen)
         {
             IsDropDownOpen = false;
             e.Handled = true;
             return;
         }
 
-        if (e.Key == Native.Constants.VirtualKeys.VK_DOWN)
+        if (e.Key == Input.Key.Down)
         {
             if (!IsDropDownOpen)
                 IsDropDownOpen = true;
@@ -261,7 +261,7 @@ public sealed class ComboBox : Control, IDisposable, IPopupOwner
 
             e.Handled = true;
         }
-        else if (e.Key == Native.Constants.VirtualKeys.VK_UP)
+        else if (e.Key == Input.Key.Up)
         {
             if (!IsDropDownOpen)
                 IsDropDownOpen = true;

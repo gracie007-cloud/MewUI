@@ -9,6 +9,8 @@ public sealed class Direct2DGraphicsFactory : IGraphicsFactory, IDisposable
 {
     public static Direct2DGraphicsFactory Instance => field ??= new Direct2DGraphicsFactory();
 
+    public GraphicsBackend Backend => GraphicsBackend.Direct2D;
+
     private nint _d2dFactory;
     private nint _dwriteFactory;
     private bool _initialized;

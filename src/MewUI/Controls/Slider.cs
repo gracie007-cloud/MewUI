@@ -197,12 +197,12 @@ public sealed class Slider : Control, IDisposable
         if (!IsEnabled)
             return;
 
-        if (e.Key == Native.Constants.VirtualKeys.VK_LEFT)
+        if (e.Key == Input.Key.Left)
         {
             SetValueInternal(Value - SmallChange, fromUser: true);
             e.Handled = true;
         }
-        else if (e.Key == Native.Constants.VirtualKeys.VK_RIGHT)
+        else if (e.Key == Input.Key.Right)
         {
             SetValueInternal(Value + SmallChange, fromUser: true);
             e.Handled = true;

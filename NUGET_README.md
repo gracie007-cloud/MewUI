@@ -1,0 +1,42 @@
+# Aprillz.MewUI
+
+Minimal, code-first .NET GUI library aimed at **NativeAOT + Trim**.
+
+- GitHub: https://github.com/aprillz/MewUI
+- License: MIT
+
+## Concept
+
+- Fluent **C# markup** (no XAML)
+- Designed for **small footprint** (AOT/Trim-friendly), **fast startup**, and **low memory usage**
+- Keep the binding model simple (no complex, reflection-heavy path binding)
+
+## Install
+
+```sh
+dotnet add package Aprillz.MewUI --prerelease
+```
+
+## Quick start
+
+```csharp
+using Aprillz.MewUI.Controls;
+using Aprillz.MewUI.Core;
+using Aprillz.MewUI.Markup;
+using Aprillz.MewUI.Panels;
+
+var window = new Window()
+    .Title("Hello MewUI")
+    .Size(520, 360)
+    .Padding(12)
+    .Content(
+        new StackPanel()
+            .Spacing(8)
+            .Children(
+                new Label().Text("Hello, Aprillz.MewUI").FontSize(18).Bold(),
+                new Button().Content("Quit").OnClick(() => Application.Quit())
+            )
+    );
+
+Application.Run(window);
+```

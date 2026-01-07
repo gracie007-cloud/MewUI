@@ -84,7 +84,26 @@ public class Window : ContentControl
     public Action<Theme, Theme>? ThemeChanged { get; set; }
     public Action? FirstFrameRendered { get; set; }
 
+    /// <summary>
+    /// Preview (tunneling) keyboard events for the whole window.
+    /// If <see cref="KeyEventArgs.Handled"/> is set, the focused element will not receive the event.
+    /// </summary>
+    public Action<KeyEventArgs>? PreviewKeyDown { get; set; }
+    public Action<KeyEventArgs>? PreviewKeyUp { get; set; }
+
+    /// <summary>
+    /// Preview (tunneling) text input for the whole window.
+    /// If <see cref="TextInputEventArgs.Handled"/> is set, the focused element will not receive the event.
+    /// </summary>
+    public Action<TextInputEventArgs>? PreviewTextInput { get; set; }
+
     #endregion
+
+    internal void RaisePreviewKeyDown(KeyEventArgs e) => PreviewKeyDown?.Invoke(e);
+
+    internal void RaisePreviewKeyUp(KeyEventArgs e) => PreviewKeyUp?.Invoke(e);
+
+    internal void RaisePreviewTextInput(TextInputEventArgs e) => PreviewTextInput?.Invoke(e);
 
     public Theme Theme
     {

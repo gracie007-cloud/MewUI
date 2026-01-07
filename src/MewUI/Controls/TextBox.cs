@@ -255,52 +255,52 @@ public class TextBox : Control, IDisposable
 
         switch (e.Key)
         {
-            case Native.Constants.VirtualKeys.VK_LEFT:
+            case Input.Key.Left:
                 MoveCaret(-1, shift, ctrl);
                 e.Handled = true;
                 break;
 
-            case Native.Constants.VirtualKeys.VK_RIGHT:
+            case Input.Key.Right:
                 MoveCaret(1, shift, ctrl);
                 e.Handled = true;
                 break;
 
-            case Native.Constants.VirtualKeys.VK_HOME:
+            case Input.Key.Home:
                 MoveCaret(-Text.Length, shift, false);
                 e.Handled = true;
                 break;
 
-            case Native.Constants.VirtualKeys.VK_END:
+            case Input.Key.End:
                 MoveCaret(Text.Length, shift, false);
                 e.Handled = true;
                 break;
 
-            case Native.Constants.VirtualKeys.VK_BACK:
+            case Input.Key.Backspace:
                 if (!IsReadOnly) HandleBackspace(ctrl);
                 e.Handled = true;
                 break;
 
-            case Native.Constants.VirtualKeys.VK_DELETE:
+            case Input.Key.Delete:
                 if (!IsReadOnly) HandleDelete(ctrl);
                 e.Handled = true;
                 break;
 
-            case 'A' when ctrl:
+            case Input.Key.A when ctrl:
                 SelectAll();
                 e.Handled = true;
                 break;
 
-            case 'C' when ctrl:
+            case Input.Key.C when ctrl:
                 CopyToClipboard();
                 e.Handled = true;
                 break;
 
-            case 'X' when ctrl:
+            case Input.Key.X when ctrl:
                 if (!IsReadOnly) CutToClipboard();
                 e.Handled = true;
                 break;
 
-            case 'V' when ctrl:
+            case Input.Key.V when ctrl:
                 if (!IsReadOnly) PasteFromClipboard();
                 e.Handled = true;
                 break;
@@ -497,11 +497,11 @@ public class TextBox : Control, IDisposable
         }
     }
 
-    private static bool IsNavigationKey(int key) =>
-        key is Native.Constants.VirtualKeys.VK_LEFT or
-               Native.Constants.VirtualKeys.VK_RIGHT or
-               Native.Constants.VirtualKeys.VK_HOME or
-               Native.Constants.VirtualKeys.VK_END;
+    private static bool IsNavigationKey(Input.Key key) =>
+        key is Input.Key.Left or
+               Input.Key.Right or
+               Input.Key.Home or
+               Input.Key.End;
 
     private static void SetClipboardText(string text)
     {

@@ -2,15 +2,14 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFrameworks>net8.0-windows;net10.0-windows</TargetFrameworks>
-    <LangVersion>preview</LangVersion>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>Aprillz.MewUI.Sample</RootNamespace>
     <AssemblyName>Aprillz.MewUI.Sample</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
   </PropertyGroup>
 
   <ItemGroup>

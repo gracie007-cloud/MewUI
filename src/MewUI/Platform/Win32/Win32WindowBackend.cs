@@ -230,8 +230,8 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
     private void HandleDestroy()
     {
-        if (Window.GraphicsFactory is Rendering.Gdi.GdiGraphicsFactory gdi)
-            gdi.ReleaseWindowResources(Handle);
+        if (Window.GraphicsFactory is Aprillz.MewUI.Rendering.IWindowResourceReleaser releaser)
+            releaser.ReleaseWindowResources(Handle);
 
         _host.UnregisterWindow(Handle);
         Window.DisposeVisualTree();
@@ -395,11 +395,16 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
     private nint HandleKeyDown(nint wParam, nint lParam)
     {
-        int key = (int)wParam.ToInt64();
+        int platformKey = (int)wParam.ToInt64();
         bool isRepeat = ((lParam.ToInt64() >> 30) & 1) != 0;
         var modifiers = GetModifierKeys();
 
-        if (key == VirtualKeys.VK_TAB)
+        var args = new KeyEventArgs(MapKey(platformKey), platformKey, modifiers, isRepeat);
+        Window.RaisePreviewKeyDown(args);
+        if (args.Handled)
+            return 0;
+
+        if (args.Key == Input.Key.Tab)
         {
             if (modifiers.HasFlag(ModifierKeys.Shift))
                 Window.FocusManager.MoveFocusPrevious();
@@ -408,7 +413,6 @@ internal sealed class Win32WindowBackend : IWindowBackend
             return 0;
         }
 
-        var args = new KeyEventArgs(key, modifiers, isRepeat);
         Window.FocusManager.FocusedElement?.OnKeyDown(args);
 
         return args.Handled ? 0 : User32.DefWindowProc(Handle, WindowMessages.WM_KEYDOWN, wParam, lParam);
@@ -416,10 +420,12 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
     private nint HandleKeyUp(nint wParam, nint lParam)
     {
-        int key = (int)wParam.ToInt64();
+        int platformKey = (int)wParam.ToInt64();
         var modifiers = GetModifierKeys();
 
-        var args = new KeyEventArgs(key, modifiers);
+        var args = new KeyEventArgs(MapKey(platformKey), platformKey, modifiers);
+        Window.RaisePreviewKeyUp(args);
+        if (!args.Handled)
         Window.FocusManager.FocusedElement?.OnKeyUp(args);
 
         return args.Handled ? 0 : User32.DefWindowProc(Handle, WindowMessages.WM_KEYUP, wParam, lParam);
@@ -435,9 +441,55 @@ internal sealed class Win32WindowBackend : IWindowBackend
             return 0;
 
         var args = new TextInputEventArgs(c.ToString());
-        Window.FocusManager.FocusedElement?.OnTextInput(args);
+        Window.RaisePreviewTextInput(args);
+        if (!args.Handled)
+            Window.FocusManager.FocusedElement?.OnTextInput(args);
 
         return 0;
+    }
+
+    private static Input.Key MapKey(int vk)
+    {
+        // Digits (top row)
+        if (vk is >= 0x30 and <= 0x39)
+            return (Input.Key)((int)Input.Key.D0 + (vk - 0x30));
+
+        // Letters
+        if (vk is >= 0x41 and <= 0x5A)
+            return (Input.Key)((int)Input.Key.A + (vk - 0x41));
+
+        // Numpad digits
+        if (vk is >= 0x60 and <= 0x69)
+            return (Input.Key)((int)Input.Key.NumPad0 + (vk - 0x60));
+
+        return vk switch
+        {
+            VirtualKeys.VK_BACK => Input.Key.Backspace,
+            VirtualKeys.VK_TAB => Input.Key.Tab,
+            VirtualKeys.VK_RETURN => Input.Key.Enter,
+            VirtualKeys.VK_ESCAPE => Input.Key.Escape,
+            VirtualKeys.VK_SPACE => Input.Key.Space,
+
+            VirtualKeys.VK_LEFT => Input.Key.Left,
+            VirtualKeys.VK_UP => Input.Key.Up,
+            VirtualKeys.VK_RIGHT => Input.Key.Right,
+            VirtualKeys.VK_DOWN => Input.Key.Down,
+
+            VirtualKeys.VK_INSERT => Input.Key.Insert,
+            VirtualKeys.VK_DELETE => Input.Key.Delete,
+            VirtualKeys.VK_HOME => Input.Key.Home,
+            VirtualKeys.VK_END => Input.Key.End,
+            VirtualKeys.VK_PRIOR => Input.Key.PageUp,
+            VirtualKeys.VK_NEXT => Input.Key.PageDown,
+
+            VirtualKeys.VK_ADD => Input.Key.Add,
+            VirtualKeys.VK_SUBTRACT => Input.Key.Subtract,
+            VirtualKeys.VK_MULTIPLY => Input.Key.Multiply,
+            VirtualKeys.VK_DIVIDE => Input.Key.Divide,
+            VirtualKeys.VK_DECIMAL => Input.Key.Decimal,
+
+            _ => Input.Key.None
+        };
     }
 
     private Point GetMousePosition(nint lParam)

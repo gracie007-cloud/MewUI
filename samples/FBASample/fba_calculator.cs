@@ -10,7 +10,7 @@
 #:property DebugType=none
 #:property StripSymbols=true
 
-#:package Aprillz.MewUI@0.1.0-preview.1
+#:package Aprillz.MewUI@0.1.0-preview.3
 
 using System.Globalization;
 using System.Text;
@@ -24,11 +24,7 @@ using Aprillz.MewUI.Panels;
 using Aprillz.MewUI.Primitives;
 using Aprillz.MewUI.Rendering;
 
-Thread.CurrentThread.SetApartmentState(ApartmentState.Unknown);
-Thread.CurrentThread.SetApartmentState(ApartmentState.STA);
-
-var useGdi = args.Any(a => a.Equals("--gdi", StringComparison.OrdinalIgnoreCase));
-Application.DefaultGraphicsBackend = useGdi ? GraphicsBackend.Gdi : GraphicsBackend.Direct2D;
+Application.DefaultGraphicsBackend = GraphicsBackend.Gdi;
 
 var goldAccent = Color.FromRgb(214, 176, 82);
 Theme.Current = Theme.Dark.WithAccent(goldAccent);
@@ -37,56 +33,71 @@ var expression = new ObservableValue<string>(string.Empty);
 var result = new ObservableValue<string>("0");
 var error = new ObservableValue<string>(string.Empty);
 
-var keySink = new KeySink
-{
-    IsHitTestVisible = false,
-    KeyDown = OnKeySyncKeyDown,
-    TextInput = e =>
-    {
-        if (TryAppendFromText(e.Text))
-            e.Handled = true;
-    }
-};
-
 
 UniformGrid Keypad() => new UniformGrid()
     .Rows(5)
     .Columns(4)
     .Children(
-        Key("C", Clear),
-        Key("(", () => Append("(")),
-        Key(")", () => Append(")")),
-        Key("⌫", Backspace),
+        KeyButton("C", Clear),
+        KeyButton("(", () => Append("(")),
+        KeyButton(")", () => Append(")")),
+        KeyButton("⌫", Backspace),
 
-        Key("7", () => Append("7")),
-        Key("8", () => Append("8")),
-        Key("9", () => Append("9")),
-        Key("/", () => Append("/")),
+        KeyButton("7", () => Append("7")),
+        KeyButton("8", () => Append("8")),
+        KeyButton("9", () => Append("9")),
+        KeyButton("/", () => Append("/")),
 
-        Key("4", () => Append("4")),
-        Key("5", () => Append("5")),
-        Key("6", () => Append("6")),
-        Key("*", () => Append("*")),
+        KeyButton("4", () => Append("4")),
+        KeyButton("5", () => Append("5")),
+        KeyButton("6", () => Append("6")),
+        KeyButton("*", () => Append("*")),
 
-        Key("1", () => Append("1")),
-        Key("2", () => Append("2")),
-        Key("3", () => Append("3")),
-        Key("-", () => Append("-")),
+        KeyButton("1", () => Append("1")),
+        KeyButton("2", () => Append("2")),
+        KeyButton("3", () => Append("3")),
+        KeyButton("-", () => Append("-")),
 
-        Key("0", () => Append("0")),
-        Key(".", () => Append(".")),
-        Key("=", CommitEquals, isPrimary: true),
-        Key("+", () => Append("+"))
+        KeyButton("0", () => Append("0")),
+        KeyButton(".", () => Append(".")),
+        KeyButton("=", CommitEquals, isPrimary: true),
+        KeyButton("+", () => Append("+"))
     );
 
-var window = new Window() 
+var window = new Window()
+    .OnPreviewKeyDown(e =>
+    {
+        if (e.Key == Key.Backspace)
+        {
+            Backspace();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Escape)
+        {
+            Clear();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            CommitEquals();
+            e.Handled = true;
+        }
+    })
+    .OnPreviewTextInput(e =>
+    {
+        if (TryAppendFromText(e.Text))
+            e.Handled = true;
+    })
     .Title("MewUI FBA Calculator")
     .Size(360, 520)
     .Content(
         new DockPanel()
             .Margin(8)
             .Children(
-                keySink,
                 new StackPanel()
                     .DockTop()
                     .Spacing(6)
@@ -113,7 +124,6 @@ var window = new Window()
     );
 
 Recompute();
-window.Loaded = () => keySink.Focus();
 
 Application.Run(window);
 
@@ -193,48 +203,13 @@ bool TryAppendFromText(string text)
     return appended;
 }
 
-void OnKeySyncKeyDown(KeyEventArgs e)
+Button KeyButton(string text, Action onClick, bool isPrimary = false)
 {
-    const int VK_BACK = 0x08;
-    const int VK_ESCAPE = 0x1B;
-    const int VK_RETURN = 0x0D;
-
-    if (e.Key == VK_BACK)
-    {
-        Backspace();
-        e.Handled = true;
-        return;
-    }
-
-    if (e.Key == VK_ESCAPE)
-    {
-        Clear();
-        e.Handled = true;
-        return;
-    }
-
-    if (e.Key == VK_RETURN)
-    {
-        CommitEquals();
-        e.Handled = true;
-        return;
-    }
-}
-
-
-Button Key(string text, Action onClick, bool isPrimary = false)
-{
-    void WrappedClick()
-    {
-        onClick();
-        keySink.Focus();
-    }
-
     var b = new Button()
         .Content(text)
         .Margin(2)
         .FontSize(20)
-        .OnClick(WrappedClick)
+        .OnClick(onClick)
         .MinWidth(56)
         .MinHeight(44);
 
@@ -242,13 +217,6 @@ Button Key(string text, Action onClick, bool isPrimary = false)
         b.BorderBrush(Theme.Current.Accent);
 
     return b;
-}
-
-sealed class KeySink : Control
-{
-    public override bool Focusable => true;
-    protected override Size MeasureOverride(Size availableSize) => new(0, 0);
-    protected override Size ArrangeOverride(Size finalSize) => new(0, 0);
 }
 
 static class ExpressionEvaluator

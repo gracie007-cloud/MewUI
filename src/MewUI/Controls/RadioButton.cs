@@ -205,7 +205,7 @@ public class RadioButton : Control, IDisposable
         if (!IsEnabled)
             return;
 
-        if (e.Key == Native.Constants.VirtualKeys.VK_SPACE)
+        if (e.Key == Input.Key.Space)
         {
             IsChecked = true;
             e.Handled = true;

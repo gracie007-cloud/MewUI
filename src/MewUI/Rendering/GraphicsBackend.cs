@@ -7,5 +7,5 @@ public enum GraphicsBackend
 {
     Direct2D = 0,
     Gdi = 1,
+    Custom = 100,
 }
-

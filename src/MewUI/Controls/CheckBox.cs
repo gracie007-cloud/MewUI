@@ -169,7 +169,7 @@ public class CheckBox : Control, IDisposable
         if (!IsEnabled)
             return;
 
-        if (e.Key == Native.Constants.VirtualKeys.VK_SPACE)
+        if (e.Key == Input.Key.Space)
         {
             IsChecked = !IsChecked;
             e.Handled = true;

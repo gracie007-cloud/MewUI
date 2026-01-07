@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <!-- Assembly Info -->
@@ -17,14 +17,14 @@
     <!-- NuGet -->
     <PackageId>Aprillz.MewUI</PackageId>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReadmeFile>NUGET_README.md</PackageReadmeFile>
     <PackageIcon>logo-256.png</PackageIcon>
     <PublishRepositoryUrl>false</PublishRepositoryUrl>
     <IncludeSymbols>false</IncludeSymbols>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\NUGET_README.md" Pack="true" PackagePath="\" />
     <None Include="..\..\assets\logo\logo-256.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 

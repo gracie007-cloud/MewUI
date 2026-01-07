@@ -178,8 +178,7 @@ public class Button : Control, IDisposable
         base.OnKeyDown(e);
 
         // Space or Enter triggers click
-        if ((e.Key == Native.Constants.VirtualKeys.VK_SPACE ||
-             e.Key == Native.Constants.VirtualKeys.VK_RETURN) && IsEnabled)
+        if ((e.Key == Input.Key.Space || e.Key == Input.Key.Enter) && IsEnabled)
         {
             _isPressed = true;
             InvalidateVisual();
@@ -191,8 +190,7 @@ public class Button : Control, IDisposable
     {
         base.OnKeyUp(e);
 
-        if ((e.Key == Native.Constants.VirtualKeys.VK_SPACE ||
-             e.Key == Native.Constants.VirtualKeys.VK_RETURN) && _isPressed)
+        if ((e.Key == Input.Key.Space || e.Key == Input.Key.Enter) && _isPressed)
         {
             _isPressed = false;
             OnClick();

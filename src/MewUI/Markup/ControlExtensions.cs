@@ -1,5 +1,6 @@
 using Aprillz.MewUI.Controls;
 using Aprillz.MewUI.Binding;
+using Aprillz.MewUI.Input;
 using Aprillz.MewUI.Primitives;
 using Aprillz.MewUI.Rendering;
 
@@ -371,6 +372,24 @@ public static class ControlExtensions
     public static Window OnClosed(this Window window, Action handler)
     {
         window.Closed = handler;
+        return window;
+    }
+
+    public static Window OnPreviewKeyDown(this Window window, Action<KeyEventArgs> handler)
+    {
+        window.PreviewKeyDown = handler;
+        return window;
+    }
+
+    public static Window OnPreviewKeyUp(this Window window, Action<KeyEventArgs> handler)
+    {
+        window.PreviewKeyUp = handler;
+        return window;
+    }
+
+    public static Window OnPreviewTextInput(this Window window, Action<TextInputEventArgs> handler)
+    {
+        window.PreviewTextInput = handler;
         return window;
     }
 

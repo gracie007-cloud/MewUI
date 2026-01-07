@@ -19,9 +19,14 @@ public enum ModifierKeys
 public class KeyEventArgs
 {
     /// <summary>
-    /// Gets the virtual key code.
+    /// Gets the platform-independent key.
     /// </summary>
-    public int Key { get; }
+    public Key Key { get; }
+
+    /// <summary>
+    /// Gets the platform-specific key code (e.g. Win32 virtual-key).
+    /// </summary>
+    public int PlatformKey { get; }
 
     /// <summary>
     /// Gets the modifier keys that were pressed.
@@ -38,11 +43,17 @@ public class KeyEventArgs
     /// </summary>
     public bool Handled { get; set; }
 
-    public KeyEventArgs(int key, ModifierKeys modifiers = ModifierKeys.None, bool isRepeat = false)
+    public KeyEventArgs(Key key, int platformKey, ModifierKeys modifiers = ModifierKeys.None, bool isRepeat = false)
     {
         Key = key;
+        PlatformKey = platformKey;
         Modifiers = modifiers;
         IsRepeat = isRepeat;
+    }
+
+    public KeyEventArgs(int platformKey, ModifierKeys modifiers = ModifierKeys.None, bool isRepeat = false)
+        : this(Key.None, platformKey, modifiers, isRepeat)
+    {
     }
 
     /// <summary>

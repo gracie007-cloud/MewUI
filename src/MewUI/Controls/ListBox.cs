@@ -173,13 +173,13 @@ public class ListBox : Control, IDisposable
         if (!IsEnabled)
             return;
 
-        if (e.Key == Native.Constants.VirtualKeys.VK_UP)
+        if (e.Key == Input.Key.Up)
         {
             if (_items.Count > 0)
                 SelectedIndex = Math.Max(0, SelectedIndex <= 0 ? 0 : SelectedIndex - 1);
             e.Handled = true;
         }
-        else if (e.Key == Native.Constants.VirtualKeys.VK_DOWN)
+        else if (e.Key == Input.Key.Down)
         {
             if (_items.Count > 0)
                 SelectedIndex = Math.Min(_items.Count - 1, SelectedIndex < 0 ? 0 : SelectedIndex + 1);
