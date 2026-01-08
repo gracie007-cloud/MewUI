@@ -130,15 +130,11 @@ public sealed class ComboBox : Control, IPopupOwner
     protected override void OnRender(IGraphicsContext context)
     {
         var theme = GetTheme();
-        var bounds = Bounds;
+        var bounds = GetSnappedBorderBounds(Bounds);
+        var borderInset = GetBorderVisualInset();
         double radius = theme.ControlCornerRadius;
 
         var bg = IsEnabled ? Background : theme.TextBoxDisabledBackground;
-
-        if (radius > 0)
-            context.FillRoundedRectangle(bounds, radius, radius, bg);
-        else
-            context.FillRectangle(bounds, bg);
 
         var borderColor = BorderBrush;
         if (IsEnabled)
@@ -149,19 +145,14 @@ public sealed class ComboBox : Control, IPopupOwner
                 borderColor = BorderBrush.Lerp(theme.Accent, 0.6);
         }
 
-        if (BorderThickness > 0)
-        {
-            if (radius > 0)
-                context.DrawRoundedRectangle(bounds, radius, radius, borderColor, BorderThickness);
-            else
-                context.DrawRectangle(bounds, borderColor, BorderThickness);
-        }
+        DrawBackgroundAndBorder(context, bounds, bg, borderColor, radius);
 
         var headerHeight = ResolveHeaderHeight();
         var headerRect = new Rect(bounds.X, bounds.Y, bounds.Width, headerHeight);
+        var innerHeaderRect = headerRect.Deflate(new Thickness(borderInset));
 
         // Text
-        var textRect = new Rect(headerRect.X, headerRect.Y, headerRect.Width - ArrowAreaWidth, headerRect.Height)
+        var textRect = new Rect(innerHeaderRect.X, innerHeaderRect.Y, innerHeaderRect.Width - ArrowAreaWidth, innerHeaderRect.Height)
             .Deflate(Padding);
 
         string text = SelectedItem ?? string.Empty;

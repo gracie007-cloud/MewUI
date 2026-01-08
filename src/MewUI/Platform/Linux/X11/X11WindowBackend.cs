@@ -107,7 +107,12 @@ internal sealed class X11WindowBackend : IWindowBackend
 
         // Choose a GLX visual for OpenGL rendering and create the window with that visual.
         // This keeps it compatible with later Wayland/EGL abstraction (window owns the surface config).
-        int[] attribs =
+        // Try MSAA first to reduce jaggies on filled primitives (RoundRect, Ellipse, etc).
+        // GLX_SAMPLE_BUFFERS / GLX_SAMPLES are from GLX_ARB_multisample.
+        const int GLX_SAMPLE_BUFFERS = 100000;
+        const int GLX_SAMPLES = 100001;
+
+        int[] attribsMsaa =
         {
             4,  // GLX_RGBA
             5,  // GLX_DOUBLEBUFFER
@@ -119,18 +124,44 @@ internal sealed class X11WindowBackend : IWindowBackend
             8,
             11, // GLX_ALPHA_SIZE
             8,
+            GLX_SAMPLE_BUFFERS, 1,
+            GLX_SAMPLES, 4,
             0
         };
 
         nint visualInfoPtr;
         unsafe
         {
-            fixed (int* p = attribs)
+            fixed (int* p = attribsMsaa)
                 visualInfoPtr = LibGL.glXChooseVisual(Display, screen, (nint)p);
         }
 
         if (visualInfoPtr == 0)
-            throw new InvalidOperationException("glXChooseVisual failed.");
+        {
+            int[] attribs =
+            {
+                4,  // GLX_RGBA
+                5,  // GLX_DOUBLEBUFFER
+                8,  // GLX_RED_SIZE
+                8,
+                9,  // GLX_GREEN_SIZE
+                8,
+                10, // GLX_BLUE_SIZE
+                8,
+                11, // GLX_ALPHA_SIZE
+                8,
+                0
+            };
+
+            unsafe
+            {
+                fixed (int* p = attribs)
+                    visualInfoPtr = LibGL.glXChooseVisual(Display, screen, (nint)p);
+            }
+
+            if (visualInfoPtr == 0)
+                throw new InvalidOperationException("glXChooseVisual failed.");
+        }
 
         var visualInfo = Marshal.PtrToStructure<XVisualInfo>(visualInfoPtr);
         NativeX11.XFree(visualInfoPtr);

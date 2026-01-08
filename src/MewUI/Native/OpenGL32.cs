@@ -10,6 +10,9 @@ internal static partial class OpenGL32
     [LibraryImport(LibraryName)]
     public static partial nint wglCreateContext(nint hdc);
 
+    [LibraryImport(LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial nint wglGetProcAddress(string lpszProc);
+
     [LibraryImport(LibraryName)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool wglMakeCurrent(nint hdc, nint hglrc);

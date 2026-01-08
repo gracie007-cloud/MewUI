@@ -4,6 +4,18 @@ namespace Aprillz.MewUI.Core;
 
 internal static class LayoutRounding
 {
+    public static double SnapThicknessToPixels(double thicknessDip, double dpiScale, int minPixels)
+    {
+        if (thicknessDip <= 0)
+            return 0;
+
+        int px = RoundToPixelInt(thicknessDip, dpiScale);
+        if (px < minPixels)
+            px = minPixels;
+
+        return px / dpiScale;
+    }
+
     public static Size RoundSizeToPixels(Size size, double dpiScale)
     {
         if (dpiScale <= 0 || double.IsNaN(dpiScale) || double.IsInfinity(dpiScale))
@@ -15,6 +27,30 @@ internal static class LayoutRounding
         var w = RoundToPixel(size.Width, dpiScale);
         var h = RoundToPixel(size.Height, dpiScale);
         return new Size(Math.Max(0, w), Math.Max(0, h));
+    }
+
+    public static Rect SnapRectEdgesToPixels(Rect rect, double dpiScale)
+    {
+        if (dpiScale <= 0 || double.IsNaN(dpiScale) || double.IsInfinity(dpiScale))
+            return rect;
+
+        if (rect.IsEmpty)
+            return rect;
+
+        int leftPx = RoundToPixelInt(rect.X, dpiScale);
+        int topPx = RoundToPixelInt(rect.Y, dpiScale);
+        int rightPx = RoundToPixelInt(rect.X + rect.Width, dpiScale);
+        int bottomPx = RoundToPixelInt(rect.Y + rect.Height, dpiScale);
+
+        int widthPx = Math.Max(0, rightPx - leftPx);
+        int heightPx = Math.Max(0, bottomPx - topPx);
+
+        double x = leftPx / dpiScale;
+        double y = topPx / dpiScale;
+        double w = widthPx / dpiScale;
+        double h = heightPx / dpiScale;
+
+        return new Rect(x, y, w, h);
     }
 
     public static Rect RoundRectToPixels(Rect rect, double dpiScale)

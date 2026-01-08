@@ -18,7 +18,7 @@ public sealed class GdiGraphicsFactory : IGraphicsFactory, IWindowResourceReleas
 
     public bool IsDoubleBuffered { get; set; } = true;
 
-    public GdiCurveQuality CurveQuality { get; set; } = GdiCurveQuality.Fast;
+    public GdiCurveQuality CurveQuality { get; set; } = GdiCurveQuality.Supersample2x;
 
     public IFont CreateFont(string family, double size, FontWeight weight = FontWeight.Normal,
         bool italic = false, bool underline = false, bool strikethrough = false)

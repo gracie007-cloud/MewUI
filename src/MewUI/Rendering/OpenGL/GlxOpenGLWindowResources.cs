@@ -82,6 +82,7 @@ internal sealed class GlxOpenGLWindowResources : IOpenGLWindowResources
             GL.Enable(GL.GL_BLEND);
             GL.BlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
             GL.Enable(GL.GL_TEXTURE_2D);
+            GL.Enable(GL.GL_MULTISAMPLE);
             GL.Enable(GL.GL_LINE_SMOOTH);
             GL.Hint(GL.GL_LINE_SMOOTH_HINT, GL.GL_NICEST);
 

@@ -41,19 +41,22 @@ public class Button : Control
 
     protected override Size MeasureContent(Size availableSize)
     {
+        var borderInset = GetBorderVisualInset();
+        var border = borderInset > 0 ? new Thickness(borderInset) : Thickness.Zero;
+
         if (string.IsNullOrEmpty(Content))
-            return new Size(Padding.HorizontalThickness + 20, Padding.VerticalThickness + 10);
+            return new Size(Padding.HorizontalThickness + 20, Padding.VerticalThickness + 10).Inflate(border);
 
         using var measure = BeginTextMeasurement();
         var textSize = measure.Context.MeasureText(Content, measure.Font);
 
-        return textSize.Inflate(Padding);
+        return textSize.Inflate(Padding).Inflate(border);
     }
 
     protected override void OnRender(IGraphicsContext context)
     {
         var theme = GetTheme();
-        var bounds = Bounds;
+        var bounds = GetSnappedBorderBounds(Bounds);
         double radius = theme.ControlCornerRadius;
 
         // Determine visual state
@@ -84,24 +87,12 @@ public class Button : Control
         if (IsEnabled && IsFocused)
             borderColor = theme.Accent;
 
-        // Draw background
-        if (radius > 0)
-        {
-            context.FillRoundedRectangle(bounds, radius, radius, bgColor);
-            if (BorderThickness > 0)
-                context.DrawRoundedRectangle(bounds, radius, radius, borderColor, BorderThickness);
-        }
-        else
-        {
-            context.FillRectangle(bounds, bgColor);
-            if (BorderThickness > 0)
-                context.DrawRectangle(bounds, borderColor, BorderThickness);
-        }
+        DrawBackgroundAndBorder(context, bounds, bgColor, borderColor, radius);
 
         // Draw text
         if (!string.IsNullOrEmpty(Content))
         {
-            var contentBounds = bounds.Deflate(Padding);
+            var contentBounds = bounds.Deflate(Padding).Deflate(new Thickness(GetBorderVisualInset()));
             var font = GetFont();
             var textColor = IsEnabled ? Foreground : theme.DisabledText;
 

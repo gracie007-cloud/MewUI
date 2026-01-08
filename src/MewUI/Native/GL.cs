@@ -17,6 +17,7 @@ internal static class GL
     internal const uint GL_SCISSOR_TEST = 0x0C11;
     internal const uint GL_TEXTURE_2D = 0x0DE1;
     internal const uint GL_LINE_SMOOTH = 0x0B20;
+    internal const uint GL_MULTISAMPLE = 0x809D;
 
     internal const uint GL_SRC_ALPHA = 0x0302;
     internal const uint GL_ONE_MINUS_SRC_ALPHA = 0x0303;
@@ -39,6 +40,7 @@ internal static class GL
     internal const uint GL_TEXTURE_WRAP_S = 0x2802;
     internal const uint GL_TEXTURE_WRAP_T = 0x2803;
     internal const uint GL_CLAMP = 0x2900;
+    internal const uint GL_CLAMP_TO_EDGE = 0x812F;
 
     internal const uint GL_LINE_SMOOTH_HINT = 0x0C52;
     internal const uint GL_NICEST = 0x1102;

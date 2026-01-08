@@ -47,7 +47,7 @@ public sealed class ProgressBar : Control
     public ProgressBar()
     {
         BorderThickness = 1;
-        Padding = new Thickness(2);
+        Padding = new Thickness(1);
         Height = 18;
     }
 
@@ -80,23 +80,12 @@ public sealed class ProgressBar : Control
             Value = _valueBinding.Get();
         }
 
-        var bounds = Bounds;
-        var contentBounds = bounds.Deflate(Padding);
+        var bounds = GetSnappedBorderBounds(Bounds);
+        var borderInset = GetBorderVisualInset();
+        var contentBounds = bounds.Deflate(Padding).Deflate(new Thickness(borderInset));
 
         var bg = IsEnabled ? Background : theme.TextBoxDisabledBackground;
-        if (radius > 0)
-            context.FillRoundedRectangle(bounds, radius, radius, bg);
-        else
-            context.FillRectangle(bounds, bg);
-
-        if (BorderThickness > 0)
-        {
-            var borderColor = BorderBrush;
-            if (radius > 0)
-                context.DrawRoundedRectangle(bounds, radius, radius, borderColor, BorderThickness);
-            else
-                context.DrawRectangle(bounds, borderColor, BorderThickness);
-        }
+        DrawBackgroundAndBorder(context, bounds, bg, BorderBrush, radius);
 
         double range = Maximum - Minimum;
         double t = range <= 0 ? 0 : (Value - Minimum) / range;

@@ -90,17 +90,11 @@ public class TextBox : Control
     protected override void OnRender(IGraphicsContext context)
     {
         var theme = GetTheme();
-        var bounds = Bounds;
-        var contentBounds = bounds.Deflate(Padding);
+        var bounds = GetSnappedBorderBounds(Bounds);
+        var borderInset = GetBorderVisualInset();
+        var contentBounds = bounds.Deflate(Padding).Deflate(new Thickness(borderInset));
         double radius = theme.ControlCornerRadius;
 
-        // Draw background
-        if (radius > 0)
-            context.FillRoundedRectangle(bounds, radius, radius, IsEnabled ? Background : theme.TextBoxDisabledBackground);
-        else
-            context.FillRectangle(bounds, IsEnabled ? Background : theme.TextBoxDisabledBackground);
-
-        // Draw border
         var borderColor = BorderBrush;
         if (IsEnabled)
         {
@@ -109,13 +103,13 @@ public class TextBox : Control
             else if (IsMouseOver)
                 borderColor = BorderBrush.Lerp(theme.Accent, 0.6);
         }
-        if (BorderThickness > 0)
-        {
-            if (radius > 0)
-                context.DrawRoundedRectangle(bounds, radius, radius, borderColor, BorderThickness);
-            else
-                context.DrawRectangle(bounds, borderColor, BorderThickness);
-        }
+
+        DrawBackgroundAndBorder(
+            context,
+            bounds,
+            IsEnabled ? Background : theme.TextBoxDisabledBackground,
+            borderColor,
+            radius);
 
         // Set up clipping for content
         context.Save();

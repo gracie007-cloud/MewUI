@@ -32,6 +32,9 @@ internal static partial class Gdi32
     public static partial int ChoosePixelFormat(nint hdc, ref PIXELFORMATDESCRIPTOR ppfd);
 
     [LibraryImport(LibraryName)]
+    public static partial int DescribePixelFormat(nint hdc, int iPixelFormat, uint nBytes, ref PIXELFORMATDESCRIPTOR ppfd);
+
+    [LibraryImport(LibraryName)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool SetPixelFormat(nint hdc, int iPixelFormat, ref PIXELFORMATDESCRIPTOR ppfd);
 

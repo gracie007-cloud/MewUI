@@ -87,6 +87,7 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         GL.Enable(GL.GL_BLEND);
         GL.BlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
         GL.Enable(GL.GL_TEXTURE_2D);
+        GL.Enable(GL.GL_MULTISAMPLE);
         GL.Enable(GL.GL_LINE_SMOOTH);
         GL.Hint(GL.GL_LINE_SMOOTH_HINT, GL.GL_NICEST);
     }
@@ -316,10 +317,21 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         int thicknessPx = Math.Max(1, LayoutRounding.RoundToPixelInt(thickness, DpiScale));
         GL.LineWidth(thicknessPx);
 
-        var pts = GetRoundedRectPointsPx(rect, radiusX, radiusY, thicknessPx, includeClose: true);
         GL.Begin(GL.GL_LINE_STRIP);
-        for (int i = 0; i < pts.Length; i += 2)
-            GL.Vertex2f(pts[i], pts[i + 1]);
+        Span<float> buffer = stackalloc float[2048];
+        int used = BuildRoundedRectPointsPx(rect, radiusX, radiusY, thicknessPx, includeClose: true, buffer);
+        if (used < 0)
+        {
+            var heap = new float[-used];
+            used = BuildRoundedRectPointsPx(rect, radiusX, radiusY, thicknessPx, includeClose: true, heap);
+            for (int i = 0; i < used; i += 2)
+                GL.Vertex2f(heap[i], heap[i + 1]);
+        }
+        else
+        {
+            for (int i = 0; i < used; i += 2)
+                GL.Vertex2f(buffer[i], buffer[i + 1]);
+        }
         GL.End();
 
         GL.Enable(GL.GL_TEXTURE_2D);
@@ -330,16 +342,26 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         GL.Disable(GL.GL_TEXTURE_2D);
         GL.Color4ub(color.R, color.G, color.B, color.A);
 
-        var pts = GetRoundedRectPointsPx(rect, radiusX, radiusY, thicknessPx: 0, includeClose: true);
-
         var r = ToDeviceRect(rect);
         float cx = (r.left + r.right) / 2f;
         float cy = (r.top + r.bottom) / 2f;
 
         GL.Begin(GL.GL_TRIANGLE_FAN);
         GL.Vertex2f(cx, cy);
-        for (int i = 0; i < pts.Length; i += 2)
-            GL.Vertex2f(pts[i], pts[i + 1]);
+        Span<float> buffer = stackalloc float[2048];
+        int used = BuildRoundedRectPointsPx(rect, radiusX, radiusY, thicknessPx: 0, includeClose: true, buffer);
+        if (used < 0)
+        {
+            var heap = new float[-used];
+            used = BuildRoundedRectPointsPx(rect, radiusX, radiusY, thicknessPx: 0, includeClose: true, heap);
+            for (int i = 0; i < used; i += 2)
+                GL.Vertex2f(heap[i], heap[i + 1]);
+        }
+        else
+        {
+            for (int i = 0; i < used; i += 2)
+                GL.Vertex2f(buffer[i], buffer[i + 1]);
+        }
         GL.End();
 
         GL.Enable(GL.GL_TEXTURE_2D);
@@ -353,10 +375,21 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         int thicknessPx = Math.Max(1, LayoutRounding.RoundToPixelInt(thickness, DpiScale));
         GL.LineWidth(thicknessPx);
 
-        var pts = GetEllipsePointsPx(bounds, thicknessPx, includeClose: true);
         GL.Begin(GL.GL_LINE_STRIP);
-        for (int i = 0; i < pts.Length; i += 2)
-            GL.Vertex2f(pts[i], pts[i + 1]);
+        Span<float> buffer = stackalloc float[1024];
+        int used = BuildEllipsePointsPx(bounds, thicknessPx, includeClose: true, buffer);
+        if (used < 0)
+        {
+            var heap = new float[-used];
+            used = BuildEllipsePointsPx(bounds, thicknessPx, includeClose: true, heap);
+            for (int i = 0; i < used; i += 2)
+                GL.Vertex2f(heap[i], heap[i + 1]);
+        }
+        else
+        {
+            for (int i = 0; i < used; i += 2)
+                GL.Vertex2f(buffer[i], buffer[i + 1]);
+        }
         GL.End();
 
         GL.Enable(GL.GL_TEXTURE_2D);
@@ -371,11 +404,22 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         float cx = (r.left + r.right) / 2f;
         float cy = (r.top + r.bottom) / 2f;
 
-        var pts = GetEllipsePointsPx(bounds, thicknessPx: 0, includeClose: true);
         GL.Begin(GL.GL_TRIANGLE_FAN);
         GL.Vertex2f(cx, cy);
-        for (int i = 0; i < pts.Length; i += 2)
-            GL.Vertex2f(pts[i], pts[i + 1]);
+        Span<float> buffer = stackalloc float[1024];
+        int used = BuildEllipsePointsPx(bounds, thicknessPx: 0, includeClose: true, buffer);
+        if (used < 0)
+        {
+            var heap = new float[-used];
+            used = BuildEllipsePointsPx(bounds, thicknessPx: 0, includeClose: true, heap);
+            for (int i = 0; i < used; i += 2)
+                GL.Vertex2f(heap[i], heap[i + 1]);
+        }
+        else
+        {
+            for (int i = 0; i < used; i += 2)
+                GL.Vertex2f(buffer[i], buffer[i + 1]);
+        }
         GL.End();
 
         GL.Enable(GL.GL_TEXTURE_2D);
@@ -523,11 +567,33 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         float w = texture.WidthPx;
         float h = texture.HeightPx;
 
+        // Avoid sampling the border texel (right/bottom clipping artifacts) by using half-texel inset UVs.
+        float u0, v0, u1, v1;
+        if (texture.WidthPx <= 1)
+        {
+            u0 = 0f; u1 = 1f;
+        }
+        else
+        {
+            u0 = 0.5f / texture.WidthPx;
+            u1 = (texture.WidthPx - 0.5f) / texture.WidthPx;
+        }
+
+        if (texture.HeightPx <= 1)
+        {
+            v0 = 0f; v1 = 1f;
+        }
+        else
+        {
+            v0 = 0.5f / texture.HeightPx;
+            v1 = (texture.HeightPx - 0.5f) / texture.HeightPx;
+        }
+
         GL.Begin(GL.GL_QUADS);
-        GL.TexCoord2f(0, 0); GL.Vertex2f(x, y);
-        GL.TexCoord2f(1, 0); GL.Vertex2f(x + w, y);
-        GL.TexCoord2f(1, 1); GL.Vertex2f(x + w, y + h);
-        GL.TexCoord2f(0, 1); GL.Vertex2f(x, y + h);
+        GL.TexCoord2f(u0, v0); GL.Vertex2f(x, y);
+        GL.TexCoord2f(u1, v0); GL.Vertex2f(x + w, y);
+        GL.TexCoord2f(u1, v1); GL.Vertex2f(x + w, y + h);
+        GL.TexCoord2f(u0, v1); GL.Vertex2f(x, y + h);
         GL.End();
     }
 
@@ -554,17 +620,19 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
 
     private RECT ToDeviceRect(Rect rect)
     {
+        // Round edges (left/right, top/bottom) instead of rounding width/height.
+        // This avoids off-by-1 clipping at right/bottom for non-integer DIP sizes.
         int left = LayoutRounding.RoundToPixelInt(rect.X + _translateX, DpiScale);
         int top = LayoutRounding.RoundToPixelInt(rect.Y + _translateY, DpiScale);
-        int width = LayoutRounding.RoundToPixelInt(rect.Width, DpiScale);
-        int height = LayoutRounding.RoundToPixelInt(rect.Height, DpiScale);
+        int right = LayoutRounding.RoundToPixelInt(rect.Right + _translateX, DpiScale);
+        int bottom = LayoutRounding.RoundToPixelInt(rect.Bottom + _translateY, DpiScale);
 
-        int right = left + Math.Max(0, width);
-        int bottom = top + Math.Max(0, height);
+        if (right < left) right = left;
+        if (bottom < top) bottom = top;
         return new RECT(left, top, right, bottom);
     }
 
-    private float[] GetEllipsePointsPx(Rect boundsDip, int thicknessPx, bool includeClose)
+    private int BuildEllipsePointsPx(Rect boundsDip, int thicknessPx, bool includeClose, Span<float> pts)
     {
         var r = ToDeviceRect(boundsDip);
         float cx = (r.left + r.right) / 2f;
@@ -572,9 +640,11 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         float rx = Math.Max(0.5f, (r.right - r.left) / 2f);
         float ry = Math.Max(0.5f, (r.bottom - r.top) / 2f);
 
-        int segments = Math.Clamp((int)Math.Ceiling(Math.Max(rx, ry) * 0.7f), 32, 160);
+        int segments = Math.Clamp((int)Math.Ceiling(Math.Max(rx, ry) * 1.0f), 48, 240);
         int count = includeClose ? segments + 1 : segments;
-        var pts = new float[count * 2];
+        int needed = count * 2;
+        if (pts.Length < needed)
+            return -needed;
 
         float offset = (thicknessPx & 1) == 1 ? 0.5f : 0f;
         for (int i = 0; i < count; i++)
@@ -582,13 +652,14 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
             float t = (float)(i % segments) / segments * (float)(Math.PI * 2);
             float x = cx + (float)Math.Cos(t) * rx + offset;
             float y = cy + (float)Math.Sin(t) * ry + offset;
-            pts[i * 2] = x;
-            pts[i * 2 + 1] = y;
+            int o = i * 2;
+            pts[o] = x;
+            pts[o + 1] = y;
         }
-        return pts;
+        return needed;
     }
 
-    private float[] GetRoundedRectPointsPx(Rect rectDip, double radiusX, double radiusY, int thicknessPx, bool includeClose)
+    private int BuildRoundedRectPointsPx(Rect rectDip, double radiusX, double radiusY, int thicknessPx, bool includeClose, Span<float> pts)
     {
         var r = ToDeviceRect(rectDip);
         float left = r.left;
@@ -604,7 +675,7 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         rx = Math.Min(rx, w / 2f);
         ry = Math.Min(ry, h / 2f);
 
-        int arcSegments = Math.Clamp((int)Math.Ceiling(Math.Max(rx, ry) * 0.7f), 12, 64);
+        int arcSegments = Math.Clamp((int)Math.Ceiling(Math.Max(rx, ry) * 1.0f), 16, 96);
 
         float offset = (thicknessPx & 1) == 1 ? 0.5f : 0f;
         left += offset;
@@ -612,35 +683,49 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         right -= offset;
         bottom -= offset;
 
-        // Build perimeter clockwise, starting at top-left (after arc).
-        var pts = new List<float>((arcSegments * 4 + 1) * 2);
+        // Build perimeter clockwise. Avoid List allocations (hot path: called per control per frame).
+        int segmentPoints = arcSegments + 1;
+        int pointCount = 4 * segmentPoints + (includeClose ? 1 : 0);
+        int needed = pointCount * 2;
+        if (pts.Length < needed)
+            return -needed;
 
-        // Helper for quarter arc
-        void AddArc(float cx, float cy, float ax, float ay, float startRad, float endRad)
-        {
-            for (int i = 0; i <= arcSegments; i++)
-            {
-                float t = i / (float)arcSegments;
-                float a = startRad + (endRad - startRad) * t;
-                pts.Add(cx + (float)Math.Cos(a) * ax);
-                pts.Add(cy + (float)Math.Sin(a) * ay);
-            }
-        }
+        int write = 0;
 
         // Angles assume y grows downward (screen space).
         // TL: 180..270, TR: 270..360, BR: 0..90, BL: 90..180
-        AddArc(left + rx, top + ry, rx, ry, (float)Math.PI, (float)(Math.PI * 1.5));
-        AddArc(right - rx, top + ry, rx, ry, (float)(Math.PI * 1.5), (float)(Math.PI * 2));
-        AddArc(right - rx, bottom - ry, rx, ry, 0, (float)(Math.PI * 0.5));
-        AddArc(left + rx, bottom - ry, rx, ry, (float)(Math.PI * 0.5), (float)Math.PI);
+        AppendArcPoints(pts, ref write, arcSegments, left + rx, top + ry, rx, ry, (float)Math.PI, (float)(Math.PI * 1.5));
+        AppendArcPoints(pts, ref write, arcSegments, right - rx, top + ry, rx, ry, (float)(Math.PI * 1.5), (float)(Math.PI * 2));
+        AppendArcPoints(pts, ref write, arcSegments, right - rx, bottom - ry, rx, ry, 0, (float)(Math.PI * 0.5));
+        AppendArcPoints(pts, ref write, arcSegments, left + rx, bottom - ry, rx, ry, (float)(Math.PI * 0.5), (float)Math.PI);
 
-        if (includeClose && pts.Count >= 2)
+        if (includeClose && write >= 2)
         {
-            pts.Add(pts[0]);
-            pts.Add(pts[1]);
+            pts[write++] = pts[0];
+            pts[write++] = pts[1];
         }
 
-        return pts.ToArray();
+        return write;
+    }
+
+    private static void AppendArcPoints(
+        Span<float> pts,
+        ref int write,
+        int arcSegments,
+        float cx,
+        float cy,
+        float ax,
+        float ay,
+        float startRad,
+        float endRad)
+    {
+        for (int i = 0; i <= arcSegments; i++)
+        {
+            float t = i / (float)arcSegments;
+            float a = startRad + (endRad - startRad) * t;
+            pts[write++] = cx + (float)Math.Cos(a) * ax;
+            pts[write++] = cy + (float)Math.Sin(a) * ay;
+        }
     }
 
     #endregion

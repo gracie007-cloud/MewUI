@@ -47,11 +47,11 @@ internal sealed class OpenGLTextCache : IDisposable
     {
         GL.GenTextures(1, out uint tex);
         GL.BindTexture(GL.GL_TEXTURE_2D, tex);
-        // Keep text crisp; callers can change later if needed.
+        // Keep text crisp. We render at device-pixel size, so nearest avoids blur.
         GL.TexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, (int)GL.GL_NEAREST);
         GL.TexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, (int)GL.GL_NEAREST);
-        GL.TexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, (int)GL.GL_CLAMP);
-        GL.TexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, (int)GL.GL_CLAMP);
+        GL.TexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, (int)GL.GL_CLAMP_TO_EDGE);
+        GL.TexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, (int)GL.GL_CLAMP_TO_EDGE);
 
         var data = bmp.Data;
         uint format = supportsBgra ? GL.GL_BGRA_EXT : GL.GL_RGBA;

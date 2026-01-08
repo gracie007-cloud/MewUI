@@ -418,9 +418,11 @@ static void Log(string message)
 static void Startup(string[] args, out bool isBench, out bool isSmoke)
 {
     isBench = args.Any(a => a.Equals("--bench", StringComparison.OrdinalIgnoreCase));
+    isSmoke = args.Any(a => a.Equals("--smoke", StringComparison.OrdinalIgnoreCase));
+
     var useGdi = args.Any(a => a.Equals("--gdi", StringComparison.OrdinalIgnoreCase));
     var useOpenGl = args.Any(a => a.Equals("--gl", StringComparison.OrdinalIgnoreCase));
-    isSmoke = args.Any(a => a.Equals("--smoke", StringComparison.OrdinalIgnoreCase));
+
     Application.DefaultGraphicsBackend =
         useGdi ? GraphicsBackend.Gdi :
         useOpenGl ? GraphicsBackend.OpenGL :

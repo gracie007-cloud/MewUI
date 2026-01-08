@@ -269,29 +269,80 @@ public abstract class Control : FrameworkElement, IDisposable
         if (BorderThickness <= 0)
             return 0;
 
-        // For centered strokes (Direct2D default), half of the stroke is inside the bounds.
-        // Round to device pixels so 1px borders don't collapse into a "no padding" look.
         var dpiScale = GetDpi() / 96.0;
-        return LayoutRounding.RoundToPixel(BorderThickness / 2.0, dpiScale);
+        // Treat borders as an "inside" inset and snap thickness to whole device pixels.
+        return LayoutRounding.SnapThicknessToPixels(BorderThickness, dpiScale, minPixels: 1);
+    }
+
+    protected Rect GetSnappedBorderBounds(Rect bounds)
+    {
+        var dpiScale = GetDpi() / 96.0;
+        return LayoutRounding.SnapRectEdgesToPixels(bounds, dpiScale);
+    }
+
+    protected void DrawBackgroundAndBorder(
+        IGraphicsContext context,
+        Rect bounds,
+        Color background,
+        Color borderBrush,
+        double cornerRadiusDip)
+    {
+        var dpiScale = GetDpi() / 96.0;
+        var borderThickness = BorderThickness <= 0 ? 0 : LayoutRounding.SnapThicknessToPixels(BorderThickness, dpiScale, minPixels: 1);
+        var radius = cornerRadiusDip <= 0 ? 0 : LayoutRounding.RoundToPixel(cornerRadiusDip, dpiScale);
+
+        bounds = GetSnappedBorderBounds(bounds);
+
+        if (borderThickness > 0 && borderBrush.A > 0 && background.A > 0)
+        {
+            // Fill "stroke" using outer + inner shapes (avoids half-pixel pen alignment issues).
+            if (radius > 0)
+                context.FillRoundedRectangle(bounds, radius, radius, borderBrush);
+            else
+                context.FillRectangle(bounds, borderBrush);
+
+            var inner = bounds.Deflate(new Thickness(borderThickness));
+            var innerRadius = Math.Max(0, radius - borderThickness);
+
+            if (inner.Width > 0 && inner.Height > 0)
+            {
+                if (innerRadius > 0)
+                    context.FillRoundedRectangle(inner, innerRadius, innerRadius, background);
+                else
+                    context.FillRectangle(inner, background);
+            }
+
+            return;
+        }
+
+        if (background.A > 0)
+        {
+            if (radius > 0)
+                context.FillRoundedRectangle(bounds, radius, radius, background);
+            else
+                context.FillRectangle(bounds, background);
+        }
+
+        if (borderThickness > 0 && borderBrush.A > 0)
+        {
+            // Fallback: draw as stroke when background is transparent.
+            if (radius > 0)
+                context.DrawRoundedRectangle(bounds, radius, radius, borderBrush, borderThickness);
+            else
+                context.DrawRectangle(bounds, borderBrush, borderThickness);
+        }
     }
 
     protected override void OnRender(IGraphicsContext context)
     {
         base.OnRender(context);
 
-        var bounds = Bounds;
-
-        // Draw background
-        if (Background.A > 0)
-        {
-            context.FillRectangle(bounds, Background);
-        }
-
-        // Draw border
-        if (BorderThickness > 0 && BorderBrush.A > 0)
-        {
-            context.DrawRectangle(bounds, BorderBrush, BorderThickness);
-        }
+        DrawBackgroundAndBorder(
+            context,
+            Bounds,
+            Background,
+            BorderBrush,
+            cornerRadiusDip: 0);
     }
 
     protected virtual void OnDispose() { }

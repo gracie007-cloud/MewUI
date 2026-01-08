@@ -76,16 +76,12 @@ public class ListBox : Control
     protected override void OnRender(IGraphicsContext context)
     {
         var theme = GetTheme();
-        var bounds = Bounds;
+        var bounds = GetSnappedBorderBounds(Bounds);
         double radius = theme.ControlCornerRadius;
-        double itemRadius = Math.Max(0, radius - 1);
+        var borderInset = GetBorderVisualInset();
+        double itemRadius = Math.Max(0, radius - borderInset);
 
         var bg = IsEnabled ? Background : theme.TextBoxDisabledBackground;
-        if (radius > 0)
-            context.FillRoundedRectangle(bounds, radius, radius, bg);
-        else
-            context.FillRectangle(bounds, bg);
-
         var borderColor = BorderBrush;
         if (IsEnabled)
         {
@@ -94,19 +90,11 @@ public class ListBox : Control
             else if (IsMouseOver)
                 borderColor = BorderBrush.Lerp(theme.Accent, 0.6);
         }
-        if (BorderThickness > 0)
-        {
-            var stroke = Math.Max(1, BorderThickness);
-            if (radius > 0)
-                context.DrawRoundedRectangle(bounds, radius, radius, borderColor, stroke);
-            else
-                context.DrawRectangle(bounds, borderColor, stroke);
-        }
+        DrawBackgroundAndBorder(context, bounds, bg, borderColor, radius);
 
         if (_items.Count == 0)
             return;
 
-        var borderInset = GetBorderVisualInset();
         var contentBounds = bounds.Deflate(Padding).Deflate(new Thickness(borderInset));
         context.Save();
         context.SetClip(contentBounds);
@@ -146,7 +134,9 @@ public class ListBox : Control
 
         Focus();
 
-        var contentBounds = Bounds.Deflate(Padding).Deflate(new Thickness(GetBorderVisualInset()));
+        var contentBounds = GetSnappedBorderBounds(Bounds)
+            .Deflate(Padding)
+            .Deflate(new Thickness(GetBorderVisualInset()));
         int index = (int)((e.Position.Y - contentBounds.Y) / ResolveItemHeight());
         if (index >= 0 && index < _items.Count)
         {
