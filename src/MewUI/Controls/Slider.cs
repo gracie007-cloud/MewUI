@@ -6,11 +6,10 @@ using Aprillz.MewUI.Rendering;
 
 namespace Aprillz.MewUI.Controls;
 
-public sealed class Slider : Control, IDisposable
+public sealed class Slider : Control
 {
     private bool _isDragging;
     private ValueBinding<double>? _valueBinding;
-    private bool _disposed;
 
     public double Minimum
     {
@@ -46,17 +45,17 @@ public sealed class Slider : Control, IDisposable
 
     public double SmallChange { get; set; } = 1;
 
+    protected override Color DefaultBorderBrush => Theme.Current.ControlBorder;
+
     public Slider()
     {
-        var theme = Theme.Current;
         Background = Color.Transparent;
-        BorderBrush = theme.ControlBorder;
         BorderThickness = 1;
         Height = 24;
         Padding = new Thickness(6, 2, 6, 2);
     }
 
-    public Slider BindValue(
+    public void SetValueBinding(
         Func<double> get,
         Action<double> set,
         Action<Action>? subscribe = null,
@@ -76,17 +75,6 @@ public sealed class Slider : Control, IDisposable
             });
 
         Value = get();
-        return this;
-    }
-
-    public Slider BindValue(ObservableValue<double> source)
-        => BindValue(() => source.Value, v => source.Value = v, h => source.Changed += h, h => source.Changed -= h);
-
-    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
-    {
-        if (BorderBrush == oldTheme.ControlBorder)
-            BorderBrush = newTheme.ControlBorder;
-        base.OnThemeChanged(oldTheme, newTheme);
     }
 
     protected override Size MeasureContent(Size availableSize) => new Size(160, Height);
@@ -145,7 +133,7 @@ public sealed class Slider : Control, IDisposable
         context.DrawEllipse(thumbRect, thumbBorder, 1);
     }
 
-    internal override void OnMouseDown(MouseEventArgs e)
+    protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
 
@@ -163,7 +151,7 @@ public sealed class Slider : Control, IDisposable
         e.Handled = true;
     }
 
-    internal override void OnMouseMove(MouseEventArgs e)
+    protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
 
@@ -174,7 +162,7 @@ public sealed class Slider : Control, IDisposable
         e.Handled = true;
     }
 
-    internal override void OnMouseUp(MouseEventArgs e)
+    protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
 
@@ -190,7 +178,7 @@ public sealed class Slider : Control, IDisposable
         e.Handled = true;
     }
 
-    internal override void OnKeyDown(KeyEventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
 
@@ -248,13 +236,9 @@ public sealed class Slider : Control, IDisposable
         return Math.Clamp(value, min, max);
     }
 
-    public void Dispose()
+    protected override void OnDispose()
     {
-        if (_disposed)
-            return;
-
         _valueBinding?.Dispose();
         _valueBinding = null;
-        _disposed = true;
     }
 }

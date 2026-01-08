@@ -5,10 +5,9 @@ using Aprillz.MewUI.Rendering;
 
 namespace Aprillz.MewUI.Controls;
 
-public sealed class ProgressBar : Control, IDisposable
+public sealed class ProgressBar : Control
 {
     private ValueBinding<double>? _valueBinding;
-    private bool _disposed;
 
     public double Minimum
     {
@@ -42,17 +41,17 @@ public sealed class ProgressBar : Control, IDisposable
 
     public Action<double>? ValueChanged { get; set; }
 
+    protected override Color DefaultBackground => Theme.Current.ControlBackground;
+    protected override Color DefaultBorderBrush => Theme.Current.ControlBorder;
+
     public ProgressBar()
     {
-        var theme = Theme.Current;
-        Background = theme.ControlBackground;
-        BorderBrush = theme.ControlBorder;
         BorderThickness = 1;
         Padding = new Thickness(2);
         Height = 18;
     }
 
-    public ProgressBar BindValue(
+    public void SetValueBinding(
         Func<double> get,
         Action<Action>? subscribe = null,
         Action<Action>? unsubscribe = null)
@@ -63,25 +62,9 @@ public sealed class ProgressBar : Control, IDisposable
             set: null,
             subscribe,
             unsubscribe,
-            onSourceChanged: () =>
-            {
-                Value = get();
-            });
+            onSourceChanged: () => Value = get());
 
         Value = get();
-        return this;
-    }
-
-    public ProgressBar BindValue(ObservableValue<double> source)
-        => BindValue(() => source.Value, h => source.Changed += h, h => source.Changed -= h);
-
-    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
-    {
-        if (Background == oldTheme.ControlBackground)
-            Background = newTheme.ControlBackground;
-        if (BorderBrush == oldTheme.ControlBorder)
-            BorderBrush = newTheme.ControlBorder;
-        base.OnThemeChanged(oldTheme, newTheme);
     }
 
     protected override Size MeasureContent(Size availableSize) => new Size(120, Height);
@@ -142,13 +125,9 @@ public sealed class ProgressBar : Control, IDisposable
         return Math.Clamp(value, min, max);
     }
 
-    public void Dispose()
+    protected override void OnDispose()
     {
-        if (_disposed)
-            return;
-
         _valueBinding?.Dispose();
         _valueBinding = null;
-        _disposed = true;
     }
 }

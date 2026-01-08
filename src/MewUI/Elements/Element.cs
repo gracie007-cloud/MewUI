@@ -1,4 +1,3 @@
-using Aprillz.MewUI.Controls;
 using Aprillz.MewUI.Core;
 using Aprillz.MewUI.Primitives;
 using Aprillz.MewUI.Rendering;
@@ -150,18 +149,18 @@ public abstract class Element
     private Size ApplyLayoutRounding(Size size)
     {
         var root = FindVisualRoot();
-        if (root is not Window window || !window.UseLayoutRounding)
+        if (root is not ILayoutRoundingHost host || !host.UseLayoutRounding)
             return size;
 
-        return LayoutRounding.RoundSizeToPixels(size, window.DpiScale);
+        return LayoutRounding.RoundSizeToPixels(size, host.DpiScale);
     }
 
     private Rect ApplyLayoutRounding(Rect rect)
     {
         var root = FindVisualRoot();
-        if (root is not Window window || !window.UseLayoutRounding)
+        if (root is not ILayoutRoundingHost host || !host.UseLayoutRounding)
             return rect;
 
-        return LayoutRounding.RoundRectToPixels(rect, window.DpiScale);
+        return LayoutRounding.RoundRectToPixels(rect, host.DpiScale);
     }
 }

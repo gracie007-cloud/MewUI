@@ -9,28 +9,18 @@ namespace Aprillz.MewUI.Controls;
 /// <summary>
 /// A button control that responds to clicks.
 /// </summary>
-public class Button : Control, IDisposable
+public class Button : Control
 {
     private bool _isPressed;
     private ValueBinding<string>? _contentBinding;
-    private bool _disposed;
+
+    protected override Color DefaultBackground => Theme.Current.ButtonFace;
+    protected override Color DefaultBorderBrush => Theme.Current.ControlBorder;
 
     public Button()
     {
-        var theme = Theme.Current;
-        Background = theme.ButtonFace;
-        BorderBrush = theme.ControlBorder;
         BorderThickness = 1;
         Padding = new Thickness(12, 6, 12, 6);
-    }
-
-    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
-    {
-        if (Background == oldTheme.ButtonFace)
-            Background = newTheme.ButtonFace;
-        if (BorderBrush == oldTheme.ControlBorder)
-            BorderBrush = newTheme.ControlBorder;
-        base.OnThemeChanged(oldTheme, newTheme);
     }
 
     /// <summary>
@@ -120,7 +110,7 @@ public class Button : Control, IDisposable
         }
     }
 
-    internal override void OnMouseDown(MouseEventArgs e)
+    protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
 
@@ -139,7 +129,7 @@ public class Button : Control, IDisposable
         }
     }
 
-    internal override void OnMouseUp(MouseEventArgs e)
+    protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
 
@@ -173,7 +163,7 @@ public class Button : Control, IDisposable
         }
     }
 
-    internal override void OnKeyDown(KeyEventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
 
@@ -186,7 +176,7 @@ public class Button : Control, IDisposable
         }
     }
 
-    internal override void OnKeyUp(KeyEventArgs e)
+    protected override void OnKeyUp(KeyEventArgs e)
     {
         base.OnKeyUp(e);
 
@@ -201,29 +191,24 @@ public class Button : Control, IDisposable
 
     protected virtual void OnClick() => Click?.Invoke();
 
-    public Button BindContent(ObservableValue<string> source)
+    public void SetContentBinding(Func<string> get, Action<Action>? subscribe = null, Action<Action>? unsubscribe = null)
     {
-        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (get == null) throw new ArgumentNullException(nameof(get));
 
         _contentBinding?.Dispose();
         _contentBinding = new ValueBinding<string>(
-            get: () => source.Value,
+            get,
             set: null,
-            subscribe: h => source.Changed += h,
-            unsubscribe: h => source.Changed -= h,
-            onSourceChanged: () => Content = source.Value ?? string.Empty);
+            subscribe,
+            unsubscribe,
+            onSourceChanged: () => Content = get() ?? string.Empty);
 
-        Content = source.Value ?? string.Empty;
-        return this;
+        Content = get() ?? string.Empty;
     }
 
-    public void Dispose()
+    protected override void OnDispose()
     {
-        if (_disposed)
-            return;
-
         _contentBinding?.Dispose();
         _contentBinding = null;
-        _disposed = true;
     }
 }

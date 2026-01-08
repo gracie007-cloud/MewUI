@@ -295,7 +295,7 @@ internal sealed class X11WindowBackend : IWindowBackend
                     return;
                 }
 
-                Window.FocusManager.FocusedElement?.OnKeyDown(args);
+                Window.FocusManager.FocusedElement?.RaiseKeyDown(args);
             }
 
             // Text input after key handling (best-effort).
@@ -316,7 +316,7 @@ internal sealed class X11WindowBackend : IWindowBackend
                         var ti = new TextInputEventArgs(s);
                         Window.RaisePreviewTextInput(ti);
                         if (!ti.Handled)
-                            Window.FocusManager.FocusedElement?.OnTextInput(ti);
+                            Window.FocusManager.FocusedElement?.RaiseTextInput(ti);
                     }
                 }
             }
@@ -325,7 +325,7 @@ internal sealed class X11WindowBackend : IWindowBackend
         {
             Window.RaisePreviewKeyUp(args);
             if (!args.Handled)
-                Window.FocusManager.FocusedElement?.OnKeyUp(args);
+                Window.FocusManager.FocusedElement?.RaiseKeyUp(args);
         }
     }
 
@@ -353,7 +353,7 @@ internal sealed class X11WindowBackend : IWindowBackend
             if (!isDown)
                 return;
             int delta = e.button == 4 ? 120 : -120;
-            element.OnMouseWheel(new MouseWheelEventArgs(pos, pos, delta, isHorizontal: false));
+            element.RaiseMouseWheel(new MouseWheelEventArgs(pos, pos, delta, isHorizontal: false));
             return;
         }
 
@@ -377,9 +377,9 @@ internal sealed class X11WindowBackend : IWindowBackend
         var args = new MouseEventArgs(pos, pos, btn, leftButton: left, rightButton: right, middleButton: middle);
 
         if (isDown)
-            element.OnMouseDown(args);
+            element.RaiseMouseDown(args);
         else
-            element.OnMouseUp(args);
+            element.RaiseMouseUp(args);
     }
 
     private void HandleMotion(XMotionEvent e)
@@ -402,7 +402,7 @@ internal sealed class X11WindowBackend : IWindowBackend
         bool right = (e.state & (1u << 10)) != 0;
 
         var args = new MouseEventArgs(pos, pos, MouseButton.Left, leftButton: left, rightButton: right, middleButton: middle);
-        element.OnMouseMove(args);
+        element.RaiseMouseMove(args);
     }
 
     private static Key MapKeysymToKey(long keysym)

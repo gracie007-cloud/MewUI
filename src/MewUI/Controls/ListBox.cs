@@ -6,12 +6,11 @@ using Aprillz.MewUI.Rendering;
 
 namespace Aprillz.MewUI.Controls;
 
-public class ListBox : Control, IDisposable
+public class ListBox : Control
 {
     private readonly List<string> _items = new();
     private ValueBinding<int>? _selectedIndexBinding;
     private bool _updatingFromSource;
-    private bool _disposed;
 
     public IList<string> Items => _items;
 
@@ -47,23 +46,13 @@ public class ListBox : Control, IDisposable
 
     public override bool Focusable => true;
 
+    protected override Color DefaultBackground => Theme.Current.ControlBackground;
+    protected override Color DefaultBorderBrush => Theme.Current.ControlBorder;
+
     public ListBox()
     {
-        var theme = Theme.Current;
-        Background = theme.ControlBackground;
-        BorderBrush = theme.ControlBorder;
         BorderThickness = 1;
         Padding = new Thickness(1);
-    }
-
-    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
-    {
-        if (Background == oldTheme.ControlBackground)
-            Background = newTheme.ControlBackground;
-        if (BorderBrush == oldTheme.ControlBorder)
-            BorderBrush = newTheme.ControlBorder;
-
-        base.OnThemeChanged(oldTheme, newTheme);
     }
 
     protected override Size MeasureContent(Size availableSize)
@@ -148,7 +137,7 @@ public class ListBox : Control, IDisposable
         context.Restore();
     }
 
-    internal override void OnMouseDown(MouseEventArgs e)
+    protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
 
@@ -166,7 +155,7 @@ public class ListBox : Control, IDisposable
         }
     }
 
-    internal override void OnKeyDown(KeyEventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
 
@@ -209,20 +198,25 @@ public class ListBox : Control, IDisposable
         return Math.Max(18, FontSize + 6);
     }
 
-    public ListBox BindSelectedIndex(ObservableValue<int> source)
+    public void SetSelectedIndexBinding(
+        Func<int> get,
+        Action<int> set,
+        Action<Action>? subscribe = null,
+        Action<Action>? unsubscribe = null)
     {
-        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (get == null) throw new ArgumentNullException(nameof(get));
+        if (set == null) throw new ArgumentNullException(nameof(set));
 
         _selectedIndexBinding?.Dispose();
         _selectedIndexBinding = new ValueBinding<int>(
-            get: () => source.Value,
-            set: v => source.Value = v,
-            subscribe: h => source.Changed += h,
-            unsubscribe: h => source.Changed -= h,
+            get,
+            set,
+            subscribe,
+            unsubscribe,
             onSourceChanged: () =>
             {
                 _updatingFromSource = true;
-                try { SelectedIndex = source.Value; }
+                try { SelectedIndex = get(); }
                 finally { _updatingFromSource = false; }
             });
 
@@ -238,19 +232,13 @@ public class ListBox : Control, IDisposable
         };
 
         _updatingFromSource = true;
-        try { SelectedIndex = source.Value; }
+        try { SelectedIndex = get(); }
         finally { _updatingFromSource = false; }
-
-        return this;
     }
 
-    public void Dispose()
+    protected override void OnDispose()
     {
-        if (_disposed)
-            return;
-
         _selectedIndexBinding?.Dispose();
         _selectedIndexBinding = null;
-        _disposed = true;
     }
 }

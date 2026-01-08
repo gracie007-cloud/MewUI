@@ -7,10 +7,9 @@ namespace Aprillz.MewUI.Controls;
 /// <summary>
 /// A control that displays text.
 /// </summary>
-public class Label : Control, IDisposable
+public class Label : Control
 {
     private ValueBinding<string>? _textBinding;
-    private bool _disposed;
 
     /// <summary>
     /// Gets or sets the text content.
@@ -113,7 +112,7 @@ public class Label : Control, IDisposable
             TextAlignment, VerticalTextAlignment, wrapping);
     }
 
-    public Label BindText(Func<string> get, Action<Action>? subscribe = null, Action<Action>? unsubscribe = null)
+    public void SetTextBinding(Func<string> get, Action<Action>? subscribe = null, Action<Action>? unsubscribe = null)
     {
         _textBinding?.Dispose();
         _textBinding = new ValueBinding<string>(
@@ -124,21 +123,6 @@ public class Label : Control, IDisposable
             onSourceChanged: () => SetTextFromBinding(get()));
 
         SetTextFromBinding(get());
-        return this;
-    }
-
-    public Label BindText(ObservableValue<string> source)
-        => BindText(() => source.Value, h => source.Changed += h, h => source.Changed -= h);
-
-    public Label BindText<TSource>(ObservableValue<TSource> source, Func<TSource, string> convert)
-    {
-        if (source == null) throw new ArgumentNullException(nameof(source));
-        if (convert == null) throw new ArgumentNullException(nameof(convert));
-
-        return BindText(
-            get: () => convert(source.Value) ?? string.Empty,
-            subscribe: h => source.Changed += h,
-            unsubscribe: h => source.Changed -= h);
     }
 
     private void SetTextFromBinding(string value)
@@ -149,13 +133,9 @@ public class Label : Control, IDisposable
         Text = value;
     }
 
-    public void Dispose()
+    protected override void OnDispose()
     {
-        if (_disposed)
-            return;
-
         _textBinding?.Dispose();
         _textBinding = null;
-        _disposed = true;
     }
 }

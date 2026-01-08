@@ -7,14 +7,13 @@ using Aprillz.MewUI.Rendering;
 
 namespace Aprillz.MewUI.Controls;
 
-public sealed class ComboBox : Control, IDisposable, IPopupOwner
+public sealed class ComboBox : Control, IPopupOwner
 {
     private readonly List<string> _items = new();
     private bool _isDropDownOpen;
     private ListBox? _popupList;
     private ValueBinding<int>? _selectedIndexBinding;
     private bool _updatingFromSource;
-    private bool _disposed;
 
     public IList<string> Items => _items;
 
@@ -80,11 +79,11 @@ public sealed class ComboBox : Control, IDisposable, IPopupOwner
 
     public override bool Focusable => true;
 
+    protected override Color DefaultBackground => Theme.Current.ControlBackground;
+    protected override Color DefaultBorderBrush => Theme.Current.ControlBorder;
+
     public ComboBox()
     {
-        var theme = Theme.Current;
-        Background = theme.ControlBackground;
-        BorderBrush = theme.ControlBorder;
         BorderThickness = 1;
         Padding = new Thickness(8, 4, 8, 4);
         // Do not set explicit Height, otherwise FrameworkElement.MeasureOverride will clamp DesiredSize
@@ -95,10 +94,6 @@ public sealed class ComboBox : Control, IDisposable, IPopupOwner
 
     protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
     {
-        if (Background == oldTheme.ControlBackground)
-            Background = newTheme.ControlBackground;
-        if (BorderBrush == oldTheme.ControlBorder)
-            BorderBrush = newTheme.ControlBorder;
         base.OnThemeChanged(oldTheme, newTheme);
 
         // The popup ListBox can exist while the dropdown is closed, so it won't be in the Window visual tree
@@ -200,13 +195,13 @@ public sealed class ComboBox : Control, IDisposable, IPopupOwner
             return;
         }
 
-        if (_popupList != null && ReferenceEquals(window.FocusManager.FocusedElement, _popupList))
+        if (_popupList != null && window.FocusManager.FocusedElement == _popupList)
             return;
 
         IsDropDownOpen = false;
     }
 
-    internal override void OnMouseDown(MouseEventArgs e)
+    protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
 
@@ -227,7 +222,7 @@ public sealed class ComboBox : Control, IDisposable, IPopupOwner
         }
     }
 
-    internal override void OnKeyDown(KeyEventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
 
@@ -292,20 +287,25 @@ public sealed class ComboBox : Control, IDisposable, IPopupOwner
         InvalidateVisual();
     }
 
-    public ComboBox BindSelectedIndex(ObservableValue<int> source)
+    public void SetSelectedIndexBinding(
+        Func<int> get,
+        Action<int> set,
+        Action<Action>? subscribe = null,
+        Action<Action>? unsubscribe = null)
     {
-        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (get == null) throw new ArgumentNullException(nameof(get));
+        if (set == null) throw new ArgumentNullException(nameof(set));
 
         _selectedIndexBinding?.Dispose();
         _selectedIndexBinding = new ValueBinding<int>(
-            get: () => source.Value,
-            set: v => source.Value = v,
-            subscribe: h => source.Changed += h,
-            unsubscribe: h => source.Changed -= h,
+            get,
+            set,
+            subscribe,
+            unsubscribe,
             onSourceChanged: () =>
             {
                 _updatingFromSource = true;
-                try { SelectedIndex = source.Value; }
+                try { SelectedIndex = get(); }
                 finally { _updatingFromSource = false; }
             });
 
@@ -321,10 +321,8 @@ public sealed class ComboBox : Control, IDisposable, IPopupOwner
         };
 
         _updatingFromSource = true;
-        try { SelectedIndex = source.Value; }
+        try { SelectedIndex = get(); }
         finally { _updatingFromSource = false; }
-
-        return this;
     }
 
     private double ResolveItemHeight()
@@ -452,11 +450,8 @@ public sealed class ComboBox : Control, IDisposable, IPopupOwner
         return new Rect(x, y, width, height);
     }
 
-    public void Dispose()
+    protected override void OnDispose()
     {
-        if (_disposed)
-            return;
-
         if (_popupList != null)
         {
             ClosePopup();
@@ -466,12 +461,11 @@ public sealed class ComboBox : Control, IDisposable, IPopupOwner
 
         _selectedIndexBinding?.Dispose();
         _selectedIndexBinding = null;
-        _disposed = true;
     }
 
     void IPopupOwner.OnPopupClosed(UIElement popup)
     {
-        if (_popupList != null && ReferenceEquals(popup, _popupList))
+        if (_popupList != null && popup == _popupList)
         {
             _isDropDownOpen = false;
             InvalidateVisual();

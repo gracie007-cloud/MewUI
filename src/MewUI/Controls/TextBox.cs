@@ -9,31 +9,21 @@ namespace Aprillz.MewUI.Controls;
 /// <summary>
 /// A single-line text input control.
 /// </summary>
-public class TextBox : Control, IDisposable
+public class TextBox : Control
 {
     private int _selectionStart;
     private int _selectionLength;
     private double _scrollOffset;
     private ValueBinding<string>? _textBinding;
     private bool _suppressBindingSet;
-    private bool _disposed;
+
+    protected override Color DefaultBackground => Theme.Current.ControlBackground;
+    protected override Color DefaultBorderBrush => Theme.Current.ControlBorder;
 
     public TextBox()
     {
-        var theme = Theme.Current;
-        Background = theme.ControlBackground;
-        BorderBrush = theme.ControlBorder;
         BorderThickness = 1; 
-        Padding = new Thickness(4, 2, 4, 2);
-    }
-
-    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
-    {
-        if (Background == oldTheme.ControlBackground)
-            Background = newTheme.ControlBackground;
-        if (BorderBrush == oldTheme.ControlBorder)
-            BorderBrush = newTheme.ControlBorder;
-        base.OnThemeChanged(oldTheme, newTheme);
+        Padding = new Thickness(4);
     }
 
     /// <summary>
@@ -158,7 +148,7 @@ public class TextBox : Control, IDisposable
 
                 var selRect = new Rect(textX + beforeWidth, contentBounds.Y,
                     selWidth, contentBounds.Height);
-                context.FillRectangle(selRect, theme.Accent);
+                context.FillRectangle(selRect, theme.SelectionBackground);
             }
 
             // Draw text
@@ -188,7 +178,7 @@ public class TextBox : Control, IDisposable
         context.Restore();
     }
 
-    internal override void OnMouseDown(MouseEventArgs e)
+    protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
 
@@ -215,7 +205,7 @@ public class TextBox : Control, IDisposable
         }
     }
 
-    internal override void OnMouseMove(MouseEventArgs e)
+    protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
 
@@ -246,7 +236,7 @@ public class TextBox : Control, IDisposable
         }
     }
 
-    internal override void OnMouseUp(MouseEventArgs e)
+    protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
 
@@ -258,7 +248,7 @@ public class TextBox : Control, IDisposable
         }
     }
 
-    internal override void OnKeyDown(KeyEventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
         if (e.Handled || IsReadOnly && !IsNavigationKey(e.Key)) return;
@@ -322,7 +312,7 @@ public class TextBox : Control, IDisposable
         InvalidateVisual();
     }
 
-    internal override void OnTextInput(TextInputEventArgs e)
+    protected override void OnTextInput(TextInputEventArgs e)
     {
         base.OnTextInput(e);
         if (IsReadOnly) return;
@@ -615,7 +605,7 @@ public class TextBox : Control, IDisposable
         }
     }
 
-    public TextBox BindText(
+    public void SetTextBinding(
         Func<string> get,
         Action<string> set,
         Action<Action>? subscribe = null,
@@ -655,20 +645,11 @@ public class TextBox : Control, IDisposable
         _suppressBindingSet = true;
         try { Text = get() ?? string.Empty; }
         finally { _suppressBindingSet = false; }
-
-        return this;
     }
 
-    public TextBox BindText(ObservableValue<string> source)
-        => BindText(() => source.Value, v => source.Value = v, h => source.Changed += h, h => source.Changed -= h);
-
-    public void Dispose()
+    protected override void OnDispose()
     {
-        if (_disposed)
-            return;
-
         _textBinding?.Dispose();
         _textBinding = null;
-        _disposed = true;
     }
 }

@@ -1,5 +1,7 @@
 using Aprillz.MewUI.Controls;
 using Aprillz.MewUI.Binding;
+using Aprillz.MewUI.Core;
+using Aprillz.MewUI.Elements;
 using Aprillz.MewUI.Input;
 using Aprillz.MewUI.Primitives;
 using Aprillz.MewUI.Rendering;
@@ -63,6 +65,106 @@ public static class ControlExtensions
 
     #endregion
 
+    // Binding intentionally stays explicit (BindText/BindContent/...) instead of a generic Bind API.
+
+    #region UIElement Events (Generic)
+
+    #region UIElement Binding (Explicit)
+
+    public static T BindIsVisible<T>(this T element, ObservableValue<bool> source) where T : UIElement
+    {
+        if (element == null) throw new ArgumentNullException(nameof(element));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        element.SetIsVisibleBinding(
+            get: () => source.Value,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
+        return element;
+    }
+
+    public static T BindIsEnabled<T>(this T element, ObservableValue<bool> source) where T : UIElement
+    {
+        if (element == null) throw new ArgumentNullException(nameof(element));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        element.SetIsEnabledBinding(
+            get: () => source.Value,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
+        return element;
+    }
+
+    #endregion
+
+    public static T OnGotFocus<T>(this T element, Action handler) where T : UIElement
+    {
+        element.GotFocus = handler;
+        return element;
+    }
+
+    public static T OnLostFocus<T>(this T element, Action handler) where T : UIElement
+    {
+        element.LostFocus = handler;
+        return element;
+    }
+
+    public static T OnMouseEnter<T>(this T element, Action handler) where T : UIElement
+    {
+        element.MouseEnter = handler;
+        return element;
+    }
+
+    public static T OnMouseLeave<T>(this T element, Action handler) where T : UIElement
+    {
+        element.MouseLeave = handler;
+        return element;
+    }
+
+    public static T OnMouseDown<T>(this T element, Action<MouseEventArgs> handler) where T : UIElement
+    {
+        element.MouseDown = handler;
+        return element;
+    }
+
+    public static T OnMouseUp<T>(this T element, Action<MouseEventArgs> handler) where T : UIElement
+    {
+        element.MouseUp = handler;
+        return element;
+    }
+
+    public static T OnMouseMove<T>(this T element, Action<MouseEventArgs> handler) where T : UIElement
+    {
+        element.MouseMove = handler;
+        return element;
+    }
+
+    public static T OnMouseWheel<T>(this T element, Action<MouseWheelEventArgs> handler) where T : UIElement
+    {
+        element.MouseWheel = handler;
+        return element;
+    }
+
+    public static T OnKeyDown<T>(this T element, Action<KeyEventArgs> handler) where T : UIElement
+    {
+        element.KeyDown = handler;
+        return element;
+    }
+
+    public static T OnKeyUp<T>(this T element, Action<KeyEventArgs> handler) where T : UIElement
+    {
+        element.KeyUp = handler;
+        return element;
+    }
+
+    public static T OnTextInput<T>(this T element, Action<TextInputEventArgs> handler) where T : UIElement
+    {
+        element.TextInput = handler;
+        return element;
+    }
+
+    #endregion
+
     #region Label
 
     public static Label Text(this Label label, string text)
@@ -91,13 +193,26 @@ public static class ControlExtensions
 
     public static Label BindText(this Label label, ObservableValue<string> source)
     {
-        label.BindText(source);
+        if (label == null) throw new ArgumentNullException(nameof(label));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        label.SetTextBinding(
+            get: () => source.Value,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
         return label;
     }
 
     public static Label BindText<TSource>(this Label label, ObservableValue<TSource> source, Func<TSource, string> convert)
     {
-        label.BindText(source, convert);
+        if (label == null) throw new ArgumentNullException(nameof(label));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (convert == null) throw new ArgumentNullException(nameof(convert));
+
+        label.SetTextBinding(
+            get: () => convert(source.Value) ?? string.Empty,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
         return label;
     }
 
@@ -119,7 +234,13 @@ public static class ControlExtensions
 
     public static Button BindContent(this Button button, ObservableValue<string> source)
     {
-        button.BindContent(source);
+        if (button == null) throw new ArgumentNullException(nameof(button));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        button.SetContentBinding(
+            get: () => source.Value,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
         return button;
     }
 
@@ -153,7 +274,14 @@ public static class ControlExtensions
 
     public static TextBox BindText(this TextBox textBox, ObservableValue<string> source)
     {
-        textBox.BindText(source);
+        if (textBox == null) throw new ArgumentNullException(nameof(textBox));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        textBox.SetTextBinding(
+            get: () => source.Value,
+            set: v => source.Value = v,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
         return textBox;
     }
 
@@ -181,7 +309,14 @@ public static class ControlExtensions
 
     public static CheckBox BindIsChecked(this CheckBox checkBox, ObservableValue<bool> source)
     {
-        checkBox.BindIsChecked(source);
+        if (checkBox == null) throw new ArgumentNullException(nameof(checkBox));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        checkBox.SetIsCheckedBinding(
+            get: () => source.Value,
+            set: v => source.Value = v,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
         return checkBox;
     }
 
@@ -215,7 +350,14 @@ public static class ControlExtensions
 
     public static RadioButton BindIsChecked(this RadioButton radioButton, ObservableValue<bool> source)
     {
-        radioButton.BindIsChecked(source);
+        if (radioButton == null) throw new ArgumentNullException(nameof(radioButton));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        radioButton.SetIsCheckedBinding(
+            get: () => source.Value,
+            set: v => source.Value = v,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
         return radioButton;
     }
 
@@ -245,7 +387,14 @@ public static class ControlExtensions
 
     public static ListBox BindSelectedIndex(this ListBox listBox, ObservableValue<int> source)
     {
-        listBox.BindSelectedIndex(source);
+        if (listBox == null) throw new ArgumentNullException(nameof(listBox));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        listBox.SetSelectedIndexBinding(
+            get: () => source.Value,
+            set: v => source.Value = v,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
         return listBox;
     }
 
@@ -281,7 +430,14 @@ public static class ControlExtensions
 
     public static ComboBox BindSelectedIndex(this ComboBox comboBox, ObservableValue<int> source)
     {
-        comboBox.BindSelectedIndex(source);
+        if (comboBox == null) throw new ArgumentNullException(nameof(comboBox));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        comboBox.SetSelectedIndexBinding(
+            get: () => source.Value,
+            set: v => source.Value = v,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
         return comboBox;
     }
 
@@ -309,7 +465,13 @@ public static class ControlExtensions
 
     public static ProgressBar BindValue(this ProgressBar progressBar, ObservableValue<double> source)
     {
-        progressBar.BindValue(source);
+        if (progressBar == null) throw new ArgumentNullException(nameof(progressBar));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        progressBar.SetValueBinding(
+            get: () => source.Value,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
         return progressBar;
     }
 
@@ -349,7 +511,14 @@ public static class ControlExtensions
 
     public static Slider BindValue(this Slider slider, ObservableValue<double> source)
     {
-        slider.BindValue(source);
+        if (slider == null) throw new ArgumentNullException(nameof(slider));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        slider.SetValueBinding(
+            get: () => source.Value,
+            set: v => source.Value = v,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
         return slider;
     }
 
@@ -372,6 +541,42 @@ public static class ControlExtensions
     public static Window OnClosed(this Window window, Action handler)
     {
         window.Closed = handler;
+        return window;
+    }
+
+    public static Window OnActivated(this Window window, Action handler)
+    {
+        window.Activated = handler;
+        return window;
+    }
+
+    public static Window OnDeactivated(this Window window, Action handler)
+    {
+        window.Deactivated = handler;
+        return window;
+    }
+
+    public static Window OnSizeChanged(this Window window, Action<Size> handler)
+    {
+        window.SizeChanged = handler;
+        return window;
+    }
+
+    public static Window OnDpiChanged(this Window window, Action<uint, uint> handler)
+    {
+        window.DpiChanged = handler;
+        return window;
+    }
+
+    public static Window OnThemeChanged(this Window window, Action<Theme, Theme> handler)
+    {
+        window.ThemeChanged = handler;
+        return window;
+    }
+
+    public static Window OnFirstFrameRendered(this Window window, Action handler)
+    {
+        window.FirstFrameRendered = handler;
         return window;
     }
 

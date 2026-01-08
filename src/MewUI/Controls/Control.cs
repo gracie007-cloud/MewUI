@@ -8,9 +8,23 @@ namespace Aprillz.MewUI.Controls;
 /// <summary>
 /// Base class for all controls.
 /// </summary>
-public abstract class Control : FrameworkElement
+public abstract class Control : FrameworkElement, IDisposable
 {
     private IFont? _font;
+    private bool _disposed;
+    private Color? _background;
+    private Color? _foreground;
+    private Color? _borderBrush;
+    private string? _fontFamily;
+    private double? _fontSize;
+    private FontWeight? _fontWeight;
+
+    protected virtual Color DefaultBackground => Color.Transparent;
+    protected virtual Color DefaultForeground => Theme.Current.WindowText;
+    protected virtual Color DefaultBorderBrush => Color.Transparent;
+    protected virtual string DefaultFontFamily => Theme.Current.FontFamily;
+    protected virtual double DefaultFontSize => Theme.Current.FontSize;
+    protected virtual FontWeight DefaultFontWeight => Theme.Current.FontWeight;
 
     protected readonly struct TextMeasurementScope : IDisposable
     {
@@ -41,39 +55,63 @@ public abstract class Control : FrameworkElement
     /// </summary>
     public Color Background
     {
-        get;
+        get => _background ?? DefaultBackground;
         set
         {
-            field = value;
+            _background = value;
             InvalidateVisual();
         }
-    } = Color.Transparent;
+    }
+
+    public void ClearBackground()
+    {
+        if (_background == null)
+            return;
+        _background = null;
+        InvalidateVisual();
+    }
 
     /// <summary>
     /// Gets or sets the foreground (text) color.
     /// </summary>
     public Color Foreground
     {
-        get;
+        get => _foreground ?? DefaultForeground;
         set
         {
-            field = value;
+            _foreground = value;
             InvalidateVisual();
         }
-    } = Theme.Current.WindowText;
+    }
+
+    public void ClearForeground()
+    {
+        if (_foreground == null)
+            return;
+        _foreground = null;
+        InvalidateVisual();
+    }
 
     /// <summary>
     /// Gets or sets the border color.
     /// </summary>
     public Color BorderBrush
     {
-        get;
+        get => _borderBrush ?? DefaultBorderBrush;
         set
         {
-            field = value;
+            _borderBrush = value;
             InvalidateVisual();
         }
-    } = Color.Transparent;
+    }
+
+    public void ClearBorderBrush()
+    {
+        if (_borderBrush == null)
+            return;
+        _borderBrush = null;
+        InvalidateVisual();
+    }
 
     /// <summary>
     /// Gets or sets the border thickness.
@@ -93,45 +131,75 @@ public abstract class Control : FrameworkElement
     /// </summary>
     public string FontFamily
     {
-        get;
+        get => _fontFamily ?? DefaultFontFamily;
         set
         {
-            field = value;
+            _fontFamily = value ?? string.Empty;
             _font?.Dispose();
             _font = null;
             InvalidateMeasure();
         }
-    } = Theme.Current.FontFamily;
+    }
+
+    public void ClearFontFamily()
+    {
+        if (_fontFamily == null)
+            return;
+        _fontFamily = null;
+        _font?.Dispose();
+        _font = null;
+        InvalidateMeasure();
+    }
 
     /// <summary>
     /// Gets or sets the font size.
     /// </summary>
     public double FontSize
     {
-        get;
+        get => _fontSize ?? DefaultFontSize;
         set
         {
-            field = value;
+            _fontSize = value;
             _font?.Dispose();
             _font = null;
             InvalidateMeasure();
         }
-    } = Theme.Current.FontSize;
+    }
+
+    public void ClearFontSize()
+    {
+        if (_fontSize == null)
+            return;
+        _fontSize = null;
+        _font?.Dispose();
+        _font = null;
+        InvalidateMeasure();
+    }
 
     /// <summary>
     /// Gets or sets the font weight.
     /// </summary>
     public FontWeight FontWeight
     {
-        get;
+        get => _fontWeight ?? DefaultFontWeight;
         set
         {
-            field = value;
+            _fontWeight = value;
             _font?.Dispose();
             _font = null;
             InvalidateMeasure();
         }
-    } = Theme.Current.FontWeight;
+    }
+
+    public void ClearFontWeight()
+    {
+        if (_fontWeight == null)
+            return;
+        _fontWeight = null;
+        _font?.Dispose();
+        _font = null;
+        InvalidateMeasure();
+    }
 
     /// <summary>
     /// Gets or creates the font for this control.
@@ -160,29 +228,14 @@ public abstract class Control : FrameworkElement
 
     protected virtual void OnThemeChanged(Theme oldTheme, Theme newTheme)
     {
-        if (Foreground == oldTheme.WindowText)
-            Foreground = newTheme.WindowText;
-
-        if (BorderBrush == oldTheme.ControlBorder)
-            BorderBrush = newTheme.ControlBorder;
-
-        if (FontFamily == oldTheme.FontFamily)
-            FontFamily = newTheme.FontFamily;
-
-        if (FontSize.Equals(oldTheme.FontSize))
-            FontSize = newTheme.FontSize;
-
-        if (FontWeight == oldTheme.FontWeight)
-            FontWeight = newTheme.FontWeight;
-
+        _font?.Dispose();
+        _font = null;
+        InvalidateMeasure();
         InvalidateVisual();
     }
 
     protected Theme GetTheme()
     {
-        var root = FindVisualRoot();
-        if (root is Window window)
-            return window.Theme;
         return Theme.Current;
     }
 
@@ -239,5 +292,23 @@ public abstract class Control : FrameworkElement
         {
             context.DrawRectangle(bounds, BorderBrush, BorderThickness);
         }
+    }
+
+    protected virtual void OnDispose() { }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        // Release extension-managed bindings (and any other UIElement-registered disposables).
+        DisposeBindings();
+
+        // Release cached font resources.
+        _font?.Dispose();
+        _font = null;
+
+        OnDispose();
     }
 }

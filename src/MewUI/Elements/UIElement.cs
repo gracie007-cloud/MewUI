@@ -1,3 +1,4 @@
+using Aprillz.MewUI.Binding;
 using Aprillz.MewUI.Input;
 using Aprillz.MewUI.Primitives;
 using Aprillz.MewUI.Rendering;
@@ -9,6 +10,9 @@ namespace Aprillz.MewUI.Elements;
 /// </summary>
 public abstract class UIElement : Element
 {
+    private List<IDisposable>? _bindings;
+    private ValueBinding<bool>? _isVisibleBinding;
+    private ValueBinding<bool>? _isEnabledBinding;
     /// <summary>
     /// Gets or sets whether the element is visible.
     /// </summary>
@@ -184,6 +188,34 @@ public abstract class UIElement : Element
 
     internal void SetMouseCaptured(bool captured) => IsMouseCaptured = captured;
 
+    internal void RegisterBinding(IDisposable binding)
+    {
+        if (binding == null)
+            return;
+        _bindings ??= new List<IDisposable>(capacity: 2);
+        _bindings.Add(binding);
+    }
+
+    internal void DisposeBindings()
+    {
+        _isVisibleBinding?.Dispose();
+        _isVisibleBinding = null;
+        _isEnabledBinding?.Dispose();
+        _isEnabledBinding = null;
+
+        if (_bindings == null)
+            return;
+
+        for (int i = 0; i < _bindings.Count; i++)
+        {
+            try { _bindings[i].Dispose(); }
+            catch { /* best-effort */ }
+        }
+
+        _bindings.Clear();
+        _bindings = null;
+    }
+
     #region Input Handlers
 
     protected virtual void OnGotFocus() { }
@@ -191,22 +223,71 @@ public abstract class UIElement : Element
     protected virtual void OnMouseEnter() { }
     protected virtual void OnMouseLeave() { }
 
-    internal virtual void OnMouseDown(MouseEventArgs e) => MouseDown?.Invoke(e);
+    internal void RaiseMouseDown(MouseEventArgs e) => OnMouseDown(e);
 
-    internal virtual void OnMouseUp(MouseEventArgs e) => MouseUp?.Invoke(e);
+    internal void RaiseMouseUp(MouseEventArgs e) => OnMouseUp(e);
 
-    internal virtual void OnMouseMove(MouseEventArgs e) => MouseMove?.Invoke(e);
+    internal void RaiseMouseMove(MouseEventArgs e) => OnMouseMove(e);
 
-    internal virtual void OnMouseWheel(MouseWheelEventArgs e) => MouseWheel?.Invoke(e);
+    internal void RaiseMouseWheel(MouseWheelEventArgs e) => OnMouseWheel(e);
 
-    internal virtual void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(e);
+    internal void RaiseKeyDown(KeyEventArgs e) => OnKeyDown(e);
 
-    internal virtual void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(e);
+    internal void RaiseKeyUp(KeyEventArgs e) => OnKeyUp(e);
 
-    internal virtual void OnTextInput(TextInputEventArgs e) => TextInput?.Invoke(e);
+    internal void RaiseTextInput(TextInputEventArgs e) => OnTextInput(e);
+
+    // Protected virtual hooks for derived controls (public API surface stays small).
+    protected virtual void OnMouseDown(MouseEventArgs e) => MouseDown?.Invoke(e);
+
+    protected virtual void OnMouseUp(MouseEventArgs e) => MouseUp?.Invoke(e);
+
+    protected virtual void OnMouseMove(MouseEventArgs e) => MouseMove?.Invoke(e);
+
+    protected virtual void OnMouseWheel(MouseWheelEventArgs e) => MouseWheel?.Invoke(e);
+
+    protected virtual void OnKeyDown(KeyEventArgs e) => KeyDown?.Invoke(e);
+
+    protected virtual void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(e);
+
+    protected virtual void OnTextInput(TextInputEventArgs e) => TextInput?.Invoke(e);
 
     #endregion
 
     protected virtual void OnVisibilityChanged() { }
     protected virtual void OnEnabledChanged() { }
+
+    #region Binding Helpers
+
+    internal void SetIsVisibleBinding(Func<bool> get, Action<Action>? subscribe = null, Action<Action>? unsubscribe = null)
+    {
+        if (get == null) throw new ArgumentNullException(nameof(get));
+
+        _isVisibleBinding?.Dispose();
+        _isVisibleBinding = new ValueBinding<bool>(
+            get,
+            set: null,
+            subscribe,
+            unsubscribe,
+            onSourceChanged: () => IsVisible = get());
+
+        IsVisible = get();
+    }
+
+    internal void SetIsEnabledBinding(Func<bool> get, Action<Action>? subscribe = null, Action<Action>? unsubscribe = null)
+    {
+        if (get == null) throw new ArgumentNullException(nameof(get));
+
+        _isEnabledBinding?.Dispose();
+        _isEnabledBinding = new ValueBinding<bool>(
+            get,
+            set: null,
+            subscribe,
+            unsubscribe,
+            onSourceChanged: () => IsEnabled = get());
+
+        IsEnabled = get();
+    }
+
+    #endregion
 }

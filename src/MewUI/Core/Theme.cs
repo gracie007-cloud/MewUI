@@ -14,7 +14,7 @@ public sealed class Theme
         set
         {
             if (value == null) throw new ArgumentNullException(nameof(value));
-            if (ReferenceEquals(_current, value)) return;
+            if (_current == value) return;
             var old = _current;
             _current = value;
             CurrentChanged?.Invoke(old, value);

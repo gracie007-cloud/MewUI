@@ -11,6 +11,7 @@ namespace Aprillz.MewUI.Controls;
 /// Represents a top-level window.
 /// </summary>
 public class Window : ContentControl
+    , ILayoutRoundingHost
 {
     private Theme _theme = Theme.Current;
     private IWindowBackend? _backend;
@@ -111,7 +112,7 @@ public class Window : ContentControl
         set
         {
             if (value == null) throw new ArgumentNullException(nameof(value));
-            if (ReferenceEquals(_theme, value)) return;
+            if (_theme == value) return;
             var old = _theme;
             _theme = value;
 
@@ -345,7 +346,7 @@ public class Window : ContentControl
         // Replace if already present.
         for (int i = 0; i < _popups.Count; i++)
         {
-            if (ReferenceEquals(_popups[i].Element, popup))
+            if (_popups[i].Element == popup)
             {
                 UpdatePopup(popup, bounds);
                 return;
@@ -363,7 +364,7 @@ public class Window : ContentControl
     {
         for (int i = 0; i < _popups.Count; i++)
         {
-            if (!ReferenceEquals(_popups[i].Element, popup))
+            if (_popups[i].Element != popup)
                 continue;
 
             _popups[i].Bounds = bounds;
@@ -377,7 +378,7 @@ public class Window : ContentControl
     {
         for (int i = 0; i < _popups.Count; i++)
         {
-            if (!ReferenceEquals(_popups[i].Element, popup))
+            if (_popups[i].Element != popup)
                 continue;
 
             var entry = _popups[i];

@@ -6,13 +6,12 @@ using Aprillz.MewUI.Rendering;
 
 namespace Aprillz.MewUI.Controls;
 
-public class RadioButton : Control, IDisposable
+public class RadioButton : Control
 {
     private bool _isPressed;
     private bool _isChecked;
     private ValueBinding<bool>? _checkedBinding;
     private bool _updatingFromSource;
-    private bool _disposed;
 
     public string Text
     {
@@ -42,20 +41,13 @@ public class RadioButton : Control, IDisposable
 
     public override bool Focusable => true;
 
+    protected override Color DefaultBorderBrush => Theme.Current.ControlBorder;
+
     public RadioButton()
     {
-        var theme = Theme.Current;
         Background = Color.Transparent;
-        BorderBrush = theme.ControlBorder;
         BorderThickness = 1;
         Padding = new Thickness(2);
-    }
-
-    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
-    {
-        if (BorderBrush == oldTheme.ControlBorder)
-            BorderBrush = newTheme.ControlBorder;
-        base.OnThemeChanged(oldTheme, newTheme);
     }
 
     private void SetChecked(bool value, bool notifyGroup)
@@ -79,7 +71,7 @@ public class RadioButton : Control, IDisposable
 
         Elements.VisualTree.Visit(window.Content, element =>
         {
-            if (ReferenceEquals(element, this))
+            if (element == this)
                 return;
 
             if (element is not RadioButton rb)
@@ -95,7 +87,7 @@ public class RadioButton : Control, IDisposable
             }
             else
             {
-                if (ReferenceEquals(rb.Parent, parent) && string.IsNullOrWhiteSpace(rb.GroupName))
+                if (rb.Parent == parent && string.IsNullOrWhiteSpace(rb.GroupName))
                     rb.SetChecked(false, notifyGroup: false);
             }
         });
@@ -160,7 +152,7 @@ public class RadioButton : Control, IDisposable
         }
     }
 
-    internal override void OnMouseDown(MouseEventArgs e)
+    protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
 
@@ -178,7 +170,7 @@ public class RadioButton : Control, IDisposable
         e.Handled = true;
     }
 
-    internal override void OnMouseUp(MouseEventArgs e)
+    protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
 
@@ -198,7 +190,7 @@ public class RadioButton : Control, IDisposable
         e.Handled = true;
     }
 
-    internal override void OnKeyUp(KeyEventArgs e)
+    protected override void OnKeyUp(KeyEventArgs e)
     {
         base.OnKeyUp(e);
 
@@ -212,20 +204,25 @@ public class RadioButton : Control, IDisposable
         }
     }
 
-    public RadioButton BindIsChecked(ObservableValue<bool> source)
+    public void SetIsCheckedBinding(
+        Func<bool> get,
+        Action<bool> set,
+        Action<Action>? subscribe = null,
+        Action<Action>? unsubscribe = null)
     {
-        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (get == null) throw new ArgumentNullException(nameof(get));
+        if (set == null) throw new ArgumentNullException(nameof(set));
 
         _checkedBinding?.Dispose();
         _checkedBinding = new ValueBinding<bool>(
-            get: () => source.Value,
-            set: v => source.Value = v,
-            subscribe: h => source.Changed += h,
-            unsubscribe: h => source.Changed -= h,
+            get,
+            set,
+            subscribe,
+            unsubscribe,
             onSourceChanged: () =>
             {
                 _updatingFromSource = true;
-                try { IsChecked = source.Value; }
+                try { IsChecked = get(); }
                 finally { _updatingFromSource = false; }
             });
 
@@ -241,19 +238,13 @@ public class RadioButton : Control, IDisposable
         };
 
         _updatingFromSource = true;
-        try { IsChecked = source.Value; }
+        try { IsChecked = get(); }
         finally { _updatingFromSource = false; }
-
-        return this;
     }
 
-    public void Dispose()
+    protected override void OnDispose()
     {
-        if (_disposed)
-            return;
-
         _checkedBinding?.Dispose();
         _checkedBinding = null;
-        _disposed = true;
     }
 }

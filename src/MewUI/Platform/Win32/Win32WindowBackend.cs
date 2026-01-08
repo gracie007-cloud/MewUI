@@ -318,7 +318,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
         bool rightDown = (User32.GetKeyState(VirtualKeys.VK_RBUTTON) & 0x8000) != 0;
         bool middleDown = (User32.GetKeyState(VirtualKeys.VK_MBUTTON) & 0x8000) != 0;
         var args = new MouseEventArgs(pos, screenPos, MouseButton.Left, leftDown, rightDown, middleDown);
-        element?.OnMouseMove(args);
+        element?.RaiseMouseMove(args);
 
         return 0;
     }
@@ -342,11 +342,11 @@ internal sealed class Win32WindowBackend : IWindowBackend
             if (element?.Focusable == true)
                 Window.FocusManager.SetFocus(element);
 
-            element?.OnMouseDown(args);
+            element?.RaiseMouseDown(args);
         }
         else
         {
-            element?.OnMouseUp(args);
+            element?.RaiseMouseUp(args);
         }
 
         return 0;
@@ -364,7 +364,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
         var element = Window.HitTest(pos);
         var args = new MouseWheelEventArgs(pos, new Point(screenX, screenY), delta, isHorizontal);
-        element?.OnMouseWheel(args);
+        element?.RaiseMouseWheel(args);
 
         return 0;
     }
@@ -413,7 +413,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
             return 0;
         }
 
-        Window.FocusManager.FocusedElement?.OnKeyDown(args);
+        Window.FocusManager.FocusedElement?.RaiseKeyDown(args);
 
         return args.Handled ? 0 : User32.DefWindowProc(Handle, WindowMessages.WM_KEYDOWN, wParam, lParam);
     }
@@ -426,7 +426,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
         var args = new KeyEventArgs(MapKey(platformKey), platformKey, modifiers);
         Window.RaisePreviewKeyUp(args);
         if (!args.Handled)
-        Window.FocusManager.FocusedElement?.OnKeyUp(args);
+        Window.FocusManager.FocusedElement?.RaiseKeyUp(args);
 
         return args.Handled ? 0 : User32.DefWindowProc(Handle, WindowMessages.WM_KEYUP, wParam, lParam);
     }
@@ -443,7 +443,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
         var args = new TextInputEventArgs(c.ToString());
         Window.RaisePreviewTextInput(args);
         if (!args.Handled)
-            Window.FocusManager.FocusedElement?.OnTextInput(args);
+            Window.FocusManager.FocusedElement?.RaiseTextInput(args);
 
         return 0;
     }
