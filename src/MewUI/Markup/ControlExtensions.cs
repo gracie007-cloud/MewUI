@@ -232,6 +232,14 @@ public static class ControlExtensions
         return button;
     }
 
+    public static Button CanClick(this Button button, Func<bool> canClick)
+    {
+        if (button == null) throw new ArgumentNullException(nameof(button));
+        if (canClick == null) throw new ArgumentNullException(nameof(canClick));
+        button.CanClick = canClick;
+        return button;
+    }
+
     public static Button BindContent(this Button button, ObservableValue<string> source)
     {
         if (button == null) throw new ArgumentNullException(nameof(button));

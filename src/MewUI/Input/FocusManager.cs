@@ -27,7 +27,7 @@ public sealed class FocusManager
         if (FocusedElement == element)
             return true;
 
-        if (element != null && (!element.Focusable || !element.IsEnabled || !element.IsVisible))
+        if (element != null && (!element.Focusable || !element.IsEffectivelyEnabled || !element.IsVisible))
             return false;
 
         var oldElement = FocusedElement;
@@ -35,6 +35,8 @@ public sealed class FocusManager
 
         oldElement?.SetFocused(false);
         element?.SetFocused(true);
+
+        _window.RequerySuggested();
 
         return true;
     }
@@ -83,7 +85,7 @@ public sealed class FocusManager
     {
         if (element is UIElement uiElement)
         {
-            if (uiElement.Focusable && uiElement.IsEnabled && uiElement.IsVisible)
+            if (uiElement.Focusable && uiElement.IsEffectivelyEnabled && uiElement.IsVisible)
             {
                 result.Add(uiElement);
             }

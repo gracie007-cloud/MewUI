@@ -13,6 +13,7 @@ public class Button : Control
 {
     private bool _isPressed;
     private ValueBinding<string>? _contentBinding;
+    private Func<bool>? _canClick;
 
     protected override Color DefaultBackground => Theme.Current.ButtonFace;
     protected override Color DefaultBorderBrush => Theme.Current.ControlBorder;
@@ -37,7 +38,19 @@ public class Button : Control
     /// </summary>
     public Action? Click { get; set; }
 
+    public Func<bool>? CanClick
+    {
+        get => _canClick;
+        set
+        {
+            _canClick = value;
+            ReevaluateSuggestedIsEnabled();
+        }
+    }
+
     public override bool Focusable => true;
+
+    protected override bool ComputeIsEnabledSuggestion() => CanClick?.Invoke() ?? true;
 
     protected override Size MeasureContent(Size availableSize)
     {
@@ -105,7 +118,7 @@ public class Button : Control
     {
         base.OnMouseDown(e);
 
-        if (e.Button == MouseButton.Left && IsEnabled)
+        if (e.Button == MouseButton.Left && IsEffectivelyEnabled)
         {
             _isPressed = true;
             Focus();
@@ -134,7 +147,7 @@ public class Button : Control
                 window.ReleaseMouseCapture();
 
             // Fire click if still over button
-            if (IsEnabled && Bounds.Contains(e.Position))
+            if (IsEffectivelyEnabled && Bounds.Contains(e.Position))
             {
                 OnClick();
             }
@@ -159,7 +172,7 @@ public class Button : Control
         base.OnKeyDown(e);
 
         // Space or Enter triggers click
-        if ((e.Key == Input.Key.Space || e.Key == Input.Key.Enter) && IsEnabled)
+        if ((e.Key == Input.Key.Space || e.Key == Input.Key.Enter) && IsEffectivelyEnabled)
         {
             _isPressed = true;
             InvalidateVisual();
@@ -174,7 +187,8 @@ public class Button : Control
         if ((e.Key == Input.Key.Space || e.Key == Input.Key.Enter) && _isPressed)
         {
             _isPressed = false;
-            OnClick();
+            if (IsEffectivelyEnabled)
+                OnClick();
             InvalidateVisual();
             e.Handled = true;
         }

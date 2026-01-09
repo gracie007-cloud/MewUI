@@ -213,6 +213,18 @@ public class Window : ContentControl
 
     internal bool SetFocusedElement(UIElement element) => FocusManager.SetFocus(element);
 
+    public void RequerySuggested()
+    {
+        if (Content == null)
+            return;
+
+        VisitVisualTree(Content, e =>
+        {
+            if (e is UIElement u)
+                u.ReevaluateSuggestedIsEnabled();
+        });
+    }
+
     public void CaptureMouse(UIElement element)
     {
         EnsureBackend();

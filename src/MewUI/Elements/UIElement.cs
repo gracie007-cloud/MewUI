@@ -13,6 +13,8 @@ public abstract class UIElement : Element
     private List<IDisposable>? _bindings;
     private ValueBinding<bool>? _isVisibleBinding;
     private ValueBinding<bool>? _isEnabledBinding;
+    private bool _suggestedIsEnabled = true;
+    private bool _suggestedIsEnabledInitialized;
     /// <summary>
     /// Gets or sets whether the element is visible.
     /// </summary>
@@ -46,6 +48,8 @@ public abstract class UIElement : Element
             }
         }
     } = true;
+
+    internal bool IsEffectivelyEnabled => IsEnabled && GetSuggestedIsEnabled();
 
     /// <summary>
     /// Gets or sets whether the element participates in hit testing.
@@ -123,7 +127,7 @@ public abstract class UIElement : Element
     /// </summary>
     public virtual UIElement? HitTest(Point point)
     {
-        if (!IsVisible || !IsHitTestVisible || !IsEnabled)
+        if (!IsVisible || !IsHitTestVisible || !IsEffectivelyEnabled)
             return null;
 
         if (Bounds.Contains(point))
@@ -137,7 +141,7 @@ public abstract class UIElement : Element
     /// </summary>
     public bool Focus()
     {
-        if (!Focusable || !IsEnabled || !IsVisible)
+        if (!Focusable || !IsEffectivelyEnabled || !IsVisible)
             return false;
 
         var root = FindVisualRoot();
@@ -187,6 +191,34 @@ public abstract class UIElement : Element
     }
 
     internal void SetMouseCaptured(bool captured) => IsMouseCaptured = captured;
+
+    internal void ReevaluateSuggestedIsEnabled()
+    {
+        bool old = _suggestedIsEnabledInitialized ? _suggestedIsEnabled : true;
+        _suggestedIsEnabled = ComputeIsEnabledSuggestionSafe();
+        _suggestedIsEnabledInitialized = true;
+
+        if (old != _suggestedIsEnabled)
+            InvalidateVisual();
+    }
+
+    private bool GetSuggestedIsEnabled()
+    {
+        if (!_suggestedIsEnabledInitialized)
+        {
+            _suggestedIsEnabled = ComputeIsEnabledSuggestionSafe();
+            _suggestedIsEnabledInitialized = true;
+        }
+        return _suggestedIsEnabled;
+    }
+
+    protected virtual bool ComputeIsEnabledSuggestion() => true;
+
+    private bool ComputeIsEnabledSuggestionSafe()
+    {
+        try { return ComputeIsEnabledSuggestion(); }
+        catch { return true; }
+    }
 
     internal void RegisterBinding(IDisposable binding)
     {
