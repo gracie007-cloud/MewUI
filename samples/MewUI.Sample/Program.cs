@@ -46,9 +46,8 @@ var root = new Window()
 
                 NormalControls()
             )
-    );
-
-window.FirstFrameRendered = ProcessMetric;
+    )
+    .OnFirstFrameRendered(ProcessMetric);
 
 Application.Run(root);
 
@@ -175,11 +174,8 @@ Element NormalControls() => new StackPanel()
                 new MultiLineTextBox()
                     .Column(1)
                     .Height(80)
-                    .Apply(t =>
-                    {
-                        t.Placeholder = "Type multi-line text (wheel scroll + thin scrollbar)";
-                        t.Text = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7";
-                    })
+                    .Placeholder("Type multi-line text (wheel scroll + thin scrollbar)")
+                    .Text("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7")
             ),
 
         new StackPanel()
@@ -257,19 +253,23 @@ Element NormalControls() => new StackPanel()
                 )
         ));
 
-Element BindSamples() => new StackPanel()
-    .Vertical()
-    .Margin(20, 0, 0, 0)
-    .Children(
-        new Label()
-            .Text("Binding Demo")
-            .Bold(),
+Element BindSamples()
+{
+    var selectionItemCount = new ObservableValue<int>(4);
 
-        new Grid()
-            .Rows("Auto,Auto,Auto,Auto")
-            .Columns("100,*")
-            .ChildMargin(8)
-            .Children(
+    return new StackPanel()
+        .Vertical()
+        .Margin(20, 0, 0, 0)
+        .Children(
+            new Label()
+                .Text("Binding Demo")
+                .Bold(),
+
+            new Grid()
+                .Rows("Auto,Auto,Auto,*")
+                .Columns("100,*")
+                .ChildMargin(8)
+                .Children(
                 new Label()
                     .Row(0).Column(0)
                     .BindText(vm.Percent, v => $"Percent ({Math.Round(v):0}%)")
@@ -346,22 +346,51 @@ Element BindSamples() => new StackPanel()
 
                 new StackPanel()
                     .Row(3).Column(1)
-                    .Horizontal()
+                    .Vertical()
                     .Spacing(10)
                     .Children(
                         new ListBox()
                             .Ref(out var selectionListBox)
+                            .Height(120)
                             .Items("Alpha", "Beta", "Gamma", "Delta")
-                            .BindSelectedIndex(vm.SelectedIndex)
-                            .Height(100)
-                            .Width(80),
+                            .BindSelectedIndex(vm.SelectedIndex),
 
-                        new Label()
-                            .BindText(vm.SelectedIndex, i => $@"SelectedIndex = {i}{Environment.NewLine}Item = {selectionListBox.SelectedItem ?? string.Empty}")
+                        new StackPanel()
+                            .Vertical()
+                            .Spacing(6)
+                            .Children(
+                                new Label()
+                                    .BindText(vm.SelectedIndex, i => $@"SelectedIndex = {i}{Environment.NewLine}Item = {selectionListBox.SelectedItem ?? string.Empty}"),
+
+                                new Button()
+                                    .Content("Add 40,000 ")
+                                    .OnClick(() =>
+                                    {
+                                        const int repeat = 10_000;
+                                        var items = selectionListBox.Items;
+
+                                        if (items is List<string> list)
+                                            list.EnsureCapacity(list.Count + repeat * 4);
+
+                                        for (int i = 0; i < repeat; i++)
+                                        {
+                                            items.Add("Alpha");
+                                            items.Add("Beta");
+                                            items.Add("Gamma");
+                                            items.Add("Delta");
+                                        }
+
+                                        selectionListBox.InvalidateMeasure();
+                                        selectionItemCount.Value = items.Count;
+                                    }),
+
+                                new Label()
+                                    .BindText(selectionItemCount, c => $"Items: {c:N0}")
+                            )
                     )
             )
-
     );
+}
 
 void UpdateAccentSwatches()
 {
