@@ -16,4 +16,8 @@
     <ProjectReference Include="..\..\src\MewUI\MewUI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\assets\logo\logo-256.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
