@@ -12,6 +12,14 @@ public class RadioButton : ToggleBase
     private string? _registeredGroupName;
     private Elements.Element? _registeredParentScope;
 
+    internal void EnsureGroupRegistered()
+    {
+        if (!IsChecked)
+            return;
+
+        RegisterToGroup();
+    }
+
     public string? GroupName
     {
         get;
@@ -54,7 +62,9 @@ public class RadioButton : ToggleBase
     {
         base.OnParentChanged();
 
-        if (IsChecked && string.IsNullOrWhiteSpace(GroupName))
+        // IsChecked can be set before the control is attached to a Window (e.g. in markup),
+        // which means group registration would have been skipped. Re-register once the parent chain changes.
+        if (IsChecked)
         {
             UnregisterFromGroup();
             RegisterToGroup();
@@ -99,6 +109,11 @@ public class RadioButton : ToggleBase
 
     protected override Size MeasureContent(Size availableSize)
     {
+        // IsChecked may be set before this control is attached to a Window. In that case,
+        // initial group registration is skipped. Retrying here makes group exclusivity reliable
+        // without requiring global lifecycle hooks.
+        EnsureGroupRegistered();
+
         const double boxSize = 14;
         const double spacing = 6;
 
@@ -118,6 +133,8 @@ public class RadioButton : ToggleBase
 
     protected override void OnRender(IGraphicsContext context)
     {
+        EnsureGroupRegistered();
+
         var theme = GetTheme();
         var bounds = Bounds;
         var contentBounds = bounds.Deflate(Padding);

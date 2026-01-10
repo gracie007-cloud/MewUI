@@ -10,7 +10,7 @@
 #:property DebugType=none
 #:property StripSymbols=true
 
-#:package Aprillz.MewUI@0.3.2
+#:package Aprillz.MewUI@0.3.3
 
 using System.Diagnostics;
 
@@ -41,7 +41,7 @@ var currentAccent = Theme.Current.Accent;
 var root = new Window()
     .Ref(out window)
     .Title("Aprillz.MewUI Demo")
-    .Size(744, 640)
+    .Resizable(744, 740)
     .Padding(10)
     .OnLoaded(() =>
     {
@@ -228,31 +228,62 @@ Element NormalControls() => new StackPanel()
                     .BindText(vm.AsyncStatus)
                     .Margin(0, 0, 0, 6),
 
-                new Label()
-                    .Text("Options")
-                    .Bold(),
-
+                new Label() 
+                    .Text("Options") 
+                    .Bold(), 
+ 
                 new StackPanel()
-                    .Horizontal()
-                    .Spacing(12)
+                    .Vertical()
+                    .Spacing(6)
                     .Children(
-                new CheckBox()
-                    .Text("Enable feature"),
-
-                new RadioButton()
-                    .Text("A")
-                    .GroupName("group1")
-                    .IsChecked(true),
-
-                new RadioButton()
-                    .Text("B")
-                    .GroupName("group1")
-            ),
-
-            new ListBox()
-                .Items("First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth")
-                .SelectedIndex(1)
-                .Height(74),
+                        new CheckBox()
+                            .Text("Enable feature"),
+ 
+                        new StackPanel()
+                            .Horizontal()
+                            .Spacing(12)
+                            .Children(
+                                new Label().Text("GroupName: group1").CenterVertical(),
+                                new RadioButton()
+                                    .Text("A")
+                                    .GroupName("group1")
+                                    .IsChecked(true),
+                                new RadioButton()
+                                    .Text("B")
+                                    .GroupName("group1")
+                            ),
+ 
+                        new StackPanel()
+                            .Horizontal()
+                            .Spacing(12)
+                            .Children(
+                                new Label().Text("GroupName: group2").CenterVertical(),
+                                new RadioButton()
+                                    .Text("C")
+                                    .GroupName("group2")
+                                    .IsChecked(true),
+                                new RadioButton()
+                                    .Text("D")
+                                    .GroupName("group2")
+                            ),
+ 
+                        new StackPanel()
+                            .Horizontal()
+                            .Spacing(12)
+                            .Children(
+                                new Label().Text("GroupName: (parent-scope)").CenterVertical(),
+                                new RadioButton()
+                                    .Text("X")
+                                    .IsChecked(true),
+                                new RadioButton()
+                                    .Text("Y")
+                            )
+                    ),
+ 
+            new ListBox() 
+                .Items("First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth") 
+                .SelectedIndex(1) 
+                .Height(76),
 
             new DockPanel()
                 .Children(
@@ -284,14 +315,13 @@ Element BindSamples()
                 .Rows("Auto,Auto,Auto,*")
                 .Columns("100,*")
                 .Spacing(8)
+                .AutoIndexing()
                 .Children(
                 new Label()
-                    .Row(0).Column(0)
                     .BindText(vm.Percent, v => $"Percent ({Math.Round(v):0}%)")
                     .Bold(),
 
                 new StackPanel()
-                    .Row(0).Column(1)
                     .Vertical()
                     .Spacing(6)
                     .Children(
@@ -307,13 +337,11 @@ Element BindSamples()
                     ),
 
                 new Label()
-                    .Row(1).Column(0)
                     .Text("Name")
                     .Bold(),
 
                 new UniformGrid()
                     .Columns(2)
-                    .Row(1).Column(1)
                     .Children(
                         new TextBox()
                             .Width(100)
@@ -326,12 +354,10 @@ Element BindSamples()
                     ),
 
                 new Label()
-                    .Row(2).Column(0)
                     .Text("Enabled")
                     .Bold(),
 
                 new StackPanel()
-                    .Row(2).Column(1)
                     .Horizontal()
                     .Spacing(10)
                     .Children(
@@ -355,12 +381,10 @@ Element BindSamples()
                     ),
 
                 new Label()
-                    .Row(3).Column(0)
                     .Text("Selection")
                     .Bold(),
 
                 new StackPanel()
-                    .Row(3).Column(1)
                     .Vertical()
                     .Spacing(10)
                     .Children(

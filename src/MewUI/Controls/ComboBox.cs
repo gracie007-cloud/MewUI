@@ -12,6 +12,7 @@ public sealed class ComboBox : Control, IPopupOwner
     private readonly List<string> _items = new();
     private bool _isDropDownOpen;
     private ListBox? _popupList;
+    private bool _restoreFocusAfterPopupClose;
     private ValueBinding<int>? _selectedIndexBinding;
     private bool _updatingFromSource;
 
@@ -370,6 +371,7 @@ public sealed class ComboBox : Control, IPopupOwner
             _popupList.SelectionChanged = i =>
             {
                 SelectedIndex = i;
+                _restoreFocusAfterPopupClose = true;
                 IsDropDownOpen = false;
             };
         }
@@ -460,6 +462,17 @@ public sealed class ComboBox : Control, IPopupOwner
         {
             _isDropDownOpen = false;
             InvalidateVisual();
+
+            var root = FindVisualRoot();
+            if (root is Window window && window.FocusManager.FocusedElement == popup)
+            {
+                if (_restoreFocusAfterPopupClose)
+                    window.FocusManager.SetFocus(this);
+                else
+                    window.FocusManager.ClearFocus();
+            }
+
+            _restoreFocusAfterPopupClose = false;
         }
     }
 }
