@@ -19,6 +19,7 @@ public class Window : ContentControl
     private Size _lastLayoutClientSizeDip = Size.Empty;
     private readonly List<PopupEntry> _popups = new();
     private readonly RadioGroupManager _radioGroups = new();
+    private bool _loadedRaised;
     private bool _firstFrameRenderedRaised;
 
     private sealed class PopupEntry
@@ -215,6 +216,11 @@ public class Window : ContentControl
     {
         EnsureBackend();
         _backend!.Show();
+
+        // Raise Loaded once, and only after the application's dispatcher is ready.
+        // The platform host will raise Loaded for the very first window after it sets the dispatcher.
+        if (!_loadedRaised && Application.IsRunning && Application.Current.Dispatcher != null)
+            RaiseLoaded();
     }
 
     public void Hide() => _backend?.Hide();
@@ -307,6 +313,10 @@ public class Window : ContentControl
 
     internal void RaiseLoaded()
     {
+        if (_loadedRaised)
+            return;
+        _loadedRaised = true;
+
         PerformLayout();
         Loaded?.Invoke();
     }

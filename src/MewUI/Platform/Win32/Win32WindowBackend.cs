@@ -184,6 +184,11 @@ internal sealed class Win32WindowBackend : IWindowBackend
                 (Window.ApplicationDispatcher as Win32UiDispatcher)?.ProcessWorkItems();
                 return 0;
 
+            case WindowMessages.WM_TIMER:
+                if ((Window.ApplicationDispatcher as Win32UiDispatcher)?.ProcessTimer((nuint)wParam) == true)
+                    return 0;
+                return 0;
+
             default:
                 return User32.DefWindowProc(Handle, msg, wParam, lParam);
         }
@@ -235,7 +240,6 @@ internal sealed class Win32WindowBackend : IWindowBackend
         if (Window.Background.A == 0)
             Window.Background = Window.Theme.WindowBackground;
 
-        Window.RaiseLoaded();
     }
 
     private uint GetWindowStyle()

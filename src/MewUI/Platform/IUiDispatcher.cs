@@ -8,6 +8,10 @@ public interface IUiDispatcher
 
     void Send(Action action);
 
+    /// <summary>
+    /// Schedules an action to run on the UI thread after <paramref name="dueTime"/>.
+    /// </summary>
+    IDisposable Schedule(TimeSpan dueTime, Action action);
+
     void ProcessWorkItems();
 }
-

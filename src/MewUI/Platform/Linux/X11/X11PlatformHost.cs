@@ -17,6 +17,7 @@ public sealed class X11PlatformHost : IPlatformHost
     private readonly IClipboardService _clipboard = new NoClipboardService();
     private bool _running;
     private nint _display;
+	private LinuxUiDispatcher? _dispatcher;
 
     public IMessageBoxService MessageBox => _messageBox;
 
@@ -50,8 +51,10 @@ public sealed class X11PlatformHost : IPlatformHost
         mainWindow.Show();
 
         var dispatcher = CreateDispatcher(mainWindow.Handle);
+        _dispatcher = dispatcher as LinuxUiDispatcher;
         app.Dispatcher = dispatcher;
         SynchronizationContext.SetSynchronizationContext(dispatcher as SynchronizationContext);
+        mainWindow.RaiseLoaded();
 
         // Very simple single-display loop (from the main window).
         if (!_windows.TryGetValue(mainWindow.Handle, out var mainBackend))
@@ -95,6 +98,7 @@ public sealed class X11PlatformHost : IPlatformHost
             try { NativeX11.XCloseDisplay(_display); } catch { }
             _display = 0;
         }
+        _dispatcher = null;
     }
 
     private static nint GetEventWindow(in XEvent ev)
@@ -129,6 +133,7 @@ public sealed class X11PlatformHost : IPlatformHost
     {
         foreach (var backend in _windows.Values)
             backend.PumpEventsOnce();
+        _dispatcher?.ProcessWorkItems();
     }
 
     public void Dispose()

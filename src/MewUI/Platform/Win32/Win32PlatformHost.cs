@@ -70,6 +70,7 @@ public sealed class Win32PlatformHost : IPlatformHost
             var dispatcher = CreateDispatcher(mainWindow.Handle);
             app.Dispatcher = dispatcher;
             SynchronizationContext.SetSynchronizationContext(dispatcher as SynchronizationContext);
+            mainWindow.RaiseLoaded();
 
             MSG msg;
             while (_running && User32.GetMessage(out msg, 0, 0, 0) > 0)
