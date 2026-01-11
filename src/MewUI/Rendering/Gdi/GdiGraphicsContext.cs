@@ -125,6 +125,99 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
 
     public void DrawLine(Point start, Point end, Color color, double thickness = 1)
     {
+        // Supersample only for non-axis-aligned lines. Axis-aligned lines should stay crisp.
+        if (_supersampleFactor > 1 && color.A > 0 && thickness > 0)
+        {
+            // Use device-space doubles so sampling doesn't inherit pixel snapping.
+            double ax = (start.X + _translateX) * DpiScale;
+            double ay = (start.Y + _translateY) * DpiScale;
+            double bx = (end.X + _translateX) * DpiScale;
+            double by = (end.Y + _translateY) * DpiScale;
+
+            double dx = bx - ax;
+            double dy = by - ay;
+
+            // If the line is axis-aligned, draw it normally.
+            if (Math.Abs(dx) > 0.0001 && Math.Abs(dy) > 0.0001)
+            {
+                double half = Math.Max(0.5, thickness * DpiScale * 0.5);
+                double pad = half + 1.0;
+
+                double minX = Math.Min(ax, bx) - pad;
+                double minY = Math.Min(ay, by) - pad;
+                double maxX = Math.Max(ax, bx) + pad;
+                double maxY = Math.Max(ay, by) + pad;
+
+                int dstX = (int)Math.Floor(minX);
+                int dstY = (int)Math.Floor(minY);
+                int w = (int)Math.Ceiling(maxX) - dstX;
+                int h = (int)Math.Ceiling(maxY) - dstY;
+
+                // Guard against accidental huge AA surfaces.
+                if (w > 0 && h > 0 && w <= 4096 && h <= 4096)
+                {
+                    EnsureAaSurface(w, h);
+                    ClearAaBits(w, h);
+
+                    int s = _supersampleFactor;
+                    int samples = s * s;
+                    double halfSq = half * half;
+
+                    byte srcA = color.A;
+                    byte srcR = color.R;
+                    byte srcG = color.G;
+                    byte srcB = color.B;
+
+                    unsafe
+                    {
+                        byte* basePtr = (byte*)_aaBits;
+                        int stride = w * 4;
+
+                        for (int py = 0; py < h; py++)
+                        {
+                            byte* row = basePtr + py * stride;
+                            for (int px = 0; px < w; px++)
+                            {
+                                int covered = 0;
+
+                                for (int sy = 0; sy < s; sy++)
+                                {
+                                    double y = (dstY + py) + (sy + 0.5) / s;
+                                    for (int sx = 0; sx < s; sx++)
+                                    {
+                                        double x = (dstX + px) + (sx + 0.5) / s;
+                                        if (DistanceSqPointToSegment(x, y, ax, ay, bx, by) <= halfSq)
+                                            covered++;
+                                    }
+                                }
+
+                                if (covered <= 0)
+                                    continue;
+
+                                int a = (srcA * covered + (samples / 2)) / samples; // rounded
+                                if (a > 255) a = 255;
+
+                                int pr = (srcR * a + 127) / 255;
+                                int pg = (srcG * a + 127) / 255;
+                                int pb = (srcB * a + 127) / 255;
+
+                                int idx = px * 4;
+                                // AlphaBlend expects premultiplied BGRA when AC_SRC_ALPHA is set.
+                                row[idx + 0] = (byte)pb;
+                                row[idx + 1] = (byte)pg;
+                                row[idx + 2] = (byte)pr;
+                                row[idx + 3] = (byte)a;
+                            }
+                        }
+                    }
+
+                    AlphaBlendBitmap(dstX, dstY, w, h);
+                    return;
+                }
+            }
+        }
+
+        // Default path.
         var pen = Gdi32.CreatePen(GdiConstants.PS_SOLID, QuantizePenWidthPx(thickness), color.ToCOLORREF());
         var oldPen = Gdi32.SelectObject(Hdc, pen);
         try
@@ -139,6 +232,42 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
             Gdi32.SelectObject(Hdc, oldPen);
             Gdi32.DeleteObject(pen);
         }
+    }
+
+    private static double DistanceSqPointToSegment(double px, double py, double ax, double ay, double bx, double by)
+    {
+        double vx = bx - ax;
+        double vy = by - ay;
+        double wx = px - ax;
+        double wy = py - ay;
+
+        double lenSq = vx * vx + vy * vy;
+        if (lenSq <= double.Epsilon)
+        {
+            double ddx = px - ax;
+            double ddy = py - ay;
+            return ddx * ddx + ddy * ddy;
+        }
+
+        double t = (wx * vx + wy * vy) / lenSq;
+        if (t <= 0)
+        {
+            double ddx = px - ax;
+            double ddy = py - ay;
+            return ddx * ddx + ddy * ddy;
+        }
+        if (t >= 1)
+        {
+            double ddx = px - bx;
+            double ddy = py - by;
+            return ddx * ddx + ddy * ddy;
+        }
+
+        double cx = ax + t * vx;
+        double cy = ay + t * vy;
+        double dx = px - cx;
+        double dy = py - cy;
+        return dx * dx + dy * dy;
     }
 
     public void DrawRectangle(Rect rect, Color color, double thickness = 1)
@@ -453,7 +582,6 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
             // If this is a pure downscale and we want high quality, pre-scale once into a DIB section
             // and then blit 1:1. This improves both quality and steady-state performance.
             if (_imageScaleQuality == ImageScaleQuality.HighQuality &&
-                destPx.Width < srcW && destPx.Height < srcH &&
                 IsNearInt(sourceRect.X) && IsNearInt(sourceRect.Y) && IsNearInt(sourceRect.Width) && IsNearInt(sourceRect.Height) &&
                 gdiImage.TryGetOrCreateScaledBitmap(srcX, srcY, srcW, srcH, destPx.Width, destPx.Height, out var scaledBmp))
             {
