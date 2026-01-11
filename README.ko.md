@@ -165,10 +165,11 @@ var label  = new Label()
 ## 🧱 컨트롤 / 패널
 
 컨트롤:
-- `Label`, `Button`, `TextBox`
+- `Label`, `Button`, `TextBox`, `MultiLineTextBox`
 - `CheckBox`, `RadioButton`
 - `ListBox`, `ComboBox`
 - `Slider`, `ProgressBar`
+- `Image`, `DispatcherTimer`
 - `Window`
 
 패널:
@@ -219,10 +220,8 @@ Theme.Current = Theme.Current.WithAccent(Color.FromRgb(214, 176, 82));
 ## 🧭 로드맵 (TODO)
 
 **컨트롤**
-- [ ] `Image`
 - [ ] `GroupBox`
 - [ ] `TabControl`
-- [ ] `ScrollViewer`
 
 **렌더링**
 - [ ] 폰트 셰이핑(HarfBuzz)
