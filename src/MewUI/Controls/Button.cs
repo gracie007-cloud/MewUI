@@ -21,7 +21,8 @@ public class Button : Control
     public Button()
     {
         BorderThickness = 1;
-        Padding = new Thickness(12, 6, 12, 6);
+        Padding = new Thickness(12, 4, 12, 4);
+		MinHeight = 28;
     }
 
     /// <summary>

@@ -20,7 +20,8 @@ public class TextBox : TextBase
     {
         BorderThickness = 1; 
         Padding = new Thickness(4);
-    }
+          MinHeight = 28;
+  }
 
     protected override string NormalizeText(string text)
     {
