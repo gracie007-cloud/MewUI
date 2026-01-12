@@ -37,7 +37,9 @@ internal sealed class X11WindowBackend : IWindowBackend
     public void SetResizable(bool resizable)
     {
         if (Display == 0 || Handle == 0)
+        {
             return;
+        }
 
         ApplyResizeMode();
     }
@@ -45,7 +47,9 @@ internal sealed class X11WindowBackend : IWindowBackend
     public void Show()
     {
         if (_shown)
+        {
             return;
+        }
 
         CreateWindow();
         _shown = true;
@@ -61,13 +65,17 @@ internal sealed class X11WindowBackend : IWindowBackend
     public void Close()
     {
         if (Display != 0 && Handle != 0)
+        {
             NativeX11.XDestroyWindow(Display, Handle);
+        }
     }
 
     public void Invalidate(bool erase)
     {
         if (Display == 0 || Handle == 0)
+        {
             return;
+        }
 
         // Coalesce invalidations; render will be performed by the platform host loop.
         _needsRender = true;
@@ -76,7 +84,10 @@ internal sealed class X11WindowBackend : IWindowBackend
     public void SetTitle(string title)
     {
         if (Display == 0 || Handle == 0)
+        {
             return;
+        }
+
         NativeX11.XStoreName(Display, Handle, title ?? string.Empty);
         NativeX11.XFlush(Display);
     }
@@ -107,7 +118,9 @@ internal sealed class X11WindowBackend : IWindowBackend
     {
         Display = _host.Display;
         if (Display == 0)
+        {
             throw new InvalidOperationException("X11 display not initialized.");
+        }
 
         int screen = NativeX11.XDefaultScreen(Display);
         nint root = NativeX11.XRootWindow(Display, screen);
@@ -147,7 +160,9 @@ internal sealed class X11WindowBackend : IWindowBackend
         unsafe
         {
             fixed (int* p = attribsMsaa)
+            {
                 visualInfoPtr = LibGL.glXChooseVisual(Display, screen, (nint)p);
+            }
         }
 
         if (visualInfoPtr == 0)
@@ -170,11 +185,15 @@ internal sealed class X11WindowBackend : IWindowBackend
             unsafe
             {
                 fixed (int* p = attribs)
+                {
                     visualInfoPtr = LibGL.glXChooseVisual(Display, screen, (nint)p);
+                }
             }
 
             if (visualInfoPtr == 0)
+            {
                 throw new InvalidOperationException("glXChooseVisual failed.");
+            }
         }
 
         var visualInfo = Marshal.PtrToStructure<XVisualInfo>(visualInfoPtr);
@@ -206,7 +225,9 @@ internal sealed class X11WindowBackend : IWindowBackend
             ref attrs);
 
         if (Handle == 0)
+        {
             throw new InvalidOperationException("XCreateWindow failed.");
+        }
 
         // Let the OpenGL backend create a matching GLX context later.
         OpenGLLinuxWindowInfoRegistry.RegisterVisual(Handle, visualInfo);
@@ -222,7 +243,9 @@ internal sealed class X11WindowBackend : IWindowBackend
         _wmProtocolsAtom = NativeX11.XInternAtom(Display, "WM_PROTOCOLS", false);
         _wmDeleteWindowAtom = NativeX11.XInternAtom(Display, "WM_DELETE_WINDOW", false);
         if (_wmProtocolsAtom != 0 && _wmDeleteWindowAtom != 0)
+        {
             NativeX11.XSetWMProtocols(Display, Handle, ref _wmDeleteWindowAtom, 1);
+        }
 
         ApplyResizeMode();
 
@@ -232,7 +255,9 @@ internal sealed class X11WindowBackend : IWindowBackend
     private void ApplyResizeMode()
     {
         if (Display == 0 || Handle == 0)
+        {
             return;
+        }
 
         var hints = new XSizeHints();
         if (!Window.WindowSize.IsResizable)
@@ -255,7 +280,10 @@ internal sealed class X11WindowBackend : IWindowBackend
     internal void PumpEventsOnce()
     {
         if (Display == 0)
+        {
             return;
+        }
+
         while (NativeX11.XPending(Display) != 0)
         {
             NativeX11.XNextEvent(Display, out var ev);
@@ -280,7 +308,10 @@ internal sealed class X11WindowBackend : IWindowBackend
             case Expose:
                 // X11 can deliver multiple expose events; render once for the last in the batch.
                 if (ev.xexpose.count == 0)
+                {
                     _needsRender = true;
+                }
+
                 break;
 
             case ConfigureNotify:
@@ -331,12 +362,17 @@ internal sealed class X11WindowBackend : IWindowBackend
     internal void RenderIfNeeded()
     {
         if (!_needsRender || Handle == 0 || Display == 0)
+        {
             return;
+        }
 
         // Simple throttle to reduce CPU/GPU pressure on software-rendered VMs.
         long now = Environment.TickCount64;
         if (now - _lastRenderTick < 16)
+        {
             return;
+        }
+
         _lastRenderTick = now;
 
         _needsRender = false;
@@ -346,7 +382,9 @@ internal sealed class X11WindowBackend : IWindowBackend
     private void HandleKey(XKeyEvent e, bool isDown)
     {
         if (Window.Content == null)
+        {
             return;
+        }
 
         // KeyDown/Up (keysym based).
         var ks = NativeX11.XLookupKeysym(ref e, 0).ToInt64();
@@ -370,9 +408,13 @@ internal sealed class X11WindowBackend : IWindowBackend
                 if (args.Key == Key.Tab)
                 {
                     if (args.Modifiers.HasFlag(ModifierKeys.Shift))
+                    {
                         Window.FocusManager.MoveFocusPrevious();
+                    }
                     else
+                    {
                         Window.FocusManager.MoveFocusNext();
+                    }
 
                     args.Handled = true;
                     return;
@@ -388,25 +430,35 @@ internal sealed class X11WindowBackend : IWindowBackend
                 unsafe
                 {
                     fixed (byte* p = buf)
+                    {
                         NativeX11.XLookupString(ref e, p, buf.Length, out _, out _);
+                    }
                 }
 
                 if (buf[0] != 0)
                 {
                     int len = buf.IndexOf((byte)0);
-                    if (len < 0) len = buf.Length;
+                    if (len < 0)
+                    {
+                        len = buf.Length;
+                    }
+
                     string s = System.Text.Encoding.UTF8.GetString(buf[..len]);
                     if (!string.IsNullOrEmpty(s))
                     {
                         // Filter control characters so Tab doesn't get inserted into TextBox.
                         // (Tab is handled above for focus navigation)
                         if (s.Length == 1 && char.IsControl(s[0]) && s[0] != '\r' && s[0] != '\n')
+                        {
                             return;
+                        }
 
                         var ti = new TextInputEventArgs(s);
                         Window.RaisePreviewTextInput(ti);
                         if (!ti.Handled)
+                        {
                             Window.FocusManager.FocusedElement?.RaiseTextInput(ti);
+                        }
                     }
                 }
             }
@@ -415,7 +467,9 @@ internal sealed class X11WindowBackend : IWindowBackend
         {
             Window.RaisePreviewKeyUp(args);
             if (!args.Handled)
+            {
                 Window.FocusManager.FocusedElement?.RaiseKeyUp(args);
+            }
         }
     }
 
@@ -424,11 +478,15 @@ internal sealed class X11WindowBackend : IWindowBackend
         var pos = new Point(e.x / Window.DpiScale, e.y / Window.DpiScale);
 
         if (isDown)
+        {
             Window.ClosePopupsIfClickOutside(pos);
+        }
 
         var element = _capturedElement ?? Window.HitTest(pos);
         if (element == null)
+        {
             return;
+        }
 
         if (element != _mouseOverElement)
         {
@@ -441,13 +499,19 @@ internal sealed class X11WindowBackend : IWindowBackend
         if (e.button == 4 || e.button == 5)
         {
             if (!isDown)
+            {
                 return;
+            }
+
             int delta = e.button == 4 ? 120 : -120;
             var wheelArgs = new MouseWheelEventArgs(pos, pos, delta, isHorizontal: false);
 
             // Bubble to parents until handled (ScrollViewer etc.).
             for (var current = element; current != null && !wheelArgs.Handled; current = current.Parent as UIElement)
+            {
                 current.RaiseMouseWheel(wheelArgs);
+            }
+
             return;
         }
 
@@ -464,16 +528,31 @@ internal sealed class X11WindowBackend : IWindowBackend
         bool right = (e.state & (1u << 10)) != 0;
 
         // Include the current transition.
-        if (btn == MouseButton.Left) left = isDown;
-        if (btn == MouseButton.Middle) middle = isDown;
-        if (btn == MouseButton.Right) right = isDown;
+        if (btn == MouseButton.Left)
+        {
+            left = isDown;
+        }
+
+        if (btn == MouseButton.Middle)
+        {
+            middle = isDown;
+        }
+
+        if (btn == MouseButton.Right)
+        {
+            right = isDown;
+        }
 
         var args = new MouseEventArgs(pos, pos, btn, leftButton: left, rightButton: right, middleButton: middle);
 
         if (isDown)
+        {
             element.RaiseMouseDown(args);
+        }
         else
+        {
             element.RaiseMouseUp(args);
+        }
     }
 
     private void HandleMotion(XMotionEvent e)
@@ -489,7 +568,9 @@ internal sealed class X11WindowBackend : IWindowBackend
         }
 
         if (element == null)
+        {
             return;
+        }
 
         bool left = (e.state & (1u << 8)) != 0;
         bool middle = (e.state & (1u << 9)) != 0;
@@ -502,13 +583,17 @@ internal sealed class X11WindowBackend : IWindowBackend
     internal void NotifyDpiChanged(uint oldDpi, uint newDpi)
     {
         if (Display == 0 || Handle == 0 || oldDpi == newDpi)
+        {
             return;
+        }
 
         Window.SetDpi(newDpi);
         Window.RaiseDpiChanged(oldDpi, newDpi);
 
         if (NativeX11.XGetWindowAttributes(Display, Handle, out var attrs) != 0)
+        {
             Window.SetClientSizeDip(attrs.width / Window.DpiScale, attrs.height / Window.DpiScale);
+        }
 
         _needsRender = true;
     }
@@ -544,16 +629,30 @@ internal sealed class X11WindowBackend : IWindowBackend
         // const uint Mod4Mask = 1u << 6; // usually Super/Win (ignored for now)
 
         ModifierKeys modifiers = ModifierKeys.None;
-        if ((x11State & ShiftMask) != 0) modifiers |= ModifierKeys.Shift;
-        if ((x11State & ControlMask) != 0) modifiers |= ModifierKeys.Control;
-        if ((x11State & Mod1Mask) != 0) modifiers |= ModifierKeys.Alt;
+        if ((x11State & ShiftMask) != 0)
+        {
+            modifiers |= ModifierKeys.Shift;
+        }
+
+        if ((x11State & ControlMask) != 0)
+        {
+            modifiers |= ModifierKeys.Control;
+        }
+
+        if ((x11State & Mod1Mask) != 0)
+        {
+            modifiers |= ModifierKeys.Alt;
+        }
+
         return modifiers;
     }
 
     private void Render()
     {
         if (Handle == 0 || Display == 0)
+        {
             return;
+        }
 
         Window.PerformLayout();
         Window.RenderFrame(Display);
@@ -562,7 +661,10 @@ internal sealed class X11WindowBackend : IWindowBackend
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
+
         _disposed = true;
 
         _mouseOverElement?.SetMouseOver(false);
@@ -582,11 +684,16 @@ internal sealed class X11WindowBackend : IWindowBackend
     private void Cleanup(nint handle, bool destroyWindow)
     {
         if (_cleanupDone)
+        {
             return;
+        }
+
         _cleanupDone = true;
 
         if (handle == 0 || Display == 0)
+        {
             return;
+        }
 
         if (destroyWindow)
         {
@@ -597,7 +704,9 @@ internal sealed class X11WindowBackend : IWindowBackend
         try
         {
             if (Window.GraphicsFactory is Rendering.IWindowResourceReleaser releaser)
+            {
                 releaser.ReleaseWindowResources(handle);
+            }
         }
         catch { }
 
@@ -606,6 +715,8 @@ internal sealed class X11WindowBackend : IWindowBackend
         try { OpenGLLinuxWindowInfoRegistry.Unregister(handle); } catch { }
 
         if (Handle == handle)
+        {
             Handle = 0;
+        }
     }
 }

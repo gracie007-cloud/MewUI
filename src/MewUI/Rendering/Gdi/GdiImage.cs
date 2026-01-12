@@ -54,7 +54,9 @@ internal sealed class GdiImage : IImage
         }
 
         if (pixelData.Length == 0)
+        {
             return;
+        }
 
         // GDI AlphaBlend expects the source to be premultiplied alpha (AC_SRC_ALPHA).
         // Most decoded pixel data is straight alpha, so we premultiply here.
@@ -103,7 +105,10 @@ internal sealed class GdiImage : IImage
         if (!_disposed && Handle != 0)
         {
             foreach (var kvp in _scaled)
+            {
                 Gdi32.DeleteObject(kvp.Value);
+            }
+
             _scaled.Clear();
 
             Gdi32.DeleteObject(Handle);
@@ -119,18 +124,40 @@ internal sealed class GdiImage : IImage
     {
         scaledBitmap = 0;
         if (_disposed || Handle == 0 || _bits == 0)
+        {
             return false;
+        }
 
         if (srcW <= 0 || srcH <= 0 || destW <= 0 || destH <= 0)
+        {
             return false;
+        }
 
         // Clamp to image bounds.
-        if (srcX < 0) srcX = 0;
-        if (srcY < 0) srcY = 0;
-        if (srcX + srcW > PixelWidth) srcW = PixelWidth - srcX;
-        if (srcY + srcH > PixelHeight) srcH = PixelHeight - srcY;
+        if (srcX < 0)
+        {
+            srcX = 0;
+        }
+
+        if (srcY < 0)
+        {
+            srcY = 0;
+        }
+
+        if (srcX + srcW > PixelWidth)
+        {
+            srcW = PixelWidth - srcX;
+        }
+
+        if (srcY + srcH > PixelHeight)
+        {
+            srcH = PixelHeight - srcY;
+        }
+
         if (srcW <= 0 || srcH <= 0)
+        {
             return false;
+        }
 
         var key = new ScaledKey(srcX, srcY, srcW, srcH, destW, destH);
         if (_scaled.TryGetValue(key, out var existing) && existing != 0)
@@ -147,7 +174,9 @@ internal sealed class GdiImage : IImage
         {
             dstBitmap = Gdi32.CreateDIBSection(screenDc, ref bmi, 0, out dstBits, 0, 0);
             if (dstBitmap == 0 || dstBits == 0)
+            {
                 return false;
+            }
 
             unsafe
             {
@@ -251,7 +280,10 @@ internal sealed class GdiImage : IImage
         finally
         {
             if (dstBitmap != 0)
+            {
                 Gdi32.DeleteObject(dstBitmap);
+            }
+
             User32.ReleaseDC(0, screenDc);
         }
     }

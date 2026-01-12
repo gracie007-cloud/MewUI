@@ -38,7 +38,9 @@ public sealed class OpenGLGraphicsFactory : IGraphicsFactory, IWindowResourceRel
         bool italic = false, bool underline = false, bool strikethrough = false)
     {
         if (OperatingSystem.IsWindows())
+        {
             return new GdiFont(family, size, weight, italic, underline, strikethrough, dpi);
+        }
 
         var path = LinuxFontResolver.ResolveFontPath(family, weight, italic);
         int px = (int)Math.Max(1, Math.Round(size * dpi / 96.0, MidpointRounding.AwayFromZero));
@@ -59,15 +61,22 @@ public sealed class OpenGLGraphicsFactory : IGraphicsFactory, IWindowResourceRel
     public IGraphicsContext CreateContext(nint hwnd, nint hdc, double dpiScale)
     {
         if (hwnd == 0 || hdc == 0)
+        {
             throw new ArgumentException("Invalid window handle or device context.");
+        }
 
         var resources = _windows.GetOrAdd(hwnd, _ =>
         {
             if (OperatingSystem.IsWindows())
+            {
                 return WglOpenGLWindowResources.Create(hwnd, hdc);
+            }
+
             if (OperatingSystem.IsLinux())
+            {
                 // Linux: hwnd = X11 Window (Drawable), hdc = Display*
                 return GlxOpenGLWindowResources.Create(hdc, hwnd);
+            }
 
             throw new PlatformNotSupportedException("OpenGL backend is supported on Windows and Linux only.");
         });
@@ -88,9 +97,13 @@ public sealed class OpenGLGraphicsFactory : IGraphicsFactory, IWindowResourceRel
     public void ReleaseWindowResources(nint hwnd)
     {
         if (hwnd == 0)
+        {
             return;
+        }
 
         if (_windows.TryRemove(hwnd, out var resources))
+        {
             resources.Dispose();
+        }
     }
 }

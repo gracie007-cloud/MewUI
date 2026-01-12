@@ -83,7 +83,9 @@ public sealed class Win32PlatformHost : IPlatformHost
                 catch (Exception ex)
                 {
                     if (Application.TryHandleUiException(ex))
+                    {
                         continue;
+                    }
 
                     Application.NotifyFatalUiException(ex);
                     _running = false;
@@ -117,7 +119,9 @@ public sealed class Win32PlatformHost : IPlatformHost
             catch (Exception ex)
             {
                 if (Application.TryHandleUiException(ex))
+                {
                     continue;
+                }
 
                 Application.NotifyFatalUiException(ex);
                 _running = false;
@@ -169,7 +173,9 @@ public sealed class Win32PlatformHost : IPlatformHost
             catch (Exception ex)
             {
                 if (Application.TryHandleUiException(ex))
+                {
                     return 0;
+                }
 
                 Application.NotifyFatalUiException(ex);
                 _running = false;

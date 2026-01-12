@@ -19,10 +19,14 @@ internal sealed unsafe class Direct2DMeasurementContext : IGraphicsContext
     public Size MeasureText(string text, IFont font, double maxWidth)
     {
         if (string.IsNullOrEmpty(text))
+        {
             return Size.Empty;
+        }
 
         if (font is not DirectWriteFont dwFont)
+        {
             throw new ArgumentException("Font must be a DirectWriteFont", nameof(font));
+        }
 
         nint textFormat = 0;
         nint textLayout = 0;
@@ -32,16 +36,22 @@ internal sealed unsafe class Direct2DMeasurementContext : IGraphicsContext
             var style = dwFont.IsItalic ? DWRITE_FONT_STYLE.ITALIC : DWRITE_FONT_STYLE.NORMAL;
             int hr = DWriteVTable.CreateTextFormat((IDWriteFactory*)_dwriteFactory, dwFont.Family, weight, style, (float)dwFont.Size, out textFormat);
             if (hr < 0 || textFormat == 0)
+            {
                 return Size.Empty;
+            }
 
             float w = maxWidth >= float.MaxValue ? float.MaxValue : (float)Math.Max(0, maxWidth);
             hr = DWriteVTable.CreateTextLayout((IDWriteFactory*)_dwriteFactory, text, textFormat, w, float.MaxValue, out textLayout);
             if (hr < 0 || textLayout == 0)
+            {
                 return Size.Empty;
+            }
 
             hr = DWriteVTable.GetMetrics(textLayout, out var metrics);
             if (hr < 0)
+            {
                 return Size.Empty;
+            }
 
             return new Size(metrics.widthIncludingTrailingWhitespace, metrics.height);
         }

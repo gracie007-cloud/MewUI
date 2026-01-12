@@ -95,7 +95,9 @@ public abstract class UIElement : Element
     protected override Size MeasureCore(Size availableSize)
     {
         if (!IsVisible)
+        {
             return Size.Empty;
+        }
 
         return MeasureOverride(availableSize);
     }
@@ -105,7 +107,9 @@ public abstract class UIElement : Element
     protected override void ArrangeCore(Rect finalRect)
     {
         if (!IsVisible)
+        {
             return;
+        }
 
         ArrangeOverride(new Size(finalRect.Width, finalRect.Height));
     }
@@ -115,7 +119,9 @@ public abstract class UIElement : Element
     public override void Render(IGraphicsContext context)
     {
         if (!IsVisible)
+        {
             return;
+        }
 
         OnRender(context);
     }
@@ -128,10 +134,14 @@ public abstract class UIElement : Element
     public virtual UIElement? HitTest(Point point)
     {
         if (!IsVisible || !IsHitTestVisible || !IsEffectivelyEnabled)
+        {
             return null;
+        }
 
         if (Bounds.Contains(point))
+        {
             return this;
+        }
 
         return null;
     }
@@ -142,7 +152,9 @@ public abstract class UIElement : Element
     public bool Focus()
     {
         if (!Focusable || !IsEffectivelyEnabled || !IsVisible)
+        {
             return false;
+        }
 
         var root = FindVisualRoot();
         if (root is Controls.Window window)
@@ -199,7 +211,9 @@ public abstract class UIElement : Element
         _suggestedIsEnabledInitialized = true;
 
         if (old != _suggestedIsEnabled)
+        {
             InvalidateVisual();
+        }
     }
 
     private bool GetSuggestedIsEnabled()
@@ -223,7 +237,10 @@ public abstract class UIElement : Element
     internal void RegisterBinding(IDisposable binding)
     {
         if (binding == null)
+        {
             return;
+        }
+
         _bindings ??= new List<IDisposable>(capacity: 2);
         _bindings.Add(binding);
     }
@@ -236,7 +253,9 @@ public abstract class UIElement : Element
         _isEnabledBinding = null;
 
         if (_bindings == null)
+        {
             return;
+        }
 
         for (int i = 0; i < _bindings.Count; i++)
         {
@@ -293,7 +312,10 @@ public abstract class UIElement : Element
 
     internal void SetIsVisibleBinding(Func<bool> get, Action<Action>? subscribe = null, Action<Action>? unsubscribe = null)
     {
-        if (get == null) throw new ArgumentNullException(nameof(get));
+        if (get == null)
+        {
+            throw new ArgumentNullException(nameof(get));
+        }
 
         _isVisibleBinding?.Dispose();
         _isVisibleBinding = new ValueBinding<bool>(
@@ -308,7 +330,10 @@ public abstract class UIElement : Element
 
     internal void SetIsEnabledBinding(Func<bool> get, Action<Action>? subscribe = null, Action<Action>? unsubscribe = null)
     {
-        if (get == null) throw new ArgumentNullException(nameof(get));
+        if (get == null)
+        {
+            throw new ArgumentNullException(nameof(get));
+        }
 
         _isEnabledBinding?.Dispose();
         _isEnabledBinding = new ValueBinding<bool>(

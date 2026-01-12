@@ -25,12 +25,18 @@ public sealed class ComboBox : Control, IPopupOwner
         {
             int clamped = value;
             if (_items.Count == 0)
+            {
                 clamped = -1;
+            }
             else
+            {
                 clamped = Math.Clamp(value, -1, _items.Count - 1);
+            }
 
             if (field == clamped)
+            {
                 return;
+            }
 
             field = clamped;
             SelectionChanged?.Invoke(field);
@@ -64,13 +70,19 @@ public sealed class ComboBox : Control, IPopupOwner
         set
         {
             if (_isDropDownOpen == value)
+            {
                 return;
+            }
 
             _isDropDownOpen = value;
             if (_isDropDownOpen)
+            {
                 ShowPopup();
+            }
             else
+            {
                 ClosePopup();
+            }
 
             InvalidateVisual();
         }
@@ -100,7 +112,9 @@ public sealed class ComboBox : Control, IPopupOwner
         // The popup ListBox can exist while the dropdown is closed, so it won't be in the Window visual tree
         // and would miss theme broadcasts. Keep it in sync here.
         if (_popupList != null && _popupList.Parent == null)
+        {
             _popupList.NotifyThemeChanged(oldTheme, newTheme);
+        }
     }
 
     protected override Size MeasureContent(Size availableSize)
@@ -114,13 +128,17 @@ public sealed class ComboBox : Control, IPopupOwner
             foreach (var item in _items)
             {
                 if (string.IsNullOrEmpty(item))
+                {
                     continue;
+                }
 
                 maxWidth = Math.Max(maxWidth, measure.Context.MeasureText(item, measure.Font).Width);
             }
 
             if (!string.IsNullOrEmpty(Placeholder))
+            {
                 maxWidth = Math.Max(maxWidth, measure.Context.MeasureText(Placeholder, measure.Font).Width);
+            }
 
             width = maxWidth + Padding.HorizontalThickness + ArrowAreaWidth;
         }
@@ -141,9 +159,13 @@ public sealed class ComboBox : Control, IPopupOwner
         if (IsEnabled)
         {
             if (IsFocused)
+            {
                 borderColor = theme.Accent;
+            }
             else if (IsMouseOver)
+            {
                 borderColor = BorderBrush.Lerp(theme.Accent, 0.6);
+            }
         }
 
         DrawBackgroundAndBorder(context, bounds, bg, borderColor, radius);
@@ -165,20 +187,26 @@ public sealed class ComboBox : Control, IPopupOwner
         }
 
         if (!string.IsNullOrEmpty(text))
+        {
             context.DrawText(text, textRect, GetFont(), textColor, TextAlignment.Left, TextAlignment.Center, TextWrapping.NoWrap);
+        }
 
         // Arrow
         DrawArrow(context, headerRect, IsEnabled ? textColor : theme.DisabledText, isUp: IsDropDownOpen);
 
         if (IsDropDownOpen)
+        {
             UpdatePopupBounds();
+        }
     }
 
     protected override void OnLostFocus()
     {
         base.OnLostFocus();
         if (!IsDropDownOpen)
+        {
             return;
+        }
 
         var root = FindVisualRoot();
         if (root is not Window window)
@@ -188,7 +216,9 @@ public sealed class ComboBox : Control, IPopupOwner
         }
 
         if (_popupList != null && window.FocusManager.FocusedElement == _popupList)
+        {
             return;
+        }
 
         IsDropDownOpen = false;
     }
@@ -198,7 +228,9 @@ public sealed class ComboBox : Control, IPopupOwner
         base.OnMouseDown(e);
 
         if (!IsEnabled || e.Button != MouseButton.Left)
+        {
             return;
+        }
 
         Focus();
 
@@ -219,7 +251,9 @@ public sealed class ComboBox : Control, IPopupOwner
         base.OnKeyDown(e);
 
         if (!IsEnabled)
+        {
             return;
+        }
 
         if (e.Key == Key.Space || e.Key == Key.Enter)
         {
@@ -238,26 +272,38 @@ public sealed class ComboBox : Control, IPopupOwner
         if (e.Key == Key.Down)
         {
             if (!IsDropDownOpen)
+            {
                 IsDropDownOpen = true;
+            }
 
             if (_items.Count > 0)
+            {
                 SelectedIndex = Math.Min(_items.Count - 1, SelectedIndex < 0 ? 0 : SelectedIndex + 1);
+            }
 
             if (_popupList != null)
+            {
                 _popupList.SelectedIndex = SelectedIndex;
+            }
 
             e.Handled = true;
         }
         else if (e.Key == Key.Up)
         {
             if (!IsDropDownOpen)
+            {
                 IsDropDownOpen = true;
+            }
 
             if (_items.Count > 0)
+            {
                 SelectedIndex = Math.Max(0, SelectedIndex <= 0 ? 0 : SelectedIndex - 1);
+            }
 
             if (_popupList != null)
+            {
                 _popupList.SelectedIndex = SelectedIndex;
+            }
 
             e.Handled = true;
         }
@@ -285,8 +331,15 @@ public sealed class ComboBox : Control, IPopupOwner
         Action<Action>? subscribe = null,
         Action<Action>? unsubscribe = null)
     {
-        if (get == null) throw new ArgumentNullException(nameof(get));
-        if (set == null) throw new ArgumentNullException(nameof(set));
+        if (get == null)
+        {
+            throw new ArgumentNullException(nameof(get));
+        }
+
+        if (set == null)
+        {
+            throw new ArgumentNullException(nameof(set));
+        }
 
         _selectedIndexBinding?.Dispose();
         _selectedIndexBinding = new ValueBinding<int>(
@@ -307,7 +360,9 @@ public sealed class ComboBox : Control, IPopupOwner
             existing?.Invoke(i);
 
             if (_updatingFromSource)
+            {
                 return;
+            }
 
             _selectedIndexBinding?.Set(i);
         };
@@ -320,14 +375,20 @@ public sealed class ComboBox : Control, IPopupOwner
     private double ResolveItemHeight()
     {
         if (!double.IsNaN(ItemHeight) && ItemHeight > 0)
+        {
             return ItemHeight;
+        }
+
         return Math.Max(18, FontSize + 6);
     }
 
     private double ResolveHeaderHeight()
     {
         if (!double.IsNaN(Height) && Height > 0)
+        {
             return Height;
+        }
+
         var min = MinHeight > 0 ? MinHeight : 0;
         return Math.Max(Math.Max(24, FontSize + Padding.VerticalThickness + 8), min);
     }
@@ -359,14 +420,19 @@ public sealed class ComboBox : Control, IPopupOwner
     {
         var root = FindVisualRoot();
         if (root is not Window window)
+        {
             return;
+        }
 
         if (_popupList == null)
         {
             _popupList = new ListBox();
             _popupList.Items.Clear();
             foreach (var item in _items)
+            {
                 _popupList.AddItem(item);
+            }
+
             _popupList.SelectedIndex = SelectedIndex;
             _popupList.SelectionChanged = i =>
             {
@@ -380,7 +446,10 @@ public sealed class ComboBox : Control, IPopupOwner
             // Sync items/selection.
             _popupList.Items.Clear();
             foreach (var item in _items)
+            {
                 _popupList.AddItem(item);
+            }
+
             _popupList.SelectedIndex = SelectedIndex;
         }
 
@@ -393,20 +462,28 @@ public sealed class ComboBox : Control, IPopupOwner
     {
         var root = FindVisualRoot();
         if (root is not Window window)
+        {
             return;
+        }
 
         if (_popupList != null)
+        {
             window.ClosePopup(_popupList);
+        }
     }
 
     private void UpdatePopupBounds()
     {
         if (!IsDropDownOpen || _popupList == null)
+        {
             return;
+        }
 
         var root = FindVisualRoot();
         if (root is not Window window)
+        {
             return;
+        }
 
         var popupBounds = CalculatePopupBounds(window);
         window.UpdatePopup(_popupList, popupBounds);
@@ -417,7 +494,9 @@ public sealed class ComboBox : Control, IPopupOwner
         var bounds = Bounds;
         double width = Math.Max(0, bounds.Width);
         if (width <= 0)
+        {
             width = 120;
+        }
 
         _popupList!.Measure(new Size(width, double.PositiveInfinity));
         double desiredHeight = _popupList.DesiredSize.Height;
@@ -436,9 +515,14 @@ public sealed class ComboBox : Control, IPopupOwner
 
         // Clamp horizontally to client area.
         if (x + width > client.Width)
+        {
             x = Math.Max(0, client.Width - width);
+        }
+
         if (x < 0)
+        {
             x = 0;
+        }
 
         return new Rect(x, y, width, height);
     }
@@ -467,9 +551,13 @@ public sealed class ComboBox : Control, IPopupOwner
             if (root is Window window && window.FocusManager.FocusedElement == popup)
             {
                 if (_restoreFocusAfterPopupClose)
+                {
                     window.FocusManager.SetFocus(this);
+                }
                 else
+                {
                     window.FocusManager.ClearFocus();
+                }
             }
 
             _restoreFocusAfterPopupClose = false;

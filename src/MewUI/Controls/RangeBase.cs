@@ -56,7 +56,10 @@ public abstract class RangeBase : Control
         double max = Math.Max(Minimum, Maximum);
         double range = max - min;
         if (range <= 0)
+        {
             return 0;
+        }
+
         return Math.Clamp((_value - min) / range, 0, 1);
     }
 
@@ -64,7 +67,9 @@ public abstract class RangeBase : Control
     {
         double clamped = ClampToRange(value);
         if (_value.Equals(clamped))
+        {
             return;
+        }
 
         _value = clamped;
         OnValueChanged(_value, fromUser);
@@ -76,7 +81,9 @@ public abstract class RangeBase : Control
     {
         double clamped = ClampToRange(_value);
         if (_value.Equals(clamped))
+        {
             return;
+        }
 
         _value = clamped;
         OnValueChanged(_value, fromUser: false);
@@ -86,7 +93,10 @@ public abstract class RangeBase : Control
     private static double Sanitize(double value)
     {
         if (double.IsNaN(value) || double.IsInfinity(value))
+        {
             return 0;
+        }
+
         return value;
     }
 }

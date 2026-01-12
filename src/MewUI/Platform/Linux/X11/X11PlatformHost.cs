@@ -56,7 +56,9 @@ public sealed class X11PlatformHost : IPlatformHost
     {
         _windows.Remove(window);
         if (_windows.Count == 0)
+        {
             _running = false;
+        }
     }
 
     public void Run(Application app, Window mainWindow)
@@ -74,7 +76,9 @@ public sealed class X11PlatformHost : IPlatformHost
 
         // Very simple single-display loop (from the main window).
         if (!_windows.TryGetValue(mainWindow.Handle, out var mainBackend))
+        {
             throw new InvalidOperationException("X11 main window backend not registered.");
+        }
 
         nint display = _display;
         while (_running)
@@ -92,7 +96,9 @@ public sealed class X11PlatformHost : IPlatformHost
                     }
                     var window = GetEventWindow(ev);
                     if (window != 0 && _windows.TryGetValue(window, out var backend))
+                    {
                         backend.ProcessEvent(ev);
+                    }
                 }
 
                 PollDpiChanges();
@@ -101,12 +107,16 @@ public sealed class X11PlatformHost : IPlatformHost
 
                 // Coalesced rendering for all windows.
                 foreach (var backend in _windows.Values.ToArray())
+                {
                     backend.RenderIfNeeded();
+                }
             }
             catch (Exception ex)
             {
                 if (Application.TryHandleUiException(ex))
+                {
                     continue;
+                }
 
                 Application.NotifyFatalUiException(ex);
                 _running = false;
@@ -156,7 +166,9 @@ public sealed class X11PlatformHost : IPlatformHost
     public void DoEvents()
     {
         if (_display == 0)
+        {
             return;
+        }
 
         while (NativeX11.XPending(_display) != 0)
         {
@@ -168,7 +180,9 @@ public sealed class X11PlatformHost : IPlatformHost
             }
             var window = GetEventWindow(ev);
             if (window != 0 && _windows.TryGetValue(window, out var backend))
+            {
                 backend.ProcessEvent(ev);
+            }
         }
 
         PollDpiChanges();
@@ -176,13 +190,18 @@ public sealed class X11PlatformHost : IPlatformHost
         _dispatcher?.ProcessWorkItems();
 
         foreach (var backend in _windows.Values.ToArray())
+        {
             backend.RenderIfNeeded();
+        }
     }
 
     public void Dispose()
     {
         foreach (var backend in _windows.Values.ToArray())
+        {
             backend.Dispose();
+        }
+
         _windows.Clear();
 
         if (_display != 0)
@@ -197,11 +216,15 @@ public sealed class X11PlatformHost : IPlatformHost
     internal void EnsureDisplay()
     {
         if (_display != 0)
+        {
             return;
+        }
 
         _display = NativeX11.XOpenDisplay(0);
         if (_display == 0)
+        {
             throw new InvalidOperationException("XOpenDisplay failed.");
+        }
 
         int screen = NativeX11.XDefaultScreen(_display);
         _rootWindow = NativeX11.XRootWindow(_display, screen);
@@ -213,7 +236,9 @@ public sealed class X11PlatformHost : IPlatformHost
 
         // Listen for root property changes (RESOURCE_MANAGER / XSETTINGS) to refresh DPI.
         if (_rootWindow != 0)
+        {
             NativeX11.XSelectInput(_display, _rootWindow, (nint)X11EventMask.PropertyChangeMask);
+        }
 
         _systemDpi = TryGetXSettingsDpi(_display, _xsettingsOwnerWindow, _xsettingsAtom)
             ?? TryGetXftDpi(_display)
@@ -229,29 +254,43 @@ public sealed class X11PlatformHost : IPlatformHost
             NativeX11.XrmInitialize();
             nint resourceString = NativeX11.XResourceManagerString(display);
             if (resourceString == 0)
+            {
                 return null;
+            }
 
             nint db = NativeX11.XrmGetStringDatabase(resourceString);
             if (db == 0)
+            {
                 return null;
+            }
 
             try
             {
                 if (NativeX11.XrmGetResource(db, "Xft.dpi", "Xft.Dpi", out _, out var value) == 0)
+                {
                     return null;
+                }
 
                 if (value.addr == 0)
+                {
                     return null;
+                }
 
                 string? dpiText = Marshal.PtrToStringUTF8(value.addr);
                 if (string.IsNullOrWhiteSpace(dpiText))
+                {
                     return null;
+                }
 
                 if (!double.TryParse(dpiText.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var dpi))
+                {
                     return null;
+                }
 
                 if (dpi <= 0)
+                {
                     return null;
+                }
 
                 return (uint)Math.Clamp((int)Math.Round(dpi), 48, 480);
             }
@@ -274,19 +313,26 @@ public sealed class X11PlatformHost : IPlatformHost
 
         long now = Environment.TickCount64;
         if (!force && now - _lastDpiPollTick < PollIntervalMs)
+        {
             return;
+        }
+
         _lastDpiPollTick = now;
 
         uint? dpi = TryGetXSettingsDpi(_display, _xsettingsOwnerWindow, _xsettingsAtom);
         dpi ??= TryGetXftDpi(_display);
         if (dpi == null || dpi.Value == _systemDpi)
+        {
             return;
+        }
 
         uint old = _systemDpi;
         _systemDpi = dpi.Value;
 
         foreach (var backend in _windows.Values.ToArray())
+        {
             backend.NotifyDpiChanged(old, _systemDpi);
+        }
     }
 
     private void HandlePropertyNotify(in XPropertyEvent e)
@@ -294,7 +340,9 @@ public sealed class X11PlatformHost : IPlatformHost
         if (e.window == _rootWindow)
         {
             if (_resourceManagerAtom != 0 && e.atom == _resourceManagerAtom)
+            {
                 PollDpiChanges(force: true);
+            }
 
             // Selection owner can change when the DE restarts; refresh.
             if (_xsettingsSelectionAtom != 0)
@@ -317,11 +365,15 @@ public sealed class X11PlatformHost : IPlatformHost
     private void UpdateXsettingsOwner()
     {
         if (_display == 0 || _xsettingsSelectionAtom == 0)
+        {
             return;
+        }
 
         var owner = NativeX11.XGetSelectionOwner(_display, _xsettingsSelectionAtom);
         if (owner == _xsettingsOwnerWindow)
+        {
             return;
+        }
 
         _xsettingsOwnerWindow = owner;
         if (_xsettingsOwnerWindow != 0)
@@ -334,7 +386,9 @@ public sealed class X11PlatformHost : IPlatformHost
     private static uint? TryGetXSettingsDpi(nint display, nint xsettingsOwnerWindow, nint xsettingsSettingsAtom)
     {
         if (display == 0 || xsettingsOwnerWindow == 0 || xsettingsSettingsAtom == 0)
+        {
             return null;
+        }
 
         const nint AnyPropertyType = 0;
 
@@ -355,7 +409,10 @@ public sealed class X11PlatformHost : IPlatformHost
         if (status != 0 || prop == 0 || actualFormat != 8 || nitems == 0)
         {
             if (prop != 0)
+            {
                 NativeX11.XFree(prop);
+            }
+
             return null;
         }
 
@@ -377,7 +434,9 @@ public sealed class X11PlatformHost : IPlatformHost
     private static uint? ParseXSettingsDpi(ReadOnlySpan<byte> data)
     {
         if (data.Length < 12)
+        {
             return null;
+        }
 
         // XSETTINGS wire format: byte order ('l' or 'B'), 3 pad bytes, uint32 serial, uint32 n_settings, then entries.
         bool littleEndian = data[0] switch
@@ -394,14 +453,18 @@ public sealed class X11PlatformHost : IPlatformHost
         for (uint i = 0; i < count; i++)
         {
             if (offset + 4 > data.Length)
+            {
                 return null;
+            }
 
             byte type = data[offset++];
             offset++; // pad
             ushort nameLen = ReadUInt16(data, ref offset, littleEndian);
 
             if (offset + nameLen > data.Length)
+            {
                 return null;
+            }
 
             string name = Encoding.ASCII.GetString(data.Slice(offset, nameLen));
             offset += nameLen;
@@ -418,7 +481,10 @@ public sealed class X11PlatformHost : IPlatformHost
                     // Value is in 1/1024 DPI units.
                     double dpi = value / 1024.0;
                     if (dpi <= 0)
+                    {
                         return null;
+                    }
+
                     return (uint)Math.Clamp((int)Math.Round(dpi), 48, 480);
                 }
             }
@@ -447,7 +513,9 @@ public sealed class X11PlatformHost : IPlatformHost
     private static ushort ReadUInt16(ReadOnlySpan<byte> data, ref int offset, bool littleEndian)
     {
         if (offset + 2 > data.Length)
+        {
             throw new IndexOutOfRangeException();
+        }
 
         ushort v = littleEndian
             ? (ushort)(data[offset] | (data[offset + 1] << 8))
@@ -459,7 +527,9 @@ public sealed class X11PlatformHost : IPlatformHost
     private static uint ReadUInt32(ReadOnlySpan<byte> data, ref int offset, bool littleEndian)
     {
         if (offset + 4 > data.Length)
+        {
             throw new IndexOutOfRangeException();
+        }
 
         uint v = littleEndian
             ? (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24))

@@ -26,7 +26,10 @@ public sealed unsafe class Direct2DGraphicsFactory : IGraphicsFactory, IWindowRe
         lock (_rtLock)
         {
             foreach (var (_, entry) in _windowTargets)
+            {
                 ComHelpers.Release(entry.RenderTarget);
+            }
+
             _windowTargets.Clear();
         }
 
@@ -40,17 +43,23 @@ public sealed unsafe class Direct2DGraphicsFactory : IGraphicsFactory, IWindowRe
     private void EnsureInitialized()
     {
         if (_initialized)
+        {
             return;
+        }
 
         Ole32.CoInitializeEx(0, Ole32.COINIT_APARTMENTTHREADED);
 
         int hr = D2D1.D2D1CreateFactory(D2D1_FACTORY_TYPE.SINGLE_THREADED, D2D1.IID_ID2D1Factory, 0, out _d2dFactory);
         if (hr < 0 || _d2dFactory == 0)
+        {
             throw new InvalidOperationException($"D2D1CreateFactory failed: 0x{hr:X8}");
+        }
 
         hr = DWrite.DWriteCreateFactory(DWRITE_FACTORY_TYPE.SHARED, DWrite.IID_IDWriteFactory, out _dwriteFactory);
         if (hr < 0 || _dwriteFactory == 0)
+        {
             throw new InvalidOperationException($"DWriteCreateFactory failed: 0x{hr:X8}");
+        }
 
         _initialized = true;
     }
@@ -89,7 +98,9 @@ public sealed unsafe class Direct2DGraphicsFactory : IGraphicsFactory, IWindowRe
         lock (_rtLock)
         {
             if (_windowTargets.Remove(hwnd, out var entry))
+            {
                 ComHelpers.Release(entry.RenderTarget);
+            }
         }
     }
 
@@ -108,7 +119,9 @@ public sealed unsafe class Direct2DGraphicsFactory : IGraphicsFactory, IWindowRe
             if (_windowTargets.TryGetValue(hwnd, out var entry) && entry.RenderTarget != 0)
             {
                 if (entry.Width == w && entry.Height == h && entry.DpiX == dpi)
+                {
                     return (entry.RenderTarget, entry.Generation);
+                }
 
                 // If size/DPI changed, recreate the target. (Safer than calling ID2D1HwndRenderTarget::Resize via vtable indices.)
                 ComHelpers.Release(entry.RenderTarget);
@@ -125,7 +138,9 @@ public sealed unsafe class Direct2DGraphicsFactory : IGraphicsFactory, IWindowRe
 
             int hr = D2D1VTable.CreateHwndRenderTarget((ID2D1Factory*)_d2dFactory, ref rtProps, ref hwndProps, out var renderTarget);
             if (hr < 0 || renderTarget == 0)
+            {
                 throw new InvalidOperationException($"CreateHwndRenderTarget failed: 0x{hr:X8}");
+            }
 
             D2D1VTable.SetDpi((ID2D1RenderTarget*)renderTarget, dpi, dpi);
             _windowTargets[hwnd] = new WindowRenderTarget(renderTarget, w, h, dpi, generation);

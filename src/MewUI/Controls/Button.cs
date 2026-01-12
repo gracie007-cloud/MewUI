@@ -59,7 +59,9 @@ public class Button : Control
         var border = borderInset > 0 ? new Thickness(borderInset) : Thickness.Zero;
 
         if (string.IsNullOrEmpty(Content))
+        {
             return new Size(Padding.HorizontalThickness + 20, Padding.VerticalThickness + 10).Inflate(border);
+        }
 
         using var measure = BeginTextMeasurement();
         var textSize = measure.Context.MeasureText(Content, measure.Font);
@@ -121,7 +123,9 @@ public class Button : Control
             // Capture mouse
             var root = FindVisualRoot();
             if (root is Window window)
+            {
                 window.CaptureMouse(this);
+            }
 
             InvalidateVisual();
             e.Handled = true;
@@ -139,7 +143,9 @@ public class Button : Control
             // Release capture
             var root = FindVisualRoot();
             if (root is Window window)
+            {
                 window.ReleaseMouseCapture();
+            }
 
             // Fire click if still over button
             if (IsEffectivelyEnabled && Bounds.Contains(e.Position))
@@ -183,7 +189,10 @@ public class Button : Control
         {
             _isPressed = false;
             if (IsEffectivelyEnabled)
+            {
                 OnClick();
+            }
+
             InvalidateVisual();
             e.Handled = true;
         }
@@ -193,7 +202,10 @@ public class Button : Control
 
     public void SetContentBinding(Func<string> get, Action<Action>? subscribe = null, Action<Action>? unsubscribe = null)
     {
-        if (get == null) throw new ArgumentNullException(nameof(get));
+        if (get == null)
+        {
+            throw new ArgumentNullException(nameof(get));
+        }
 
         _contentBinding?.Dispose();
         _contentBinding = new ValueBinding<string>(

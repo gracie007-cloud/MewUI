@@ -45,7 +45,9 @@ public sealed class ScrollBar : RangeBase
     protected override void OnRender(IGraphicsContext context)
     {
         if (!IsEnabled)
+        {
             return;
+        }
 
         var theme = GetTheme();
         var bounds = Bounds;
@@ -55,13 +57,19 @@ public sealed class ScrollBar : RangeBase
 
         var thumbColor = theme.ScrollBarThumb;
         if (_dragging || IsMouseCaptured)
+        {
             thumbColor = theme.ScrollBarThumbActive;
+        }
         else if (IsMouseOver)
+        {
             thumbColor = theme.ScrollBarThumbHover;
+        }
 
         double radius = Math.Min(theme.ScrollBarThickness / 2, theme.ControlCornerRadius);
         if (thumb.Width > 0 && thumb.Height > 0 && thumbColor.A > 0)
+        {
             context.FillRoundedRectangle(thumb, radius, radius, thumbColor);
+        }
     }
 
     protected override void OnMouseDown(MouseEventArgs e)
@@ -69,7 +77,9 @@ public sealed class ScrollBar : RangeBase
         base.OnMouseDown(e);
 
         if (!IsEnabled || e.Button != MouseButton.Left)
+        {
             return;
+        }
 
         var theme = GetTheme();
         var track = GetTrackRect(Bounds, theme);
@@ -86,7 +96,9 @@ public sealed class ScrollBar : RangeBase
 
             var root = FindVisualRoot();
             if (root is Window window)
+            {
                 window.CaptureMouse(this);
+            }
 
             e.Handled = true;
             return;
@@ -95,9 +107,13 @@ public sealed class ScrollBar : RangeBase
         // Page up/down on track click
         var clickValue = ValueFromPosition(track, theme, pos);
         if (clickValue < Value)
+        {
             Value -= LargeChange;
+        }
         else
+        {
             Value += LargeChange;
+        }
 
         e.Handled = true;
     }
@@ -107,7 +123,9 @@ public sealed class ScrollBar : RangeBase
         base.OnMouseMove(e);
 
         if (!IsEnabled || !_dragging || !IsMouseCaptured || !e.LeftButton)
+        {
             return;
+        }
 
         var theme = GetTheme();
         var track = GetTrackRect(Bounds, theme);
@@ -132,14 +150,19 @@ public sealed class ScrollBar : RangeBase
         base.OnMouseUp(e);
 
         if (e.Button != MouseButton.Left)
+        {
             return;
+        }
 
         if (_dragging)
         {
             _dragging = false;
             var root = FindVisualRoot();
             if (root is Window window)
+            {
                 window.ReleaseMouseCapture();
+            }
+
             e.Handled = true;
         }
     }
@@ -149,12 +172,16 @@ public sealed class ScrollBar : RangeBase
         base.OnMouseWheel(e);
 
         if (!IsEnabled || e.Handled)
+        {
             return;
+        }
 
         // 120 is a common wheel delta unit on Windows, but we treat it as "one notch"
         int steps = Math.Sign(e.Delta);
         if (steps == 0)
+        {
             return;
+        }
 
         Value -= steps * SmallChange;
         e.Handled = true;
@@ -191,7 +218,10 @@ public sealed class ScrollBar : RangeBase
         double offset = usable * t;
 
         if (Orientation == Orientation.Vertical)
+        {
             return new Rect(track.X, track.Y + offset, thickness, thumbLength);
+        }
+
         return new Rect(track.X + offset, track.Y, thumbLength, thickness);
     }
 
@@ -202,7 +232,9 @@ public sealed class ScrollBar : RangeBase
         double hit = Orientation == Orientation.Vertical ? bounds.Width : bounds.Height;
         double visual = Math.Max(0, theme.ScrollBarThickness);
         if (visual <= 0 || hit <= 0)
+        {
             return bounds;
+        }
 
         var dpiScale = GetDpi() / 96.0;
         visual = LayoutRounding.RoundToPixel(Math.Min(visual, hit), dpiScale);
@@ -227,7 +259,9 @@ public sealed class ScrollBar : RangeBase
         // Use the full hit-test thickness ("A") for grabbing the thumb,
         // while keeping the visible thumb thickness thin.
         if (Orientation == Orientation.Vertical)
+        {
             return new Rect(hitBounds.X, thumbVisual.Y, hitBounds.Width, thumbVisual.Height);
+        }
 
         return new Rect(thumbVisual.X, hitBounds.Y, thumbVisual.Width, hitBounds.Height);
     }

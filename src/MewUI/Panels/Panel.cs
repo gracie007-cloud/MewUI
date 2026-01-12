@@ -22,7 +22,10 @@ public abstract class Panel : Control
     /// </summary>
     public void Add(Element child)
     {
-        if (child == null) throw new ArgumentNullException(nameof(child));
+        if (child == null)
+        {
+            throw new ArgumentNullException(nameof(child));
+        }
 
         child.Parent = this;
         _children.Add(child);
@@ -36,7 +39,9 @@ public abstract class Panel : Control
     public void AddRange(params Element[] children)
     {
         foreach (var child in children)
+        {
             Add(child);
+        }
     }
 
     /// <summary>
@@ -83,7 +88,10 @@ public abstract class Panel : Control
     /// </summary>
     public void Insert(int index, Element child)
     {
-        if (child == null) throw new ArgumentNullException(nameof(child));
+        if (child == null)
+        {
+            throw new ArgumentNullException(nameof(child));
+        }
 
         child.Parent = this;
         _children.Insert(index, child);
@@ -126,7 +134,9 @@ public abstract class Panel : Control
     public override UIElement? HitTest(Point point)
     {
         if (!IsVisible || !IsHitTestVisible)
+        {
             return null;
+        }
 
         // Hit test children in reverse order (top to bottom in visual order)
         for (int i = _children.Count - 1; i >= 0; i--)
@@ -135,13 +145,17 @@ public abstract class Panel : Control
             {
                 var result = uiChild.HitTest(point);
                 if (result != null)
+                {
                     return result;
+                }
             }
         }
 
         // Then check self
         if (Bounds.Contains(point))
+        {
             return this;
+        }
 
         return null;
     }

@@ -13,7 +13,9 @@ internal static class DiagLog
     public static void Write(string message)
     {
         if (!Enabled)
+        {
             return;
+        }
 
         try
         {
@@ -32,7 +34,9 @@ internal static class DiagLog
     {
         var path = Environment.GetEnvironmentVariable("MEWUI_DIAG_PATH");
         if (!string.IsNullOrWhiteSpace(path))
+        {
             return path;
+        }
 
         return Path.Combine(AppContext.BaseDirectory, "mewui_diag.log");
     }

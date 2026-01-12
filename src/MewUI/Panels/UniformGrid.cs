@@ -41,10 +41,16 @@ public class UniformGrid : Panel
         foreach (var child in Children)
         {
             if (child is UIElement ui && !ui.IsVisible)
+            {
                 continue;
+            }
+
             count++;
         }
-        if (count == 0) return (0, 0);
+        if (count == 0)
+        {
+            return (0, 0);
+        }
 
         int rows = Rows;
         int columns = Columns;
@@ -73,7 +79,9 @@ public class UniformGrid : Panel
         var (rows, columns) = CalculateGridSize();
 
         if (rows == 0 || columns == 0)
+        {
             return Size.Empty;
+        }
 
         double colGaps = columns > 1 ? (columns - 1) * Spacing : 0;
         double rowGaps = rows > 1 ? (rows - 1) * Spacing : 0;
@@ -88,7 +96,9 @@ public class UniformGrid : Panel
         foreach (var child in Children)
         {
             if (child is UIElement ui && !ui.IsVisible)
+            {
                 continue;
+            }
 
             child.Measure(cellSize);
             maxChildWidth = Math.Max(maxChildWidth, child.DesiredSize.Width);
@@ -106,7 +116,9 @@ public class UniformGrid : Panel
         var (rows, columns) = CalculateGridSize();
 
         if (rows == 0 || columns == 0)
+        {
             return;
+        }
 
         double colGaps = columns > 1 ? (columns - 1) * Spacing : 0;
         double rowGaps = rows > 1 ? (rows - 1) * Spacing : 0;
@@ -124,13 +136,18 @@ public class UniformGrid : Panel
                 {
                     var candidate = Children[index++];
                     if (candidate is UIElement ui && !ui.IsVisible)
+                    {
                         continue;
+                    }
+
                     child = candidate;
                     break;
                 }
 
                 if (child == null)
+                {
                     return;
+                }
 
                 child.Arrange(new Rect(
                     contentBounds.X + col * (cellWidth + Spacing),

@@ -20,12 +20,16 @@ public class ContentControl : Control
             if (field != value)
             {
                 if (field != null)
+                {
                     field.Parent = null;
+                }
 
                 field = value;
 
                 if (field != null)
+                {
                     field.Parent = this;
+                }
 
                 InvalidateMeasure();
             }
@@ -35,7 +39,9 @@ public class ContentControl : Control
     protected override Size MeasureContent(Size availableSize)
     {
         if (Content == null)
+        {
             return Size.Empty;
+        }
 
         // Subtract padding
         var contentSize = availableSize.Deflate(Padding);
@@ -47,7 +53,9 @@ public class ContentControl : Control
     protected override void ArrangeContent(Rect bounds)
     {
         if (Content == null)
+        {
             return;
+        }
 
         // Arrange within padding
         var contentBounds = bounds.Deflate(Padding);
@@ -63,19 +71,25 @@ public class ContentControl : Control
     public override UIElement? HitTest(Point point)
     {
         if (!IsVisible || !IsHitTestVisible)
+        {
             return null;
+        }
 
         // First check children
         if (Content is UIElement uiContent)
         {
             var result = uiContent.HitTest(point);
             if (result != null)
+            {
                 return result;
+            }
         }
 
         // Then check self
         if (Bounds.Contains(point))
+        {
             return this;
+        }
 
         return null;
     }

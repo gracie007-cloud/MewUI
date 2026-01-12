@@ -20,7 +20,9 @@ internal sealed class OpenGLMeasurementContext : IGraphicsContext
     public Size MeasureText(string text, IFont font)
     {
         if (string.IsNullOrEmpty(text))
+        {
             return Size.Empty;
+        }
 
         if (OperatingSystem.IsLinux() && font is FreeTypeFont ftFont)
         {
@@ -31,7 +33,12 @@ internal sealed class OpenGLMeasurementContext : IGraphicsContext
         double size = font.Size <= 0 ? 12 : font.Size;
         int lines = 1;
         for (int i = 0; i < text.Length; i++)
-            if (text[i] == '\n') lines++;
+        {
+            if (text[i] == '\n')
+            {
+                lines++;
+            }
+        }
 
         double lineHeight = size * 1.25;
         double maxLineChars = 0;
@@ -39,16 +46,27 @@ internal sealed class OpenGLMeasurementContext : IGraphicsContext
         for (int i = 0; i < text.Length; i++)
         {
             char c = text[i];
-            if (c == '\r') continue;
+            if (c == '\r')
+            {
+                continue;
+            }
+
             if (c == '\n')
             {
-                if (current > maxLineChars) maxLineChars = current;
+                if (current > maxLineChars)
+                {
+                    maxLineChars = current;
+                }
+
                 current = 0;
                 continue;
             }
             current++;
         }
-        if (current > maxLineChars) maxLineChars = current;
+        if (current > maxLineChars)
+        {
+            maxLineChars = current;
+        }
 
         double width = maxLineChars * size * 0.6;
         double height = lines * lineHeight;
@@ -58,7 +76,9 @@ internal sealed class OpenGLMeasurementContext : IGraphicsContext
     public Size MeasureText(string text, IFont font, double maxWidth)
     {
         if (double.IsNaN(maxWidth) || maxWidth <= 0 || double.IsInfinity(maxWidth))
+        {
             return MeasureText(text, font);
+        }
 
         if (OperatingSystem.IsLinux() && font is FreeTypeFont ftFont)
         {
@@ -69,7 +89,9 @@ internal sealed class OpenGLMeasurementContext : IGraphicsContext
 
         var raw = MeasureText(text, font);
         if (raw.Width <= maxWidth)
+        {
             return raw;
+        }
 
         double size = font.Size <= 0 ? 12 : font.Size;
         double charsPerLine = Math.Max(1, maxWidth / (size * 0.6));

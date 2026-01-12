@@ -56,7 +56,10 @@ internal sealed class GlxOpenGLWindowResources : IOpenGLWindowResources
                 {
                     nint ptr = LibGL.glXChooseVisual(display, screen, (nint)p);
                     if (ptr == 0)
+                    {
                         throw new InvalidOperationException("glXChooseVisual failed.");
+                    }
+
                     visualInfo = Marshal.PtrToStructure<XVisualInfo>(ptr);
                     X11.XFree(ptr);
                 }
@@ -70,10 +73,14 @@ internal sealed class GlxOpenGLWindowResources : IOpenGLWindowResources
 
             nint ctx = LibGL.glXCreateContext(display, visualInfoMem, 0, 1);
             if (ctx == 0)
+            {
                 throw new InvalidOperationException("glXCreateContext failed.");
+            }
 
             if (!LibGL.glXMakeCurrent(display, window, ctx))
+            {
                 throw new InvalidOperationException("glXMakeCurrent failed.");
+            }
 
             bool supportsBgra = DetectBgraSupport();
             DiagLog.Write($"GLX context ok: ctx=0x{ctx.ToInt64():X} BGRA={supportsBgra}");
@@ -107,7 +114,10 @@ internal sealed class GlxOpenGLWindowResources : IOpenGLWindowResources
     public void MakeCurrent(nint deviceOrDisplay)
     {
         if (_disposed)
+        {
             return;
+        }
+
         LibGL.glXMakeCurrent(deviceOrDisplay, _window, GlxContext);
     }
 
@@ -119,16 +129,25 @@ internal sealed class GlxOpenGLWindowResources : IOpenGLWindowResources
     public void TrackTexture(uint textureId)
     {
         if (textureId == 0)
+        {
             return;
+        }
+
         if (_disposed)
+        {
             return;
+        }
+
         _textures.Add(textureId);
     }
 
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
+
         _disposed = true;
 
         MakeCurrent(_display);

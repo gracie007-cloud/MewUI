@@ -44,12 +44,17 @@ public class Window : ContentControl
                 _namedSelected[groupName] = new WeakReference<RadioButton>(source);
 
                 if (existing != null && existing != source && existing.IsChecked)
+                {
                     existing.IsChecked = false;
+                }
+
                 return;
             }
 
             if (parentScope == null)
+            {
                 return;
+            }
 
             _unnamedSelected.TryGetValue(parentScope, out var existingScopeRef);
             var existingScope = TryGet(existingScopeRef);
@@ -57,7 +62,9 @@ public class Window : ContentControl
             _unnamedSelected[parentScope] = new WeakReference<RadioButton>(source);
 
             if (existingScope != null && existingScope != source && existingScope.IsChecked)
+            {
                 existingScope.IsChecked = false;
+            }
         }
 
         public void Unchecked(RadioButton source, string? groupName, Element? parentScope)
@@ -66,22 +73,32 @@ public class Window : ContentControl
             {
                 if (_namedSelected.TryGetValue(groupName, out var existingRef) &&
                     TryGet(existingRef) == source)
+                {
                     _namedSelected.Remove(groupName);
+                }
+
                 return;
             }
 
             if (parentScope == null)
+            {
                 return;
+            }
 
             if (_unnamedSelected.TryGetValue(parentScope, out var scopeRef) &&
                 TryGet(scopeRef) == source)
+            {
                 _unnamedSelected.Remove(parentScope);
+            }
         }
 
         private static RadioButton? TryGet(WeakReference<RadioButton>? weak)
         {
             if (weak == null)
+            {
                 return null;
+            }
+
             return weak.TryGetTarget(out var value) ? value : null;
         }
     }
@@ -101,9 +118,15 @@ public class Window : ContentControl
         {
             field = value;
             if (!double.IsNaN(field.Width))
+            {
                 Width = field.Width;
+            }
+
             if (!double.IsNaN(field.Height))
+            {
                 Height = field.Height;
+            }
+
             _backend?.SetResizable(field.IsResizable);
         }
     } = WindowSize.Resizable(800, 600);
@@ -191,8 +214,16 @@ public class Window : ContentControl
         get => _theme;
         set
         {
-            if (value == null) throw new ArgumentNullException(nameof(value));
-            if (_theme == value) return;
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            if (_theme == value)
+            {
+                return;
+            }
+
             var old = _theme;
             _theme = value;
 
@@ -208,7 +239,10 @@ public class Window : ContentControl
     protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
     {
         if (Background == oldTheme.WindowBackground)
+        {
             Background = newTheme.WindowBackground;
+        }
+
         base.OnThemeChanged(oldTheme, newTheme);
     }
 
@@ -220,7 +254,9 @@ public class Window : ContentControl
         // Raise Loaded once, and only after the application's dispatcher is ready.
         // The platform host will raise Loaded for the very first window after it sets the dispatcher.
         if (!_loadedRaised && Application.IsRunning && Application.Current.Dispatcher != null)
+        {
             RaiseLoaded();
+        }
     }
 
     public void Hide() => _backend?.Hide();
@@ -230,10 +266,14 @@ public class Window : ContentControl
     private void EnsureBackend()
     {
         if (_backend != null)
+        {
             return;
+        }
 
         if (!Application.IsRunning)
+        {
             throw new InvalidOperationException("Application is not running. Call Application.Run() first.");
+        }
 
         _backend = Application.Current.PlatformHost.CreateWindowBackend(this);
         _backend.SetResizable(WindowSize.IsResizable);
@@ -242,14 +282,18 @@ public class Window : ContentControl
     public void PerformLayout()
     {
         if (Handle == 0 || Content == null)
+        {
             return;
+        }
 
         var clientSize = _clientSizeDip.IsEmpty ? new Size(Width, Height) : _clientSizeDip;
 
         // Layout can be expensive (e.g., large item collections). If nothing is dirty and the
         // client size hasn't changed, avoid re-running Measure/Arrange on every paint.
         if (clientSize == _lastLayoutClientSizeDip && !IsLayoutDirty(Content))
+        {
             return;
+        }
 
         const int maxPasses = 8;
         for (int pass = 0; pass < maxPasses; pass++)
@@ -258,7 +302,9 @@ public class Window : ContentControl
             Content.Arrange(new Rect(0, 0, clientSize.Width, clientSize.Height));
 
             if (!IsLayoutDirty(Content))
+            {
                 break;
+            }
         }
 
         _lastLayoutClientSizeDip = clientSize;
@@ -270,9 +316,14 @@ public class Window : ContentControl
         VisitVisualTree(root, e =>
         {
             if (dirty)
+            {
                 return;
+            }
+
             if (e.IsMeasureDirty || e.IsArrangeDirty)
+            {
                 dirty = true;
+            }
         });
         return dirty;
     }
@@ -286,12 +337,16 @@ public class Window : ContentControl
     public void RequerySuggested()
     {
         if (Content == null)
+        {
             return;
+        }
 
         VisitVisualTree(Content, e =>
         {
             if (e is UIElement u)
+            {
                 u.ReevaluateSuggestedIsEnabled();
+            }
         });
     }
 
@@ -314,7 +369,10 @@ public class Window : ContentControl
     internal void RaiseLoaded()
     {
         if (_loadedRaised)
+        {
             return;
+        }
+
         _loadedRaised = true;
 
         PerformLayout();
@@ -341,7 +399,9 @@ public class Window : ContentControl
 
             // Popups render last (on top).
             for (int i = 0; i < _popups.Count; i++)
+            {
                 _popups[i].Element.Render(context);
+            }
         }
         finally
         {
@@ -366,7 +426,9 @@ public class Window : ContentControl
         VisualTree.Visit(Content, element =>
         {
             if (element is IDisposable disposable)
+            {
                 disposable.Dispose();
+            }
         });
 
         DisposePopups();
@@ -377,7 +439,10 @@ public class Window : ContentControl
         foreach (var popup in _popups)
         {
             if (popup.Element is IDisposable disposable)
+            {
                 disposable.Dispose();
+            }
+
             popup.Element.Parent = null;
         }
         _popups.Clear();
@@ -393,14 +458,18 @@ public class Window : ContentControl
             VisitVisualTree(Content, e =>
             {
                 if (e is Control c)
+                {
                     c.NotifyThemeChanged(oldTheme, newTheme);
+                }
             });
         }
 
         for (int i = 0; i < _popups.Count; i++)
         {
             if (_popups[i].Element is Control c)
+            {
                 c.NotifyThemeChanged(oldTheme, newTheme);
+            }
         }
     }
 
@@ -416,32 +485,42 @@ public class Window : ContentControl
             VisitVisualTree(Content, e =>
             {
                 if (e is Control c)
+                {
                     c.NotifyDpiChanged(oldDpi, newDpi);
+                }
             });
         }
 
         for (int i = 0; i < _popups.Count; i++)
         {
             if (_popups[i].Element is Control c)
+            {
                 c.NotifyDpiChanged(oldDpi, newDpi);
+            }
         }
     }
 
     internal void ClosePopupsIfClickOutside(Point position)
     {
         if (_popups.Count == 0)
+        {
             return;
+        }
 
         for (int i = _popups.Count - 1; i >= 0; i--)
         {
             if (_popups[i].Bounds.Contains(position))
+            {
                 return;
+            }
         }
 
         for (int i = _popups.Count - 1; i >= 0; i--)
         {
             if (_popups[i].Owner.Bounds.Contains(position))
+            {
                 return;
+            }
         }
 
         CloseAllPopups();
@@ -454,7 +533,9 @@ public class Window : ContentControl
             var entry = _popups[i];
             entry.Element.Parent = null;
             if (entry.Owner is IPopupOwner owner)
+            {
                 owner.OnPopupClosed(entry.Element);
+            }
         }
         _popups.Clear();
         Invalidate();
@@ -462,8 +543,15 @@ public class Window : ContentControl
 
     internal void ShowPopup(UIElement owner, UIElement popup, Rect bounds)
     {
-        if (owner == null) throw new ArgumentNullException(nameof(owner));
-        if (popup == null) throw new ArgumentNullException(nameof(popup));
+        if (owner == null)
+        {
+            throw new ArgumentNullException(nameof(owner));
+        }
+
+        if (popup == null)
+        {
+            throw new ArgumentNullException(nameof(popup));
+        }
 
         // Replace if already present.
         for (int i = 0; i < _popups.Count; i++)
@@ -487,7 +575,9 @@ public class Window : ContentControl
         for (int i = 0; i < _popups.Count; i++)
         {
             if (_popups[i].Element != popup)
+            {
                 continue;
+            }
 
             _popups[i].Bounds = bounds;
             LayoutPopup(_popups[i]);
@@ -501,13 +591,18 @@ public class Window : ContentControl
         for (int i = 0; i < _popups.Count; i++)
         {
             if (_popups[i].Element != popup)
+            {
                 continue;
+            }
 
             var entry = _popups[i];
             _popups[i].Element.Parent = null;
             _popups.RemoveAt(i);
             if (entry.Owner is IPopupOwner owner)
+            {
                 owner.OnPopupClosed(entry.Element);
+            }
+
             Invalidate();
             return;
         }
@@ -524,11 +619,15 @@ public class Window : ContentControl
         for (int i = _popups.Count - 1; i >= 0; i--)
         {
             if (!_popups[i].Bounds.Contains(point))
+            {
                 continue;
+            }
 
             var hit = _popups[i].Element.HitTest(point);
             if (hit != null)
+            {
                 return hit;
+            }
         }
 
         return (Content as UIElement)?.HitTest(point);

@@ -27,12 +27,21 @@ public sealed class ImageSource
     /// </summary>
     public static ImageSource FromResource(Assembly assembly, string resourceName)
     {
-        if (assembly == null) throw new ArgumentNullException(nameof(assembly));
-        if (string.IsNullOrWhiteSpace(resourceName)) throw new ArgumentException("Resource name is required.", nameof(resourceName));
+        if (assembly == null)
+        {
+            throw new ArgumentNullException(nameof(assembly));
+        }
+
+        if (string.IsNullOrWhiteSpace(resourceName))
+        {
+            throw new ArgumentException("Resource name is required.", nameof(resourceName));
+        }
 
         using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream == null)
+        {
             throw new FileNotFoundException($"Embedded resource not found: '{resourceName}'", resourceName);
+        }
 
         return FromStream(stream);
     }
@@ -47,11 +56,15 @@ public sealed class ImageSource
     {
         source = null;
         if (assembly == null || string.IsNullOrWhiteSpace(resourceName))
+        {
             return false;
+        }
 
         using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream == null)
+        {
             return false;
+        }
 
         source = FromStream(stream);
         return true;
@@ -66,7 +79,9 @@ public sealed class ImageSource
         {
             long len64 = stream.Length;
             if (len64 > int.MaxValue)
+            {
                 throw new NotSupportedException("Embedded resource is too large.");
+            }
 
             int len = (int)len64;
             var data = GC.AllocateUninitializedArray<byte>(len);

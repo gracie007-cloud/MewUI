@@ -38,7 +38,10 @@ public sealed class Slider : RangeBase
             onSourceChanged: () =>
             {
                 if (_isDragging)
+                {
                     return;
+                }
+
                 SetValueFromSource(get());
             });
 
@@ -52,7 +55,9 @@ public sealed class Slider : RangeBase
         var theme = GetTheme();
 
         if (_valueBinding != null && !_isDragging)
+        {
             SetValueFromSource(_valueBinding.Get());
+        }
 
         var bounds = Bounds;
         var contentBounds = bounds.Deflate(Padding);
@@ -77,7 +82,9 @@ public sealed class Slider : RangeBase
         double t = GetNormalizedValue();
         var fillRect = new Rect(trackRect.X, trackRect.Y, trackRect.Width * t, trackRect.Height);
         if (fillRect.Width > 0)
+        {
             context.FillRoundedRectangle(fillRect, 2, 2, theme.Accent);
+        }
 
         // Thumb
         double thumbSize = 14;
@@ -94,9 +101,13 @@ public sealed class Slider : RangeBase
         if (IsEnabled)
         {
             if (IsFocused || _isDragging)
+            {
                 thumbBorder = theme.Accent;
+            }
             else if (IsMouseOver)
+            {
                 thumbBorder = BorderBrush.Lerp(theme.Accent, 0.6);
+            }
         }
         context.DrawEllipse(thumbRect, thumbBorder, 1);
     }
@@ -106,7 +117,9 @@ public sealed class Slider : RangeBase
         base.OnMouseDown(e);
 
         if (!IsEnabled || e.Button != MouseButton.Left)
+        {
             return;
+        }
 
         Focus();
         _isDragging = true;
@@ -114,7 +127,9 @@ public sealed class Slider : RangeBase
 
         var root = FindVisualRoot();
         if (root is Window window)
+        {
             window.CaptureMouse(this);
+        }
 
         e.Handled = true;
     }
@@ -124,7 +139,9 @@ public sealed class Slider : RangeBase
         base.OnMouseMove(e);
 
         if (!IsEnabled || !_isDragging || !IsMouseCaptured || !e.LeftButton)
+        {
             return;
+        }
 
         SetValueFromPosition(e.Position.X);
         e.Handled = true;
@@ -135,13 +152,17 @@ public sealed class Slider : RangeBase
         base.OnMouseUp(e);
 
         if (e.Button != MouseButton.Left || !_isDragging)
+        {
             return;
+        }
 
         _isDragging = false;
 
         var root = FindVisualRoot();
         if (root is Window window)
+        {
             window.ReleaseMouseCapture();
+        }
 
         e.Handled = true;
     }
@@ -151,7 +172,9 @@ public sealed class Slider : RangeBase
         base.OnKeyDown(e);
 
         if (!IsEnabled)
+        {
             return;
+        }
 
         if (e.Key == Key.Left)
         {
@@ -180,12 +203,16 @@ public sealed class Slider : RangeBase
     {
         double clamped = ClampToRange(value);
         if (Value.Equals(clamped))
+        {
             return;
+        }
 
         Value = clamped;
 
         if (fromUser && _valueBinding != null)
+        {
             _valueBinding.Set(clamped);
+        }
     }
 
     protected override void OnDispose()

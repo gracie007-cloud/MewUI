@@ -183,7 +183,9 @@ internal static unsafe class D2D1VTable
     public static void DrawText(ID2D1RenderTarget* rt, string text, nint textFormat, in D2D1_RECT_F layoutRect, nint brush)
     {
         if (string.IsNullOrEmpty(text))
+        {
             return;
+        }
 
         fixed (char* pText = text)
         fixed (D2D1_RECT_F* pRect = &layoutRect)

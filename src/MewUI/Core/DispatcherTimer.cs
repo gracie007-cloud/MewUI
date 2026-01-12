@@ -25,7 +25,10 @@ public sealed class DispatcherTimer : IDisposable
     {
         get
         {
-            lock (_gate) return _isEnabled;
+            lock (_gate)
+            {
+                return _isEnabled;
+            }
         }
     }
 
@@ -33,18 +36,25 @@ public sealed class DispatcherTimer : IDisposable
     {
         get
         {
-            lock (_gate) return _interval;
+            lock (_gate)
+            {
+                return _interval;
+            }
         }
         set
         {
             if (value <= TimeSpan.Zero)
+            {
                 throw new ArgumentOutOfRangeException(nameof(value), value, "Interval must be greater than zero.");
+            }
 
             lock (_gate)
             {
                 _interval = value;
                 if (_isEnabled)
+                {
                     Reschedule();
+                }
             }
         }
     }
@@ -58,7 +68,9 @@ public sealed class DispatcherTimer : IDisposable
             lock (_gate)
             {
                 if (_isEnabled)
+                {
                     return;
+                }
 
                 _isEnabled = true;
                 _scheduled?.Dispose();
@@ -82,14 +94,18 @@ public sealed class DispatcherTimer : IDisposable
 
         var dispatcher = Application.Current.Dispatcher;
         if (dispatcher == null)
+        {
             return;
+        }
 
         dispatcher.Send(() =>
         {
             lock (_gate)
             {
                 if (!_isEnabled)
+                {
                     return;
+                }
 
                 _isEnabled = false;
                 _scheduled?.Dispose();
@@ -105,7 +121,9 @@ public sealed class DispatcherTimer : IDisposable
         lock (_gate)
         {
             if (!_isEnabled)
+            {
                 return;
+            }
 
             // One-shot schedule; re-arm after firing (WPF-style).
             _scheduled?.Dispose();
@@ -117,7 +135,10 @@ public sealed class DispatcherTimer : IDisposable
         lock (_gate)
         {
             if (!_isEnabled)
+            {
                 return;
+            }
+
             _scheduled = dispatcher.Schedule(_interval, OnTick);
         }
     }
@@ -125,18 +146,24 @@ public sealed class DispatcherTimer : IDisposable
     private void Reschedule()
     {
         if (!Application.IsRunning)
+        {
             return;
+        }
 
         var dispatcher = Application.Current.Dispatcher;
         if (dispatcher == null)
+        {
             return;
+        }
 
         dispatcher.Send(() =>
         {
             lock (_gate)
             {
                 if (!_isEnabled)
+                {
                     return;
+                }
 
                 _scheduled?.Dispose();
                 _scheduled = dispatcher.Schedule(_interval, OnTick);
@@ -147,11 +174,15 @@ public sealed class DispatcherTimer : IDisposable
     private static IUiDispatcher GetDispatcherOrThrow()
     {
         if (!Application.IsRunning)
+        {
             throw new InvalidOperationException("DispatcherTimer requires an active Application.");
+        }
 
         var dispatcher = Application.Current.Dispatcher;
         if (dispatcher == null)
+        {
             throw new InvalidOperationException("DispatcherTimer requires Application.Dispatcher.");
+        }
 
         return dispatcher;
     }

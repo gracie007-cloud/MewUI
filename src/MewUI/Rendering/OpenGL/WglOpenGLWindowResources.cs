@@ -44,18 +44,26 @@ internal sealed class WglOpenGLWindowResources : IOpenGLWindowResources
         {
             pixelFormat = Gdi32.ChoosePixelFormat(hdc, ref pfd);
             if (pixelFormat == 0)
+            {
                 throw new InvalidOperationException($"ChoosePixelFormat failed: {Marshal.GetLastWin32Error()}");
+            }
         }
 
         if (!Gdi32.SetPixelFormat(hdc, pixelFormat, ref pfd))
+        {
             throw new InvalidOperationException($"SetPixelFormat failed: {Marshal.GetLastWin32Error()}");
+        }
 
         nint hglrc = OpenGL32.wglCreateContext(hdc);
         if (hglrc == 0)
+        {
             throw new InvalidOperationException($"wglCreateContext failed: {Marshal.GetLastWin32Error()}");
+        }
 
         if (!OpenGL32.wglMakeCurrent(hdc, hglrc))
+        {
             throw new InvalidOperationException($"wglMakeCurrent failed: {Marshal.GetLastWin32Error()}");
+        }
 
         bool supportsBgra = DetectBgraSupport();
 
@@ -85,7 +93,9 @@ internal sealed class WglOpenGLWindowResources : IOpenGLWindowResources
 
         var choose = GetWglChoosePixelFormatArb();
         if (choose == null)
+        {
             return false;
+        }
 
         // Try a small descending set of sample counts.
         Span<int> samplesToTry = stackalloc int[] { preferredSamples, 8, 4, 2 };
@@ -93,7 +103,9 @@ internal sealed class WglOpenGLWindowResources : IOpenGLWindowResources
         {
             int samples = samplesToTry[i];
             if (samples <= 1)
+            {
                 continue;
+            }
 
             Span<int> attribs = stackalloc int[]
             {
@@ -120,7 +132,10 @@ internal sealed class WglOpenGLWindowResources : IOpenGLWindowResources
                 uint outNum = 0;
                 int ok = choose(targetHdc, pAttribs, null, 1, &outPf, &outNum);
                 if (ok == 0 || outNum == 0 || outPf == 0)
+                {
                     continue;
+                }
+
                 pf = outPf;
                 num = outNum;
             }
@@ -132,7 +147,9 @@ internal sealed class WglOpenGLWindowResources : IOpenGLWindowResources
                 (uint)Marshal.SizeOf<PIXELFORMATDESCRIPTOR>(),
                 ref pfd);
             if (described == 0)
+            {
                 continue;
+            }
 
             pixelFormat = pf;
             describedPfd = pfd;
@@ -145,7 +162,9 @@ internal sealed class WglOpenGLWindowResources : IOpenGLWindowResources
     private static unsafe delegate* unmanaged<nint, int*, float*, uint, int*, uint*, int> GetWglChoosePixelFormatArb()
     {
         if (!OperatingSystem.IsWindows())
+        {
             return null;
+        }
 
         nint hwnd = 0;
         nint hdc = 0;
@@ -169,43 +188,68 @@ internal sealed class WglOpenGLWindowResources : IOpenGLWindowResources
                 lpParam: 0);
 
             if (hwnd == 0)
+            {
                 return null;
+            }
 
             hdc = User32.GetDC(hwnd);
             if (hdc == 0)
+            {
                 return null;
+            }
 
             var pfd = PIXELFORMATDESCRIPTOR.CreateOpenGlDoubleBuffered();
             int pixelFormat = Gdi32.ChoosePixelFormat(hdc, ref pfd);
             if (pixelFormat == 0)
+            {
                 return null;
+            }
 
             if (!Gdi32.SetPixelFormat(hdc, pixelFormat, ref pfd))
+            {
                 return null;
+            }
 
             hglrc = OpenGL32.wglCreateContext(hdc);
             if (hglrc == 0)
+            {
                 return null;
+            }
 
             if (!OpenGL32.wglMakeCurrent(hdc, hglrc))
+            {
                 return null;
+            }
 
             nint p = OpenGL32.wglGetProcAddress("wglChoosePixelFormatARB");
             if (p == 0)
+            {
                 return null;
+            }
 
             return (delegate* unmanaged<nint, int*, float*, uint, int*, uint*, int>)p;
         }
         finally
         {
             if (hdc != 0 && hglrc != 0)
+            {
                 OpenGL32.wglMakeCurrent(0, 0);
+            }
+
             if (hglrc != 0)
+            {
                 OpenGL32.wglDeleteContext(hglrc);
+            }
+
             if (hdc != 0 && hwnd != 0)
+            {
                 User32.ReleaseDC(hwnd, hdc);
+            }
+
             if (hwnd != 0)
+            {
                 User32.DestroyWindow(hwnd);
+            }
         }
     }
 
@@ -219,7 +263,10 @@ internal sealed class WglOpenGLWindowResources : IOpenGLWindowResources
     public void MakeCurrent(nint deviceOrDisplay)
     {
         if (_disposed)
+        {
             return;
+        }
+
         OpenGL32.wglMakeCurrent(deviceOrDisplay, Hglrc);
     }
 
@@ -231,20 +278,31 @@ internal sealed class WglOpenGLWindowResources : IOpenGLWindowResources
     public void TrackTexture(uint textureId)
     {
         if (textureId == 0)
+        {
             return;
+        }
+
         if (_disposed)
+        {
             return;
+        }
+
         _textures.Add(textureId);
     }
 
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
+
         _disposed = true;
 
         if (_hwnd == 0 || Hglrc == 0)
+        {
             return;
+        }
 
         nint hdc = User32.GetDC(_hwnd);
         try
@@ -262,7 +320,9 @@ internal sealed class WglOpenGLWindowResources : IOpenGLWindowResources
         finally
         {
             if (hdc != 0)
+            {
                 User32.ReleaseDC(_hwnd, hdc);
+            }
         }
 
         OpenGL32.wglDeleteContext(Hglrc);

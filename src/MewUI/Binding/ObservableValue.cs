@@ -27,10 +27,14 @@ public sealed class ObservableValue<T>
     public bool Set(T value)
     {
         if (_coerce != null)
+        {
             value = _coerce(value);
+        }
 
         if (_comparer.Equals(_value, value))
+        {
             return false;
+        }
 
         _value = value;
         Changed?.Invoke();

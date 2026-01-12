@@ -136,15 +136,23 @@ public abstract class FrameworkElement : UIElement
 
         double x = innerSlot.X;
         if (HorizontalAlignment == HorizontalAlignment.Center)
+        {
             x = innerSlot.X + (availableWidth - width) / 2;
+        }
         else if (HorizontalAlignment == HorizontalAlignment.Right)
+        {
             x = innerSlot.Right - width;
+        }
 
         double y = innerSlot.Y;
         if (VerticalAlignment == VerticalAlignment.Center)
+        {
             y = innerSlot.Y + (availableHeight - height) / 2;
+        }
         else if (VerticalAlignment == VerticalAlignment.Bottom)
+        {
             y = innerSlot.Bottom - height;
+        }
 
         return new Rect(x, y, width, height);
     }
@@ -162,9 +170,14 @@ public abstract class FrameworkElement : UIElement
 
         // Apply explicit size constraints
         if (!double.IsNaN(Width))
+        {
             constrainedSize = constrainedSize.WithWidth(Math.Clamp(Width, MinWidth, MaxWidth));
+        }
+
         if (!double.IsNaN(Height))
+        {
             constrainedSize = constrainedSize.WithHeight(Math.Clamp(Height, MinHeight, MaxHeight));
+        }
 
         // Measure content
         var measured = MeasureContent(constrainedSize);
@@ -175,9 +188,14 @@ public abstract class FrameworkElement : UIElement
 
         // WPF-style explicit size: DesiredSize must honor Width/Height when specified.
         if (!double.IsNaN(Width))
+        {
             finalWidth = Math.Clamp(Width, MinWidth, MaxWidth);
+        }
+
         if (!double.IsNaN(Height))
+        {
             finalHeight = Math.Clamp(Height, MinHeight, MaxHeight);
+        }
 
         // Add margin back to desired size
         return new Size(finalWidth + marginWidth, finalHeight + marginHeight);

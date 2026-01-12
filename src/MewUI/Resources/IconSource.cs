@@ -12,9 +12,14 @@ public sealed class IconSource
     public IconSource Add(int sizePx, ImageSource source)
     {
         if (sizePx <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(sizePx));
+        }
+
         if (source == null)
+        {
             throw new ArgumentNullException(nameof(source));
+        }
 
         _entries.Add(new Entry(sizePx, source));
         return this;
@@ -23,9 +28,14 @@ public sealed class IconSource
     public ImageSource? Pick(int desiredSizePx)
     {
         if (_entries.Count == 0)
+        {
             return null;
+        }
+
         if (desiredSizePx <= 0)
+        {
             desiredSizePx = 1;
+        }
 
         Entry best = _entries[0];
         int bestDelta = Math.Abs(best.SizePx - desiredSizePx);

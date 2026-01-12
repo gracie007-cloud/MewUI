@@ -40,7 +40,9 @@ internal sealed class GdiDoubleBufferedContext : IGraphicsContext
         public static void Release(nint hwnd)
         {
             if (!Cache.TryGetValue(hwnd, out var buffer))
+            {
                 return;
+            }
 
             Cache.Remove(hwnd);
             buffer.Dispose();
@@ -76,13 +78,19 @@ internal sealed class GdiDoubleBufferedContext : IGraphicsContext
         private void Destroy()
         {
             if (_memDc == 0)
+            {
                 return;
+            }
 
             if (_oldBitmap != 0)
+            {
                 Gdi32.SelectObject(_memDc, _oldBitmap);
+            }
 
             if (_bitmap != 0)
+            {
                 Gdi32.DeleteObject(_bitmap);
+            }
 
             Gdi32.DeleteDC(_memDc);
 
@@ -99,7 +107,9 @@ internal sealed class GdiDoubleBufferedContext : IGraphicsContext
             height = Math.Max(1, height);
 
             if (width == _width && height == _height && _memDc != 0 && _bitmap != 0)
+            {
                 return;
+            }
 
             Destroy();
             Create(screenDc, width, height);
@@ -120,8 +130,15 @@ internal sealed class GdiDoubleBufferedContext : IGraphicsContext
         _width = clientRect.Width;
         _height = clientRect.Height;
 
-        if (_width <= 0) _width = 1;
-        if (_height <= 0) _height = 1;
+        if (_width <= 0)
+        {
+            _width = 1;
+        }
+
+        if (_height <= 0)
+        {
+            _height = 1;
+        }
 
         _backBuffer = BackBuffer.GetOrCreate(hwnd, screenDc, _width, _height);
 

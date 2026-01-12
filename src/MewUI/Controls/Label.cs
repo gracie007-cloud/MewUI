@@ -21,7 +21,9 @@ public class Label : Control
         {
             value ??= string.Empty;
             if (field == value)
+            {
                 return;
+            }
 
             field = value;
             InvalidateMeasure();
@@ -60,16 +62,20 @@ public class Label : Control
     protected override Size MeasureContent(Size availableSize)
     {
         if (string.IsNullOrEmpty(Text))
+        {
             return Padding.HorizontalThickness > 0 || Padding.VerticalThickness > 0
                 ? new Size(Padding.HorizontalThickness, Padding.VerticalThickness)
                 : Size.Empty;
+        }
 
         using var measure = BeginTextMeasurement();
 
         Size textSize;
         var wrapping = TextWrapping;
         if (wrapping == TextWrapping.NoWrap && HasExplicitLineBreaks)
+        {
             wrapping = TextWrapping.Wrap;
+        }
 
         if (wrapping == TextWrapping.NoWrap)
         {
@@ -79,11 +85,15 @@ public class Label : Control
         {
             double maxWidth = availableSize.Width - Padding.HorizontalThickness;
             if (double.IsNaN(maxWidth) || maxWidth <= 0)
+            {
                 maxWidth = 0;
+            }
 
             // Avoid passing infinity into backend implementations that convert to int pixel widths.
             if (double.IsPositiveInfinity(maxWidth))
+            {
                 maxWidth = 1_000_000;
+            }
 
             textSize = measure.Context.MeasureText(Text, measure.Font, maxWidth > 0 ? maxWidth : 1_000_000);
         }
@@ -96,17 +106,23 @@ public class Label : Control
         base.OnRender(context);
 
         if (_textBinding != null)
+        {
             SetTextFromBinding(_textBinding.Get());
+        }
 
         if (string.IsNullOrEmpty(Text))
+        {
             return;
+        }
 
         var contentBounds = Bounds.Deflate(Padding);
         var font = GetFont();
 
         var wrapping = TextWrapping;
         if (wrapping == TextWrapping.NoWrap && HasExplicitLineBreaks)
+        {
             wrapping = TextWrapping.Wrap;
+        }
 
         context.DrawText(Text, contentBounds, font, Foreground,
             TextAlignment, VerticalTextAlignment, wrapping);
@@ -129,7 +145,10 @@ public class Label : Control
     {
         value ??= string.Empty;
         if (Text == value)
+        {
             return;
+        }
+
         Text = value;
     }
 

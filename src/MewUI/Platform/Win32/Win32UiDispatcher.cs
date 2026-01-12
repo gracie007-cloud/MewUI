@@ -76,7 +76,9 @@ public sealed class Win32UiDispatcher : SynchronizationContext, IUiDispatcher
     {
         ArgumentNullException.ThrowIfNull(action);
         if (dueTime < TimeSpan.Zero)
+        {
             throw new ArgumentOutOfRangeException(nameof(dueTime), dueTime, "DueTime must be non-negative.");
+        }
 
         if (!IsOnUIThread)
         {
@@ -110,7 +112,9 @@ public sealed class Win32UiDispatcher : SynchronizationContext, IUiDispatcher
     internal bool ProcessTimer(nuint timerId)
     {
         if (!_timerCallbacks.TryGetValue(timerId, out var callback))
+        {
             return false;
+        }
 
         // Kill first (WM_TIMER repeats).
         _timerCallbacks.Remove(timerId);
@@ -123,7 +127,9 @@ public sealed class Win32UiDispatcher : SynchronizationContext, IUiDispatcher
     private void CancelTimer(nuint timerId)
     {
         if (timerId == 0)
+        {
             return;
+        }
 
         if (!IsOnUIThread)
         {
@@ -132,7 +138,9 @@ public sealed class Win32UiDispatcher : SynchronizationContext, IUiDispatcher
         }
 
         if (_timerCallbacks.Remove(timerId))
+        {
             User32.KillTimer(_hwnd, timerId);
+        }
     }
 
     public void ProcessWorkItems()
@@ -165,7 +173,9 @@ public sealed class Win32UiDispatcher : SynchronizationContext, IUiDispatcher
         {
             var dispatcher = Interlocked.Exchange(ref _dispatcher, null);
             if (dispatcher == null)
+            {
                 return;
+            }
 
             var id = Interlocked.Exchange(ref _timerId, 0);
             dispatcher.CancelTimer(id);

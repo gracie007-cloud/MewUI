@@ -30,7 +30,9 @@ internal sealed class Win32WindowBackend : IWindowBackend
     public void SetResizable(bool resizable)
     {
         if (Handle == 0)
+        {
             return;
+        }
 
         ApplyResizeMode();
     }
@@ -51,31 +53,41 @@ internal sealed class Win32WindowBackend : IWindowBackend
     public void Hide()
     {
         if (Handle != 0)
+        {
             User32.ShowWindow(Handle, ShowWindowCommands.SW_HIDE);
+        }
     }
 
     public void Close()
     {
         if (Handle != 0)
+        {
             User32.DestroyWindow(Handle);
+        }
     }
 
     public void Invalidate(bool erase)
     {
         if (Handle != 0)
+        {
             User32.InvalidateRect(Handle, 0, erase);
+        }
     }
 
     public void SetTitle(string title)
     {
         if (Handle != 0)
+        {
             User32.SetWindowText(Handle, title);
+        }
     }
 
     public void SetClientSize(double widthDip, double heightDip)
     {
         if (Handle == 0)
+        {
             return;
+        }
 
         uint dpi = Window.Dpi == 0 ? User32.GetDpiForWindow(Handle) : Window.Dpi;
         double dpiScale = dpi / 96.0;
@@ -88,7 +100,9 @@ internal sealed class Win32WindowBackend : IWindowBackend
     public void CaptureMouse(UIElement element)
     {
         if (Handle == 0)
+        {
             return;
+        }
 
         User32.SetCapture(Handle);
         _capturedElement = element;
@@ -186,7 +200,10 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
             case WindowMessages.WM_TIMER:
                 if ((Window.ApplicationDispatcher as Win32UiDispatcher)?.ProcessTimer((nuint)wParam) == true)
+                {
                     return 0;
+                }
+
                 return 0;
 
             default:
@@ -219,7 +236,9 @@ internal sealed class Win32WindowBackend : IWindowBackend
             0);
 
         if (Handle == 0)
+        {
             throw new InvalidOperationException($"Failed to create window. Error: {Marshal.GetLastWin32Error()}");
+        }
 
         _host.RegisterWindow(Handle, this);
         Window.AttachBackend(this);
@@ -238,15 +257,19 @@ internal sealed class Win32WindowBackend : IWindowBackend
         Window.SetClientSizeDip(clientRect.Width / Window.DpiScale, clientRect.Height / Window.DpiScale);
 
         if (Window.Background.A == 0)
+        {
             Window.Background = Window.Theme.WindowBackground;
-
+        }
     }
 
     private uint GetWindowStyle()
     {
         uint style = WindowStyles.WS_OVERLAPPEDWINDOW;
         if (!Window.WindowSize.IsResizable)
+        {
             style &= ~(WindowStyles.WS_THICKFRAME | WindowStyles.WS_MAXIMIZEBOX);
+        }
+
         return style;
     }
 
@@ -266,7 +289,9 @@ internal sealed class Win32WindowBackend : IWindowBackend
     private void HandleDestroy()
     {
         if (Window.GraphicsFactory is Aprillz.MewUI.Rendering.IWindowResourceReleaser releaser)
+        {
             releaser.ReleaseWindowResources(Handle);
+        }
 
         _host.UnregisterWindow(Handle);
         Window.DisposeVisualTree();
@@ -329,9 +354,14 @@ internal sealed class Win32WindowBackend : IWindowBackend
         bool active = (wParam.ToInt64() & 0xFFFF) != 0;
         Window.SetIsActive(active);
         if (active)
+        {
             Window.Activated?.Invoke();
+        }
         else
+        {
             Window.Deactivated?.Invoke();
+        }
+
         return 0;
     }
 
@@ -375,7 +405,9 @@ internal sealed class Win32WindowBackend : IWindowBackend
         if (isDown)
         {
             if (element?.Focusable == true)
+            {
                 Window.FocusManager.SetFocus(element);
+            }
 
             element?.RaiseMouseDown(args);
         }
@@ -402,7 +434,9 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
         // Bubble to parents until handled (ScrollViewer etc.).
         for (var current = element; current != null && !args.Handled; current = current.Parent as UIElement)
+        {
             current.RaiseMouseWheel(args);
+        }
 
         return 0;
     }
@@ -422,11 +456,19 @@ internal sealed class Win32WindowBackend : IWindowBackend
         var modifiers = ModifierKeys.None;
 
         if ((User32.GetKeyState(VirtualKeys.VK_CONTROL) & 0x8000) != 0)
+        {
             modifiers |= ModifierKeys.Control;
+        }
+
         if ((User32.GetKeyState(VirtualKeys.VK_SHIFT) & 0x8000) != 0)
+        {
             modifiers |= ModifierKeys.Shift;
+        }
+
         if ((User32.GetKeyState(VirtualKeys.VK_MENU) & 0x8000) != 0)
+        {
             modifiers |= ModifierKeys.Alt;
+        }
 
         return modifiers;
     }
@@ -448,14 +490,21 @@ internal sealed class Win32WindowBackend : IWindowBackend
         var args = new KeyEventArgs(MapKey(platformKey), platformKey, modifiers, isRepeat);
         Window.RaisePreviewKeyDown(args);
         if (args.Handled)
+        {
             return 0;
+        }
 
         if (args.Key == Key.Tab)
         {
             if (modifiers.HasFlag(ModifierKeys.Shift))
+            {
                 Window.FocusManager.MoveFocusPrevious();
+            }
             else
+            {
                 Window.FocusManager.MoveFocusNext();
+            }
+
             return 0;
         }
 
@@ -472,7 +521,9 @@ internal sealed class Win32WindowBackend : IWindowBackend
         var args = new KeyEventArgs(MapKey(platformKey), platformKey, modifiers);
         Window.RaisePreviewKeyUp(args);
         if (!args.Handled)
-        Window.FocusManager.FocusedElement?.RaiseKeyUp(args);
+        {
+            Window.FocusManager.FocusedElement?.RaiseKeyUp(args);
+        }
 
         return args.Handled ? 0 : User32.DefWindowProc(Handle, msg, wParam, lParam);
     }
@@ -481,15 +532,21 @@ internal sealed class Win32WindowBackend : IWindowBackend
     {
         char c = (char)wParam.ToInt64();
         if (c == '\b')
+        {
             return 0;
+        }
 
         if (char.IsControl(c) && c != '\r' && c != '\t')
+        {
             return 0;
+        }
 
         var args = new TextInputEventArgs(c.ToString());
         Window.RaisePreviewTextInput(args);
         if (!args.Handled)
+        {
             Window.FocusManager.FocusedElement?.RaiseTextInput(args);
+        }
 
         return 0;
     }
@@ -498,15 +555,21 @@ internal sealed class Win32WindowBackend : IWindowBackend
     {
         // Digits (top row)
         if (vk is >= 0x30 and <= 0x39)
+        {
             return (Input.Key)((int)Key.D0 + (vk - 0x30));
+        }
 
         // Letters
         if (vk is >= 0x41 and <= 0x5A)
+        {
             return (Input.Key)((int)Key.A + (vk - 0x41));
+        }
 
         // Numpad digits
         if (vk is >= 0x60 and <= 0x69)
+        {
             return (Input.Key)((int)Key.NumPad0 + (vk - 0x60));
+        }
 
         return vk switch
         {
@@ -556,6 +619,8 @@ internal sealed class Win32WindowBackend : IWindowBackend
     public void Dispose()
     {
         if (Handle != 0)
+        {
             Close();
+        }
     }
 }

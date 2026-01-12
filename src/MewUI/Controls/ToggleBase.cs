@@ -28,7 +28,9 @@ public abstract class ToggleBase : Control
         set
         {
             if (_isChecked == value)
+            {
                 return;
+            }
 
             SetIsCheckedCore(value, fromUser: true);
         }
@@ -57,7 +59,9 @@ public abstract class ToggleBase : Control
         CheckedChanged?.Invoke(value);
 
         if (fromUser && !_updatingFromSource)
+        {
             _checkedBinding?.Set(value);
+        }
 
         InvalidateVisual();
     }
@@ -68,8 +72,15 @@ public abstract class ToggleBase : Control
         Action<Action>? subscribe = null,
         Action<Action>? unsubscribe = null)
     {
-        if (get == null) throw new ArgumentNullException(nameof(get));
-        if (set == null) throw new ArgumentNullException(nameof(set));
+        if (get == null)
+        {
+            throw new ArgumentNullException(nameof(get));
+        }
+
+        if (set == null)
+        {
+            throw new ArgumentNullException(nameof(set));
+        }
 
         _checkedBinding?.Dispose();
         _checkedBinding = new ValueBinding<bool>(
@@ -94,7 +105,9 @@ public abstract class ToggleBase : Control
         base.OnKeyUp(e);
 
         if (!IsEnabled)
+        {
             return;
+        }
 
         if (e.Key == Key.Space)
         {

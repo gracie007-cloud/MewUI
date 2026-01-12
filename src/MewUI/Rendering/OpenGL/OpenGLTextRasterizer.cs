@@ -28,7 +28,9 @@ internal static class OpenGLTextRasterizer
 
         nint memDc = Gdi32.CreateCompatibleDC(hdcWindow);
         if (memDc == 0)
+        {
             return new OpenGLTextBitmap(1, 1, EmptyPixel);
+        }
 
         try
         {
@@ -36,7 +38,9 @@ internal static class OpenGLTextRasterizer
             nint bits;
             nint dib = Gdi32.CreateDIBSection(memDc, ref bmi, GdiConstants.DIB_RGB_COLORS, out bits, 0, 0);
             if (dib == 0 || bits == 0)
+            {
                 return new OpenGLTextBitmap(1, 1, EmptyPixel);
+            }
 
             nint oldBmp = Gdi32.SelectObject(memDc, dib);
             nint oldFont = Gdi32.SelectObject(memDc, font.Handle);
@@ -88,9 +92,15 @@ internal static class OpenGLTextRasterizer
             finally
             {
                 if (oldFont != 0)
+                {
                     Gdi32.SelectObject(memDc, oldFont);
+                }
+
                 if (oldBmp != 0)
+                {
                     Gdi32.SelectObject(memDc, oldBmp);
+                }
+
                 Gdi32.DeleteObject(dib);
             }
         }

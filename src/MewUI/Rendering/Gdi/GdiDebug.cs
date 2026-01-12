@@ -25,10 +25,14 @@ public static class GdiDebug
         index = 0;
 
         if (string.IsNullOrWhiteSpace(DumpAaDirectory))
+        {
             return false;
+        }
 
         if (_dumpAaCount >= DumpAaMaxFiles)
+        {
             return false;
+        }
 
         index = _dumpAaCount++;
         return true;

@@ -13,7 +13,9 @@ internal sealed class FreeTypeLibrary : IDisposable
     {
         int err = FT.FT_Init_FreeType(out _library);
         if (err != 0 || _library == 0)
+        {
             throw new InvalidOperationException($"FT_Init_FreeType failed: {err}");
+        }
     }
 
     public nint Handle => _library;
@@ -21,7 +23,10 @@ internal sealed class FreeTypeLibrary : IDisposable
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
+
         _disposed = true;
         if (_library != 0)
         {

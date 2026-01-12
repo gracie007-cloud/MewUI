@@ -9,7 +9,10 @@ public static class SmokeCapture
     public static void Request(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
+        {
             return;
+        }
+
         Interlocked.Exchange(ref _pendingPath, path);
     }
 

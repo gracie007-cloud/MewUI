@@ -19,20 +19,28 @@ internal sealed class OpenGLImage : IImage
         PixelHeight = heightPx;
         _bgra = bgra ?? throw new ArgumentNullException(nameof(bgra));
         if (_bgra.Length != widthPx * heightPx * 4)
+        {
             throw new ArgumentException("Invalid BGRA buffer length.", nameof(bgra));
+        }
     }
 
     public uint GetOrCreateTexture(IOpenGLWindowResources resources, nint hwnd)
     {
         if (_disposed)
+        {
             return 0;
+        }
 
         if (_texturesByWindow.TryGetValue(hwnd, out var tex) && tex != 0)
+        {
             return tex;
+        }
 
         GL.GenTextures(1, out tex);
         if (tex == 0)
+        {
             return 0;
+        }
 
         resources.TrackTexture(tex);
 
@@ -45,7 +53,9 @@ internal sealed class OpenGLImage : IImage
         byte[] pixels = _bgra;
         uint format = resources.SupportsBgra ? GL.GL_BGRA_EXT : GL.GL_RGBA;
         if (!resources.SupportsBgra)
+        {
             pixels = _rgbaCache ??= OpenGLPixelUtils.ConvertBgraToRgba(_bgra);
+        }
 
         unsafe
         {

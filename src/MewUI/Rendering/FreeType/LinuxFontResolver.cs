@@ -7,21 +7,30 @@ internal static class LinuxFontResolver
     public static string? ResolveFontPath(string family, FontWeight weight, bool italic)
     {
         if (string.IsNullOrWhiteSpace(family))
+        {
             family = "DejaVu Sans";
+        }
 
         // Allow explicit path.
         if (LooksLikePath(family))
+        {
             return family;
+        }
 
         var envPath = Environment.GetEnvironmentVariable("MEWUI_FONT_PATH");
         if (!string.IsNullOrWhiteSpace(envPath) && File.Exists(envPath))
+        {
             return envPath;
+        }
 
         var envDir = Environment.GetEnvironmentVariable("MEWUI_FONT_DIR");
         if (!string.IsNullOrWhiteSpace(envDir))
         {
             var p = ProbeDir(envDir, family, weight, italic);
-            if (p != null) return p;
+            if (p != null)
+            {
+                return p;
+            }
         }
 
         // Very small heuristic list for early bring-up.
@@ -36,7 +45,10 @@ internal static class LinuxFontResolver
         foreach (var root in roots)
         {
             var p = ProbeDir(root, family, weight, italic);
-            if (p != null) return p;
+            if (p != null)
+            {
+                return p;
+            }
         }
 
         return null;
@@ -47,7 +59,9 @@ internal static class LinuxFontResolver
         if (s.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
             s.EndsWith(".otf", StringComparison.OrdinalIgnoreCase) ||
             s.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase))
+        {
             return true;
+        }
 
         return s.Contains('/') || s.Contains('\\');
     }
@@ -55,7 +69,9 @@ internal static class LinuxFontResolver
     private static string? ProbeDir(string root, string family, FontWeight weight, bool italic)
     {
         if (!Directory.Exists(root))
+        {
             return null;
+        }
 
         // Prefer DejaVu on most distros.
         // Try "Family" exact match in filename first, then common fallbacks.
@@ -67,14 +83,18 @@ internal static class LinuxFontResolver
             {
                 var path = FindFileCaseInsensitive(root, fileName + ext);
                 if (path != null)
+                {
                     return path;
+                }
             }
         }
 
         // Fallback to a well-known font.
         var dejavu = FindFileCaseInsensitive(root, "DejaVuSans.ttf");
         if (dejavu != null)
+        {
             return dejavu;
+        }
 
         return null;
     }
@@ -86,11 +106,30 @@ internal static class LinuxFontResolver
         yield return normalized;
 
         bool bold = weight >= FontWeight.SemiBold;
-        if (bold && italic) yield return normalized + "-BoldOblique";
-        if (bold && italic) yield return normalized + "-BoldItalic";
-        if (bold) yield return normalized + "-Bold";
-        if (italic) yield return normalized + "-Oblique";
-        if (italic) yield return normalized + "-Italic";
+        if (bold && italic)
+        {
+            yield return normalized + "-BoldOblique";
+        }
+
+        if (bold && italic)
+        {
+            yield return normalized + "-BoldItalic";
+        }
+
+        if (bold)
+        {
+            yield return normalized + "-Bold";
+        }
+
+        if (italic)
+        {
+            yield return normalized + "-Oblique";
+        }
+
+        if (italic)
+        {
+            yield return normalized + "-Italic";
+        }
     }
 
     private static string? FindFileCaseInsensitive(string root, string fileName)
@@ -100,7 +139,9 @@ internal static class LinuxFontResolver
             foreach (var path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
             {
                 if (string.Equals(Path.GetFileName(path), fileName, StringComparison.OrdinalIgnoreCase))
+                {
                     return path;
+                }
             }
         }
         catch

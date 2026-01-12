@@ -44,7 +44,9 @@ internal sealed class OpenGLTextCache : IDisposable
         Func<OpenGLTextBitmap> factory)
     {
         if (_disposed)
+        {
             throw new ObjectDisposedException(nameof(OpenGLTextCache));
+        }
 
         if (_map.TryGetValue(key, out var node))
         {
@@ -82,7 +84,9 @@ internal sealed class OpenGLTextCache : IDisposable
 
         // If BGRA is not supported, we convert.
         if (!supportsBgra)
+        {
             data = OpenGLPixelUtils.ConvertBgraToRgba(data);
+        }
 
         unsafe
         {
@@ -99,7 +103,10 @@ internal sealed class OpenGLTextCache : IDisposable
     private static long EstimateBytes(int widthPx, int heightPx)
     {
         if (widthPx <= 0 || heightPx <= 0)
+        {
             return 0;
+        }
+
         return (long)widthPx * heightPx * 4;
     }
 
@@ -118,7 +125,9 @@ internal sealed class OpenGLTextCache : IDisposable
 
             uint tex = last.Value.Entry.TextureId;
             if (tex != 0)
+            {
                 GL.DeleteTextures(1, ref tex);
+            }
 
             _currentBytes -= last.Value.Bytes;
         }
@@ -127,14 +136,19 @@ internal sealed class OpenGLTextCache : IDisposable
     public void Clear()
     {
         if (_disposed)
+        {
             return;
+        }
 
         var node = _lru.First;
         while (node != null)
         {
             uint tex = node.Value.Entry.TextureId;
             if (tex != 0)
+            {
                 GL.DeleteTextures(1, ref tex);
+            }
+
             node = node.Next;
         }
 
@@ -146,7 +160,10 @@ internal sealed class OpenGLTextCache : IDisposable
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
+
         _disposed = true;
 
         Clear();

@@ -8,7 +8,9 @@ internal static unsafe class ComHelpers
     public static uint Release(nint ptr)
     {
         if (ptr == 0)
+        {
             return 0;
+        }
 
         var vtbl = *(nint**)ptr;
         var release = (delegate* unmanaged[Stdcall]<nint, uint>)vtbl[2];

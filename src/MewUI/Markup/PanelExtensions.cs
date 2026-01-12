@@ -59,7 +59,10 @@ public static class PanelExtensions
     {
         grid.RowDefinitions.Clear();
         foreach (var row in rows)
+        {
             grid.RowDefinitions.Add(new RowDefinition { Height = row });
+        }
+
         return grid;
     }
 
@@ -70,7 +73,10 @@ public static class PanelExtensions
     {
         grid.ColumnDefinitions.Clear();
         foreach (var col in columns)
+        {
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = col });
+        }
+
         return grid;
     }
 
@@ -81,7 +87,10 @@ public static class PanelExtensions
     {
         grid.RowDefinitions.Clear();
         foreach (var length in ParseGridLengths(definition))
+        {
             grid.RowDefinitions.Add(new RowDefinition { Height = length });
+        }
+
         return grid;
     }
 
@@ -92,7 +101,10 @@ public static class PanelExtensions
     {
         grid.ColumnDefinitions.Clear();
         foreach (var length in ParseGridLengths(definition))
+        {
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = length });
+        }
+
         return grid;
     }
 

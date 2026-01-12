@@ -21,7 +21,10 @@ public sealed class Image : Control
         set
         {
             if (field == value)
+            {
                 return;
+            }
+
             field = value;
             ClearCache();
             InvalidateMeasure();
@@ -33,7 +36,9 @@ public sealed class Image : Control
     {
         var img = GetImage();
         if (img == null)
+        {
             return Size.Empty;
+        }
 
         // Pixels are treated as DIPs for now (1px == 1dip at 96dpi).
         return new Size(img.PixelWidth, img.PixelHeight);
@@ -43,7 +48,9 @@ public sealed class Image : Control
     {
         var img = GetImage();
         if (img == null)
+        {
             return;
+        }
 
         // Always clip to the control bounds to avoid overflowing when the image's natural size
         // is larger than the arranged size.
@@ -54,7 +61,9 @@ public sealed class Image : Control
         {
             var srcSize = new Size(img.PixelWidth, img.PixelHeight);
             if (srcSize.IsEmpty)
+            {
                 return;
+            }
 
             ComputeRects(srcSize, Bounds, StretchMode, out var dest, out var src);
             context.DrawImage(img, dest, src);
@@ -132,13 +141,17 @@ public sealed class Image : Control
     private IImage? GetImage()
     {
         if (Source == null)
+        {
             return null;
+        }
 
         var factory = Application.IsRunning ? Application.Current.GraphicsFactory : Application.DefaultGraphicsFactory;
         var backend = factory.Backend;
 
         if (_cache.TryGetValue(backend, out var cached))
+        {
             return cached;
+        }
 
         var created = factory.CreateImageFromBytes(Source.Data);
         _cache[backend] = created;
@@ -148,7 +161,10 @@ public sealed class Image : Control
     private void ClearCache()
     {
         foreach (var kvp in _cache)
+        {
             kvp.Value.Dispose();
+        }
+
         _cache.Clear();
     }
 

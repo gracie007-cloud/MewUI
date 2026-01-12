@@ -11,7 +11,10 @@ internal static class OpenGLLinuxWindowInfoRegistry
     public static void RegisterVisual(nint window, XVisualInfo visualInfo)
     {
         if (window == 0)
+        {
             return;
+        }
+
         _visualByWindow[window] = visualInfo;
     }
 
@@ -21,7 +24,10 @@ internal static class OpenGLLinuxWindowInfoRegistry
     public static void Unregister(nint window)
     {
         if (window == 0)
+        {
             return;
+        }
+
         _visualByWindow.TryRemove(window, out _);
     }
 }

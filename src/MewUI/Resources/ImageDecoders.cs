@@ -20,9 +20,14 @@ public static class ImageDecoders
     public static void Register(IImageDecoder decoder)
     {
         if (decoder == null)
+        {
             throw new ArgumentNullException(nameof(decoder));
+        }
+
         if (decoder.Format == ImageFormat.Unknown)
+        {
             throw new ArgumentException("Decoder must specify a format.", nameof(decoder));
+        }
 
         lock (_lock)
         {
@@ -55,13 +60,19 @@ public static class ImageDecoders
 
         var ok = decoder.TryDecode(encoded, out bitmap);
         if (!ok)
+        {
             DebugLog?.Invoke($"ImageDecoders: Decode failed for {format} (length={encoded.Length}).");
+        }
+
         return ok;
     }
 
     public static bool TryDecode(byte[] encoded, out DecodedBitmap bitmap)
     {
-        if (encoded == null) throw new ArgumentNullException(nameof(encoded));
+        if (encoded == null)
+        {
+            throw new ArgumentNullException(nameof(encoded));
+        }
 
         var format = DetectFormat(encoded);
         if (format == ImageFormat.Unknown)
@@ -86,31 +97,46 @@ public static class ImageDecoders
 
         bool ok;
         if (decoder is IByteArrayImageDecoder fast)
+        {
             ok = fast.TryDecode(encoded, out bitmap);
+        }
         else
+        {
             ok = decoder.TryDecode(encoded, out bitmap);
+        }
 
         if (!ok)
+        {
             DebugLog?.Invoke($"ImageDecoders: Decode failed for {format} (length={encoded.Length}).");
+        }
+
         return ok;
     }
 
     public static ImageFormat DetectFormat(ReadOnlySpan<byte> encoded)
     {
         if (encoded.Length >= 2 && encoded[0] == (byte)'B' && encoded[1] == (byte)'M')
+        {
             return ImageFormat.Bmp;
+        }
 
         if (encoded.Length >= 8 &&
             encoded[0] == 0x89 && encoded[1] == (byte)'P' && encoded[2] == (byte)'N' && encoded[3] == (byte)'G' &&
             encoded[4] == 0x0D && encoded[5] == 0x0A && encoded[6] == 0x1A && encoded[7] == 0x0A)
+        {
             return ImageFormat.Png;
+        }
 
         if (encoded.Length >= 3 && encoded[0] == 0xFF && encoded[1] == 0xD8 && encoded[2] == 0xFF)
+        {
             return ImageFormat.Jpeg;
+        }
 
         // SVG can start with "<svg" or an XML header; detection is intentionally conservative.
         if (encoded.Length >= 4 && encoded[0] == (byte)'<' && (encoded[1] == (byte)'s' || encoded[1] == (byte)'?'))
+        {
             return ImageFormat.Svg;
+        }
 
         return ImageFormat.Unknown;
     }

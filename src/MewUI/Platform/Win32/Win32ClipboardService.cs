@@ -9,7 +9,9 @@ internal sealed class Win32ClipboardService : IClipboardService
     public bool TrySetText(string text)
     {
         if (!User32.OpenClipboard(0))
+        {
             return false;
+        }
 
         try
         {
@@ -18,11 +20,15 @@ internal sealed class Win32ClipboardService : IClipboardService
             var bytes = System.Text.Encoding.Unicode.GetBytes((text ?? string.Empty) + "\0");
             var hGlobal = Kernel32.GlobalAlloc(0x0042, (nuint)bytes.Length); // GMEM_MOVEABLE | GMEM_ZEROINIT
             if (hGlobal == 0)
+            {
                 return false;
+            }
 
             var ptr = Kernel32.GlobalLock(hGlobal);
             if (ptr == 0)
+            {
                 return false;
+            }
 
             try
             {
@@ -49,20 +55,28 @@ internal sealed class Win32ClipboardService : IClipboardService
 
         // CF_UNICODETEXT = 13
         if (!User32.IsClipboardFormatAvailable(13))
+        {
             return false;
+        }
 
         if (!User32.OpenClipboard(0))
+        {
             return false;
+        }
 
         try
         {
             var hGlobal = User32.GetClipboardData(13);
             if (hGlobal == 0)
+            {
                 return false;
+            }
 
             var ptr = Kernel32.GlobalLock(hGlobal);
             if (ptr == 0)
+            {
                 return false;
+            }
 
             try
             {

@@ -46,10 +46,14 @@ public class StackPanel : Panel
         foreach (var child in Children)
         {
             if (child is UIElement ui && !ui.IsVisible)
+            {
                 continue;
+            }
 
             if (hasPrevious)
+            {
                 usedMain += Spacing;
+            }
 
             if (Orientation == Orientation.Vertical)
             {
@@ -83,10 +87,14 @@ public class StackPanel : Panel
         foreach (var child in Children)
         {
             if (child is UIElement ui && !ui.IsVisible)
+            {
                 continue;
+            }
 
             if (hasPrevious)
+            {
                 offset += Spacing;
+            }
 
             if (Orientation == Orientation.Vertical)
             {

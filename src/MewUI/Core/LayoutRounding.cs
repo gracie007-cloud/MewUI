@@ -7,11 +7,15 @@ internal static class LayoutRounding
     public static double SnapThicknessToPixels(double thicknessDip, double dpiScale, int minPixels)
     {
         if (thicknessDip <= 0)
+        {
             return 0;
+        }
 
         int px = RoundToPixelInt(thicknessDip, dpiScale);
         if (px < minPixels)
+        {
             px = minPixels;
+        }
 
         return px / dpiScale;
     }
@@ -19,10 +23,14 @@ internal static class LayoutRounding
     public static Size RoundSizeToPixels(Size size, double dpiScale)
     {
         if (dpiScale <= 0 || double.IsNaN(dpiScale) || double.IsInfinity(dpiScale))
+        {
             return size;
+        }
 
         if (size.IsEmpty)
+        {
             return size;
+        }
 
         var w = RoundToPixel(size.Width, dpiScale);
         var h = RoundToPixel(size.Height, dpiScale);
@@ -32,10 +40,14 @@ internal static class LayoutRounding
     public static Rect SnapRectEdgesToPixels(Rect rect, double dpiScale)
     {
         if (dpiScale <= 0 || double.IsNaN(dpiScale) || double.IsInfinity(dpiScale))
+        {
             return rect;
+        }
 
         if (rect.IsEmpty)
+        {
             return rect;
+        }
 
         int leftPx = RoundToPixelInt(rect.X, dpiScale);
         int topPx = RoundToPixelInt(rect.Y, dpiScale);
@@ -56,10 +68,14 @@ internal static class LayoutRounding
     public static Rect RoundRectToPixels(Rect rect, double dpiScale)
     {
         if (dpiScale <= 0 || double.IsNaN(dpiScale) || double.IsInfinity(dpiScale))
+        {
             return rect;
+        }
 
         if (rect.IsEmpty)
+        {
             return rect;
+        }
 
         // Round position and size independently (WPF-style) to avoid jitter introduced by
         // rounding both edges separately (left/right), which can change size by ±1px.
@@ -79,10 +95,14 @@ internal static class LayoutRounding
     public static int RoundToPixelInt(double value, double dpiScale)
     {
         if (dpiScale <= 0 || double.IsNaN(dpiScale) || double.IsInfinity(dpiScale))
+        {
             return (int)Math.Round(value, MidpointRounding.AwayFromZero);
+        }
 
         if (double.IsNaN(value) || double.IsInfinity(value))
+        {
             return 0;
+        }
 
         return (int)Math.Round(value * dpiScale, MidpointRounding.AwayFromZero);
     }
@@ -90,7 +110,9 @@ internal static class LayoutRounding
     public static double RoundToPixel(double value, double dpiScale)
     {
         if (double.IsNaN(value) || double.IsInfinity(value))
+        {
             return value;
+        }
 
         // WPF-style: avoid banker's rounding to reduce jitter at .5 boundaries (e.g. 150% DPI).
         return Math.Round(value * dpiScale, MidpointRounding.AwayFromZero) / dpiScale;

@@ -25,10 +25,14 @@ public sealed class FocusManager
     public bool SetFocus(UIElement? element)
     {
         if (FocusedElement == element)
+        {
             return true;
+        }
 
         if (element != null && (!element.Focusable || !element.IsEffectivelyEnabled || !element.IsVisible))
+        {
             return false;
+        }
 
         var oldElement = FocusedElement;
         FocusedElement = element;
@@ -52,7 +56,10 @@ public sealed class FocusManager
     public bool MoveFocusNext()
     {
         var focusable = CollectFocusableElements(_window.Content);
-        if (focusable.Count == 0) return false;
+        if (focusable.Count == 0)
+        {
+            return false;
+        }
 
         int currentIndex = FocusedElement != null ? focusable.IndexOf(FocusedElement) : -1;
         int nextIndex = (currentIndex + 1) % focusable.Count;
@@ -66,7 +73,10 @@ public sealed class FocusManager
     public bool MoveFocusPrevious()
     {
         var focusable = CollectFocusableElements(_window.Content);
-        if (focusable.Count == 0) return false;
+        if (focusable.Count == 0)
+        {
+            return false;
+        }
 
         int currentIndex = FocusedElement != null ? focusable.IndexOf(FocusedElement) : focusable.Count;
         int prevIndex = (currentIndex - 1 + focusable.Count) % focusable.Count;

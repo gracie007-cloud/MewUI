@@ -71,7 +71,9 @@ public sealed class GdiGraphicsFactory : IGraphicsFactory, IWindowResourceReleas
     public void ReleaseWindowResources(nint hwnd)
     {
         if (hwnd == 0)
+        {
             return;
+        }
 
         GdiDoubleBufferedContext.ReleaseForWindow(hwnd);
     }

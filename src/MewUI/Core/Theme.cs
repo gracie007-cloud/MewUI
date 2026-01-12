@@ -13,8 +13,16 @@ public record class Theme
         get => _current;
         set
         {
-            if (value == null) throw new ArgumentNullException(nameof(value));
-            if (_current == value) return;
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            if (_current == value)
+            {
+                return;
+            }
+
             var old = _current;
             _current = value;
             CurrentChanged?.Invoke(old, value);
@@ -102,7 +110,11 @@ public record class Theme
 
     public Theme WithPalette(Palette palette)
     {
-        if (palette == null) throw new ArgumentNullException(nameof(palette));
+        if (palette == null)
+        {
+            throw new ArgumentNullException(nameof(palette));
+        }
+
         return new Theme(
             name: Name,
             palette: palette,

@@ -27,12 +27,18 @@ public class ListBox : Control
         {
             int clamped = value;
             if (_items.Count == 0)
+            {
                 clamped = -1;
+            }
             else
+            {
                 clamped = Math.Clamp(value, -1, _items.Count - 1);
+            }
 
             if (field == clamped)
+            {
                 return;
+            }
 
             field = clamped;
             SelectionChanged?.Invoke(field);
@@ -116,7 +122,9 @@ public class ListBox : Control
                 {
                     var item = _items[i];
                     if (string.IsNullOrEmpty(item))
+                    {
                         continue;
+                    }
 
                     maxWidth = Math.Max(maxWidth, measure.Context.MeasureText(item, measure.Font).Width + itemPadW);
                     if (maxWidth >= widthLimit)
@@ -131,7 +139,9 @@ public class ListBox : Control
                 {
                     var item = _items[SelectedIndex];
                     if (!string.IsNullOrEmpty(item))
+                    {
                         maxWidth = Math.Max(maxWidth, measure.Context.MeasureText(item, measure.Font).Width + itemPadW);
+                    }
                 }
             }
             else
@@ -140,7 +150,9 @@ public class ListBox : Control
                 foreach (var item in _items)
                 {
                     if (string.IsNullOrEmpty(item))
+                    {
                         continue;
+                    }
 
                     maxWidth = Math.Max(maxWidth, measure.Context.MeasureText(item, measure.Font).Width + itemPadW);
                     if (maxWidth >= widthLimit)
@@ -165,7 +177,9 @@ public class ListBox : Control
         // When we're auto-sizing width (infinite width available), reserve that space so text doesn't get clipped.
         bool needV = _extentHeight > _viewportHeight + 0.5;
         if (needV && double.IsPositiveInfinity(widthLimit))
+        {
             maxWidth += theme.ScrollBarHitThickness + 1;
+        }
 
         double desiredHeight = double.IsPositiveInfinity(availableSize.Height)
             ? height
@@ -230,19 +244,28 @@ public class ListBox : Control
         if (IsEnabled)
         {
             if (IsFocused)
+            {
                 borderColor = theme.Accent;
+            }
             else if (IsMouseOver)
+            {
                 borderColor = BorderBrush.Lerp(theme.Accent, 0.6);
+            }
         }
         DrawBackgroundAndBorder(context, bounds, bg, borderColor, radius);
 
         if (_items.Count == 0)
+        {
             return;
+        }
 
         var innerBounds = bounds.Deflate(new Thickness(borderInset));
         var viewportBounds = innerBounds;
         if (_vBar.IsVisible)
+        {
             viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, theme.ScrollBarHitThickness + 1, 0));
+        }
+
         var contentBounds = viewportBounds.Deflate(Padding);
 
         context.Save();
@@ -269,9 +292,13 @@ public class ListBox : Control
             {
                 var selectionBg = theme.SelectionBackground;
                 if (itemRadius > 0)
+                {
                     context.FillRoundedRectangle(itemRect, itemRadius, itemRadius, selectionBg);
+                }
                 else
+                {
                     context.FillRectangle(itemRect, selectionBg);
+                }
             }
 
             var textColor = selected ? theme.SelectionText : (IsEnabled ? Foreground : theme.DisabledText);
@@ -282,16 +309,22 @@ public class ListBox : Control
         context.Restore();
 
         if (_vBar.IsVisible)
+        {
             _vBar.Render(context);
+        }
     }
 
     public override UIElement? HitTest(Point point)
     {
         if (!IsVisible || !IsHitTestVisible || !IsEnabled)
+        {
             return null;
+        }
 
         if (_vBar.IsVisible && _vBar.Bounds.Contains(point))
+        {
             return _vBar;
+        }
 
         return base.HitTest(point);
     }
@@ -301,7 +334,9 @@ public class ListBox : Control
         base.OnMouseDown(e);
 
         if (!IsEnabled || e.Button != MouseButton.Left)
+        {
             return;
+        }
 
         Focus();
 
@@ -310,7 +345,10 @@ public class ListBox : Control
         var innerBounds = bounds.Deflate(new Thickness(GetBorderVisualInset()));
         var viewportBounds = innerBounds;
         if (_vBar.IsVisible)
+        {
             viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, theme.ScrollBarHitThickness + 1, 0));
+        }
+
         var contentBounds = viewportBounds.Deflate(Padding);
 
         int index = (int)((e.Position.Y - contentBounds.Y + _verticalOffset) / ResolveItemHeight());
@@ -326,11 +364,15 @@ public class ListBox : Control
         base.OnMouseWheel(e);
 
         if (e.Handled || !_vBar.IsVisible)
+        {
             return;
+        }
 
         int notches = Math.Sign(e.Delta);
         if (notches == 0)
+        {
             return;
+        }
 
         _verticalOffset = ClampVerticalOffset(_verticalOffset - notches * GetTheme().ScrollWheelStep);
         _vBar.Value = _verticalOffset;
@@ -343,18 +385,26 @@ public class ListBox : Control
         base.OnKeyDown(e);
 
         if (!IsEnabled)
+        {
             return;
+        }
 
         if (e.Key == Key.Up)
         {
             if (_items.Count > 0)
+            {
                 SelectedIndex = Math.Max(0, SelectedIndex <= 0 ? 0 : SelectedIndex - 1);
+            }
+
             e.Handled = true;
         }
         else if (e.Key == Key.Down)
         {
             if (_items.Count > 0)
+            {
                 SelectedIndex = Math.Min(_items.Count - 1, SelectedIndex < 0 ? 0 : SelectedIndex + 1);
+            }
+
             e.Handled = true;
         }
     }
@@ -364,7 +414,9 @@ public class ListBox : Control
     public void ScrollIntoView(int index)
     {
         if (index < 0 || index >= _items.Count)
+        {
             return;
+        }
 
         double viewport = GetViewportHeightDip();
         if (viewport <= 0 || double.IsNaN(viewport) || double.IsInfinity(viewport))
@@ -375,24 +427,34 @@ public class ListBox : Control
 
         double itemHeight = ResolveItemHeight();
         if (itemHeight <= 0)
+        {
             return;
+        }
 
         double itemTop = index * itemHeight;
         double itemBottom = itemTop + itemHeight;
 
         double newOffset = _verticalOffset;
         if (itemTop < newOffset)
+        {
             newOffset = itemTop;
+        }
         else if (itemBottom > newOffset + viewport)
+        {
             newOffset = itemBottom - viewport;
+        }
 
         newOffset = ClampVerticalOffset(newOffset);
         if (newOffset.Equals(_verticalOffset))
+        {
             return;
+        }
 
         _verticalOffset = newOffset;
         if (_vBar.IsVisible)
+        {
             _vBar.Value = _verticalOffset;
+        }
 
         InvalidateVisual();
     }
@@ -415,7 +477,10 @@ public class ListBox : Control
     private double ResolveItemHeight()
     {
         if (!double.IsNaN(ItemHeight) && ItemHeight > 0)
+        {
             return ItemHeight;
+        }
+
         return Math.Max(18, FontSize * 2);
     }
 
@@ -423,7 +488,10 @@ public class ListBox : Control
     {
         double max = Math.Max(0, _extentHeight - _viewportHeight);
         if (double.IsNaN(value) || double.IsInfinity(value))
+        {
             return 0;
+        }
+
         return Math.Clamp(value, 0, max);
     }
 
@@ -446,8 +514,15 @@ public class ListBox : Control
         Action<Action>? subscribe = null,
         Action<Action>? unsubscribe = null)
     {
-        if (get == null) throw new ArgumentNullException(nameof(get));
-        if (set == null) throw new ArgumentNullException(nameof(set));
+        if (get == null)
+        {
+            throw new ArgumentNullException(nameof(get));
+        }
+
+        if (set == null)
+        {
+            throw new ArgumentNullException(nameof(set));
+        }
 
         _selectedIndexBinding?.Dispose();
         _selectedIndexBinding = new ValueBinding<int>(
@@ -468,7 +543,9 @@ public class ListBox : Control
             existing?.Invoke(i);
 
             if (_updatingFromSource)
+            {
                 return;
+            }
 
             _selectedIndexBinding?.Set(i);
         };

@@ -32,7 +32,9 @@ public sealed class ValueBinding<T> : IDisposable
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
 
         _unsubscribe?.Invoke(_onSourceChanged);
         _disposed = true;

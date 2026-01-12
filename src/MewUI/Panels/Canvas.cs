@@ -70,7 +70,9 @@ public class Canvas : Panel
             {
                 x = bounds.X + left;
                 if (!double.IsNaN(right))
+                {
                     width = bounds.Width - left - right;
+                }
             }
             else if (!double.IsNaN(right))
             {
@@ -82,7 +84,9 @@ public class Canvas : Panel
             {
                 y = bounds.Y + top;
                 if (!double.IsNaN(bottom))
+                {
                     height = bounds.Height - top - bottom;
+                }
             }
             else if (!double.IsNaN(bottom))
             {

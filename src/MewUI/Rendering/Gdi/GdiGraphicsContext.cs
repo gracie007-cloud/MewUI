@@ -60,9 +60,15 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
             if (_aaMemDc != 0)
             {
                 if (_aaOldBitmap != 0)
+                {
                     Gdi32.SelectObject(_aaMemDc, _aaOldBitmap);
+                }
+
                 if (_aaBitmap != 0)
+                {
                     Gdi32.DeleteObject(_aaBitmap);
+                }
+
                 Gdi32.DeleteDC(_aaMemDc);
 
                 _aaMemDc = 0;
@@ -187,15 +193,22 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
                                     {
                                         double x = (dstX + px) + (sx + 0.5) / s;
                                         if (DistanceSqPointToSegment(x, y, ax, ay, bx, by) <= halfSq)
+                                        {
                                             covered++;
+                                        }
                                     }
                                 }
 
                                 if (covered <= 0)
+                                {
                                     continue;
+                                }
 
                                 int a = (srcA * covered + (samples / 2)) / samples; // rounded
-                                if (a > 255) a = 255;
+                                if (a > 255)
+                                {
+                                    a = 255;
+                                }
 
                                 int pr = (srcR * a + 127) / 255;
                                 int pg = (srcG * a + 127) / 255;
@@ -415,7 +428,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     public void DrawText(string text, Point location, IFont font, Color color)
     {
         if (font is not GdiFont gdiFont)
+        {
             throw new ArgumentException("Font must be a GdiFont", nameof(font));
+        }
 
         var oldFont = Gdi32.SelectObject(Hdc, gdiFont.Handle);
         var oldColor = Gdi32.SetTextColor(Hdc, color.ToCOLORREF());
@@ -437,7 +452,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
         TextWrapping wrapping = TextWrapping.NoWrap)
     {
         if (font is not GdiFont gdiFont)
+        {
             throw new ArgumentException("Font must be a GdiFont", nameof(font));
+        }
 
         var oldFont = Gdi32.SelectObject(Hdc, gdiFont.Handle);
         var oldColor = Gdi32.SetTextColor(Hdc, color.ToCOLORREF());
@@ -483,13 +500,17 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     public Size MeasureText(string text, IFont font)
     {
         if (font is not GdiFont gdiFont)
+        {
             throw new ArgumentException("Font must be a GdiFont", nameof(font));
+        }
 
         var oldFont = Gdi32.SelectObject(Hdc, gdiFont.Handle);
         try
         {
             if (string.IsNullOrEmpty(text))
+            {
                 return Size.Empty;
+            }
 
             var hasLineBreaks = text.AsSpan().IndexOfAny('\r', '\n') >= 0;
             var rect = hasLineBreaks
@@ -512,13 +533,17 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     public Size MeasureText(string text, IFont font, double maxWidth)
     {
         if (font is not GdiFont gdiFont)
+        {
             throw new ArgumentException("Font must be a GdiFont", nameof(font));
+        }
 
         var oldFont = Gdi32.SelectObject(Hdc, gdiFont.Handle);
         try
         {
             if (double.IsNaN(maxWidth) || maxWidth <= 0 || double.IsInfinity(maxWidth))
+            {
                 maxWidth = 1_000_000;
+            }
 
             var rect = new RECT(0, 0, QuantizeLengthPx(maxWidth), 0);
             Gdi32.DrawText(Hdc, text, text.Length, ref rect,
@@ -538,7 +563,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     public void DrawImage(IImage image, Point location)
     {
         if (image is not GdiImage gdiImage)
+        {
             throw new ArgumentException("Image must be a GdiImage", nameof(image));
+        }
 
         DrawImage(gdiImage, new Rect(location.X, location.Y, image.PixelWidth, image.PixelHeight));
     }
@@ -546,7 +573,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     public void DrawImage(IImage image, Rect destRect)
     {
         if (image is not GdiImage gdiImage)
+        {
             throw new ArgumentException("Image must be a GdiImage", nameof(image));
+        }
 
         DrawImage(gdiImage, destRect, new Rect(0, 0, image.PixelWidth, image.PixelHeight));
     }
@@ -554,11 +583,15 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     public void DrawImage(IImage image, Rect destRect, Rect sourceRect)
     {
         if (image is not GdiImage gdiImage)
+        {
             throw new ArgumentException("Image must be a GdiImage", nameof(image));
+        }
 
         var destPx = ToDeviceRect(destRect);
         if (destPx.Width <= 0 || destPx.Height <= 0)
+        {
             return;
+        }
 
         var memDc = Gdi32.CreateCompatibleDC(Hdc);
         var oldBitmap = Gdi32.SelectObject(memDc, gdiImage.Handle);
@@ -570,7 +603,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
         bool hasBrushOrg = mode == GdiConstants.HALFTONE;
         var oldBrushOrg = default(POINT);
         if (hasBrushOrg)
+        {
             Gdi32.SetBrushOrgEx(Hdc, 0, 0, out oldBrushOrg);
+        }
 
         try
         {
@@ -614,9 +649,15 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
         finally
         {
             if (oldStretchMode != 0)
+            {
                 Gdi32.SetStretchBltMode(Hdc, oldStretchMode);
+            }
+
             if (hasBrushOrg)
+            {
                 Gdi32.SetBrushOrgEx(Hdc, oldBrushOrg.x, oldBrushOrg.y, out _);
+            }
+
             Gdi32.SelectObject(memDc, oldBitmap);
             Gdi32.DeleteDC(memDc);
         }
@@ -631,7 +672,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     private int QuantizePenWidthPx(double thicknessDip)
     {
         if (thicknessDip <= 0 || double.IsNaN(thicknessDip) || double.IsInfinity(thicknessDip))
+        {
             return 0;
+        }
 
         var px = thicknessDip * DpiScale;
         var snapped = (int)Math.Round(px, MidpointRounding.AwayFromZero);
@@ -641,7 +684,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     private int QuantizeLengthPx(double lengthDip)
     {
         if (lengthDip <= 0 || double.IsNaN(lengthDip) || double.IsInfinity(lengthDip))
+        {
             return 0;
+        }
 
         return LayoutRounding.RoundToPixelInt(lengthDip, DpiScale);
     }
@@ -660,18 +705,33 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
 
     private void EnsureAaSurface(int width, int height)
     {
-        if (width <= 0) width = 1;
-        if (height <= 0) height = 1;
+        if (width <= 0)
+        {
+            width = 1;
+        }
+
+        if (height <= 0)
+        {
+            height = 1;
+        }
 
         if (_aaMemDc != 0 && _aaBitmap != 0 && _aaWidth == width && _aaHeight == height && _aaBits != 0)
+        {
             return;
+        }
 
         if (_aaMemDc != 0)
         {
             if (_aaOldBitmap != 0)
+            {
                 Gdi32.SelectObject(_aaMemDc, _aaOldBitmap);
+            }
+
             if (_aaBitmap != 0)
+            {
                 Gdi32.DeleteObject(_aaBitmap);
+            }
+
             Gdi32.DeleteDC(_aaMemDc);
         }
 
@@ -692,7 +752,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     private unsafe void ClearAaBits(int width, int height)
     {
         if (_aaBits == 0)
+        {
             return;
+        }
 
         var count = (nuint)(width * height * 4);
         new Span<byte>((void*)_aaBits, checked((int)count)).Clear();
@@ -702,7 +764,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     {
         var dst = ToDeviceRect(rect);
         if (dst.Width <= 0 || dst.Height <= 0)
+        {
             return;
+        }
 
         EnsureAaSurface(dst.Width, dst.Height);
         ClearAaBits(dst.Width, dst.Height);
@@ -748,7 +812,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
                         double dx = x - cx;
                         double dy = y - cy;
                         if ((dx * dx) / rx2 + (dy * dy) / ry2 <= 1.0)
+                        {
                             covered++;
+                        }
                     }
                 }
 
@@ -787,11 +853,15 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     {
         var strokePx = QuantizePenWidthPx(thicknessDip);
         if (strokePx <= 0)
+        {
             return;
+        }
 
         var dst = ToDeviceRect(rect);
         if (dst.Width <= 0 || dst.Height <= 0)
+        {
             return;
+        }
 
         int pad = (int)Math.Ceiling(strokePx / 2.0);
         int outW = dst.Width + pad * 2;
@@ -847,14 +917,18 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
 
                         bool inOuter = InsideRoundedRect(x + half, y + half, wOut, hOut, rxOut, ryOut, rxOut2, ryOut2);
                         if (!inOuter)
+                        {
                             continue;
+                        }
 
                         bool inInner = wIn > 0 && hIn > 0
                             ? InsideRoundedRect(x - half, y - half, wIn, hIn, rxIn, ryIn, rxIn2, ryIn2)
                             : false;
 
                         if (inOuter && !inInner)
+                        {
                             covered++;
+                        }
                     }
                 }
 
@@ -892,13 +966,19 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     private static bool InsideRoundedRect(double x, double y, double w, double h, double rx, double ry, double rx2, double ry2)
     {
         if (w <= 0 || h <= 0)
+        {
             return false;
+        }
 
         if (x < 0 || y < 0 || x > w || y > h)
+        {
             return false;
+        }
 
         if (rx <= 0 || ry <= 0)
+        {
             return true;
+        }
 
         double cx = x < rx ? rx : (x > w - rx ? w - rx : x);
         double cy = y < ry ? ry : (y > h - ry ? h - ry : y);
@@ -911,7 +991,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     {
         var dst = ToDeviceRect(bounds);
         if (dst.Width <= 0 || dst.Height <= 0)
+        {
             return;
+        }
 
         EnsureAaSurface(dst.Width, dst.Height);
         ClearAaBits(dst.Width, dst.Height);
@@ -950,7 +1032,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
                         double x = px + (sx + 0.5) / s;
                         double dx = x - cx;
                         if ((dx * dx) / rx2 + (dy * dy) / ry2 <= 1.0)
+                        {
                             covered++;
+                        }
                     }
                 }
 
@@ -989,11 +1073,15 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     {
         var strokePx = QuantizePenWidthPx(thicknessDip);
         if (strokePx <= 0)
+        {
             return;
+        }
 
         var dst = ToDeviceRect(bounds);
         if (dst.Width <= 0 || dst.Height <= 0)
+        {
             return;
+        }
 
         int pad = (int)Math.Ceiling(strokePx / 2.0);
         int outW = dst.Width + pad * 2;
@@ -1049,11 +1137,15 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
                         double yo = dyOut;
                         bool inOuter = ((xo * xo) / rxOut2 + (yo * yo) / ryOut2) <= 1.0;
                         if (!inOuter)
+                        {
                             continue;
+                        }
 
                         bool inInner = rxIn > 0 && ryIn > 0 && ((xo * xo) / rxIn2 + (yo * yo) / ryIn2) <= 1.0;
                         if (inOuter && !inInner)
+                        {
                             covered++;
+                        }
                     }
                 }
 
@@ -1093,26 +1185,38 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     {
         var stages = GdiDebug.DumpStages;
         if (stages == GdiDumpStages.None)
+        {
             return;
+        }
 
         if ((stages & GdiDumpStages.DestBeforeBlend) != 0)
+        {
             CaptureHdcRegionIfEnabled(tag, "dest_before", destX, destY, destW, destH);
+        }
 
         if (_aaBits == 0 || aaW <= 0 || aaH <= 0)
+        {
             return;
+        }
 
         if ((stages & GdiDumpStages.AaSurface) != 0)
+        {
             DumpAaSurfaceIfEnabled(tag, "aa", aaW, aaH);
+        }
 
         if ((stages & GdiDumpStages.AaSurfaceAlpha) != 0)
+        {
             DumpAaSurfaceAlphaIfEnabled(tag, "aa_alpha", aaW, aaH);
+        }
     }
 
     [Conditional("DEBUG")]
     private void DumpAfterBlendIfEnabled(string tag, int destX, int destY, int destW, int destH)
     {
         if ((GdiDebug.DumpStages & GdiDumpStages.DestAfterBlend) == 0)
+        {
             return;
+        }
 
         CaptureHdcRegionIfEnabled(tag, "dest_after", destX, destY, destW, destH);
     }
@@ -1170,10 +1274,14 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     private unsafe void DumpAaSurfaceIfEnabled(string tag, string stage, int width, int height)
     {
         if (_aaBits == 0 || width <= 0 || height <= 0)
+        {
             return;
+        }
 
         if (!GdiDebug.TryGetNextAaDumpIndex(out var index))
+        {
             return;
+        }
 
         var dir = GdiDebug.DumpAaDirectory!;
         Directory.CreateDirectory(dir);
@@ -1186,10 +1294,14 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     private unsafe void DumpAaSurfaceAlphaIfEnabled(string tag, string stage, int width, int height)
     {
         if (_aaBits == 0 || width <= 0 || height <= 0)
+        {
             return;
+        }
 
         if (!GdiDebug.TryGetNextAaDumpIndex(out var index))
+        {
             return;
+        }
 
         int len = checked(width * height * 4);
         var tmp = new byte[len];
@@ -1218,10 +1330,14 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
     private unsafe void CaptureHdcRegionIfEnabled(string tag, string stage, int x, int y, int w, int h)
     {
         if (w <= 0 || h <= 0)
+        {
             return;
+        }
 
         if (!GdiDebug.TryGetNextAaDumpIndex(out var index))
+        {
             return;
+        }
 
         var dir = GdiDebug.DumpAaDirectory!;
         Directory.CreateDirectory(dir);
@@ -1238,7 +1354,9 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
             var bmi = BITMAPINFO.Create32bpp(w, h);
             bmp = Gdi32.CreateDIBSection(Hdc, ref bmi, 0, out bits, 0, 0);
             if (bmp == 0 || bits == 0)
+            {
                 return;
+            }
 
             old = Gdi32.SelectObject(memDc, bmp);
             Gdi32.BitBlt(memDc, 0, 0, w, h, Hdc, x, y, 0x00CC0020); // SRCCOPY
@@ -1250,9 +1368,15 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
             if (memDc != 0)
             {
                 if (old != 0)
+                {
                     Gdi32.SelectObject(memDc, old);
+                }
+
                 if (bmp != 0)
+                {
                     Gdi32.DeleteObject(bmp);
+                }
+
                 Gdi32.DeleteDC(memDc);
             }
         }

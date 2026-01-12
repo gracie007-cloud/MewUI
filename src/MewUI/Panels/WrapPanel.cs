@@ -60,7 +60,9 @@ public class WrapPanel : Panel
         foreach (var child in Children)
         {
             if (child is UIElement ui && !ui.IsVisible)
+            {
                 continue;
+            }
 
             // Measure with item constraints if specified
             var measureSize = new Size(
@@ -126,7 +128,9 @@ public class WrapPanel : Panel
         {
             var child = Children[i];
             if (child is UIElement ui && !ui.IsVisible)
+            {
                 continue;
+            }
 
             double childWidth = double.IsNaN(ItemWidth) ? child.DesiredSize.Width : ItemWidth;
             double childHeight = double.IsNaN(ItemHeight) ? child.DesiredSize.Height : ItemHeight;
@@ -152,7 +156,9 @@ public class WrapPanel : Panel
         }
 
         if (lineCount > 0)
+        {
             lines.Add((lineStart, lineCount, lineSize));
+        }
 
         // Second pass: arrange children
         crossOffset = 0;
@@ -165,7 +171,9 @@ public class WrapPanel : Panel
             {
                 var child = Children[i];
                 if (child is UIElement ui && !ui.IsVisible)
+                {
                     continue;
+                }
 
                 double childWidth = double.IsNaN(ItemWidth) ? child.DesiredSize.Width : ItemWidth;
                 double childHeight = double.IsNaN(ItemHeight) ? child.DesiredSize.Height : ItemHeight;

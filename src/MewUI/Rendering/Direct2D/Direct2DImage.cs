@@ -21,7 +21,9 @@ internal sealed class Direct2DImage : IImage
     public Direct2DImage(DecodedBitmap bmp)
     {
         if (bmp.PixelFormat != BitmapPixelFormat.Bgra32)
+        {
             throw new NotSupportedException($"Unsupported pixel format: {bmp.PixelFormat}");
+        }
 
         PixelWidth = bmp.WidthPx;
         PixelHeight = bmp.HeightPx;
@@ -31,10 +33,14 @@ internal sealed class Direct2DImage : IImage
     public nint GetOrCreateBitmap(nint renderTarget, int renderTargetGeneration)
     {
         if (_disposed || renderTarget == 0)
+        {
             return 0;
+        }
 
         if (_bitmap != 0 && _renderTarget == renderTarget && _renderTargetGeneration == renderTargetGeneration)
+        {
             return _bitmap;
+        }
 
         // The bitmap is tied to a specific render target. If the render target changes (e.g. during resize),
         // the bitmap must be recreated for the new target.
@@ -69,7 +75,9 @@ internal sealed class Direct2DImage : IImage
                     bitmap: out bmpHandle);
 
                 if (hr < 0 || bmpHandle == 0)
+                {
                     throw new InvalidOperationException($"ID2D1RenderTarget::CreateBitmap failed: 0x{hr:X8}");
+                }
             }
         }
 
@@ -85,7 +93,9 @@ internal sealed class Direct2DImage : IImage
         for (int i = 3; i < bgra.Length; i += 4)
         {
             if (bgra[i] != 0xFF)
+            {
                 return Premultiply(bgra);
+            }
         }
         return bgra;
     }
@@ -112,7 +122,10 @@ internal sealed class Direct2DImage : IImage
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
+
         _disposed = true;
 
         ComHelpers.Release(_bitmap);

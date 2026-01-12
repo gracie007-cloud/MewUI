@@ -66,7 +66,10 @@ public abstract class Control : FrameworkElement, IDisposable
     public void ClearBackground()
     {
         if (_background == null)
+        {
             return;
+        }
+
         _background = null;
         InvalidateVisual();
     }
@@ -87,7 +90,10 @@ public abstract class Control : FrameworkElement, IDisposable
     public void ClearForeground()
     {
         if (_foreground == null)
+        {
             return;
+        }
+
         _foreground = null;
         InvalidateVisual();
     }
@@ -108,7 +114,10 @@ public abstract class Control : FrameworkElement, IDisposable
     public void ClearBorderBrush()
     {
         if (_borderBrush == null)
+        {
             return;
+        }
+
         _borderBrush = null;
         InvalidateVisual();
     }
@@ -144,7 +153,10 @@ public abstract class Control : FrameworkElement, IDisposable
     public void ClearFontFamily()
     {
         if (_fontFamily == null)
+        {
             return;
+        }
+
         _fontFamily = null;
         _font?.Dispose();
         _font = null;
@@ -169,7 +181,10 @@ public abstract class Control : FrameworkElement, IDisposable
     public void ClearFontSize()
     {
         if (_fontSize == null)
+        {
             return;
+        }
+
         _fontSize = null;
         _font?.Dispose();
         _font = null;
@@ -194,7 +209,10 @@ public abstract class Control : FrameworkElement, IDisposable
     public void ClearFontWeight()
     {
         if (_fontWeight == null)
+        {
             return;
+        }
+
         _fontWeight = null;
         _font?.Dispose();
         _font = null;
@@ -270,11 +288,20 @@ public abstract class Control : FrameworkElement, IDisposable
     protected Color PickAccentBorder(Theme theme, Color baseBorder, in VisualState state, double hoverMix = 0.6)
     {
         if (!state.IsEnabled)
+        {
             return baseBorder;
+        }
+
         if (state.IsFocused || state.IsActive || state.IsPressed)
+        {
             return theme.Accent;
+        }
+
         if (state.IsHot)
+        {
             return baseBorder.Lerp(theme.Accent, hoverMix);
+        }
+
         return baseBorder;
     }
 
@@ -287,9 +314,13 @@ public abstract class Control : FrameworkElement, IDisposable
         var stroke = thicknessDip <= 0 ? 1 : LayoutRounding.SnapThicknessToPixels(thicknessDip, dpiScale, minPixels: 1) + 2;
         outer = GetSnappedBorderBounds(outer);
         if (radius > 0)
+        {
             context.DrawRoundedRectangle(outer, radius, radius, theme.Accent.WithAlpha(alpha), stroke);
+        }
         else
+        {
             context.DrawRectangle(outer, theme.Accent.WithAlpha(alpha), stroke);
+        }
     }
 
     /// <summary>
@@ -299,7 +330,9 @@ public abstract class Control : FrameworkElement, IDisposable
     {
         var root = FindVisualRoot();
         if (root is Window window)
+        {
             return window.GraphicsFactory;
+        }
 
         return Application.DefaultGraphicsFactory;
     }
@@ -313,14 +346,19 @@ public abstract class Control : FrameworkElement, IDisposable
     {
         var root = FindVisualRoot();
         if (root is Window window)
+        {
             return window.Dpi;
+        }
+
         return DpiHelper.GetSystemDpi();
     }
 
     protected double GetBorderVisualInset()
     {
         if (BorderThickness <= 0)
+        {
             return 0;
+        }
 
         var dpiScale = GetDpi() / 96.0;
         // Treat borders as an "inside" inset and snap thickness to whole device pixels.
@@ -350,9 +388,13 @@ public abstract class Control : FrameworkElement, IDisposable
         {
             // Fill "stroke" using outer + inner shapes (avoids half-pixel pen alignment issues).
             if (radius > 0)
+            {
                 context.FillRoundedRectangle(bounds, radius, radius, borderBrush);
+            }
             else
+            {
                 context.FillRectangle(bounds, borderBrush);
+            }
 
             var inner = bounds.Deflate(new Thickness(borderThickness));
             var innerRadius = Math.Max(0, radius - borderThickness);
@@ -360,9 +402,13 @@ public abstract class Control : FrameworkElement, IDisposable
             if (inner.Width > 0 && inner.Height > 0)
             {
                 if (innerRadius > 0)
+                {
                     context.FillRoundedRectangle(inner, innerRadius, innerRadius, background);
+                }
                 else
+                {
                     context.FillRectangle(inner, background);
+                }
             }
 
             return;
@@ -371,18 +417,26 @@ public abstract class Control : FrameworkElement, IDisposable
         if (background.A > 0)
         {
             if (radius > 0)
+            {
                 context.FillRoundedRectangle(bounds, radius, radius, background);
+            }
             else
+            {
                 context.FillRectangle(bounds, background);
+            }
         }
 
         if (borderThickness > 0 && borderBrush.A > 0)
         {
             // Fallback: draw as stroke when background is transparent.
             if (radius > 0)
+            {
                 context.DrawRoundedRectangle(bounds, radius, radius, borderBrush, borderThickness);
+            }
             else
+            {
                 context.DrawRectangle(bounds, borderBrush, borderThickness);
+            }
         }
     }
 
@@ -403,7 +457,10 @@ public abstract class Control : FrameworkElement, IDisposable
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
+
         _disposed = true;
 
         // Release extension-managed bindings (and any other UIElement-registered disposables).

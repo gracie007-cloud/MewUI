@@ -50,16 +50,24 @@ public class CheckBox : ToggleBase
         var fill = state.IsEnabled ? theme.ControlBackground : theme.TextBoxDisabledBackground;
         var radius = Math.Max(0, theme.ControlCornerRadius * 0.5);
         if (radius > 0)
+        {
             context.FillRoundedRectangle(boxRect, radius, radius, fill);
+        }
         else
+        {
             context.FillRectangle(boxRect, fill);
+        }
 
         var borderColor = PickAccentBorder(theme, BorderBrush, state, hoverMix: 0.6);
         var stroke = Math.Max(1, BorderThickness);
         if (radius > 0)
+        {
             context.DrawRoundedRectangle(boxRect, radius, radius, borderColor, stroke);
+        }
         else
+        {
             context.DrawRectangle(boxRect, borderColor, stroke);
+        }
 
         if (IsChecked)
         {
@@ -85,14 +93,18 @@ public class CheckBox : ToggleBase
         base.OnMouseDown(e);
 
         if (!IsEnabled || e.Button != MouseButton.Left)
+        {
             return;
+        }
 
         _isPressed = true;
         Focus();
 
         var root = FindVisualRoot();
         if (root is Window window)
+        {
             window.CaptureMouse(this);
+        }
 
         InvalidateVisual();
         e.Handled = true;
@@ -103,16 +115,22 @@ public class CheckBox : ToggleBase
         base.OnMouseUp(e);
 
         if (e.Button != MouseButton.Left || !_isPressed)
+        {
             return;
+        }
 
         _isPressed = false;
 
         var root = FindVisualRoot();
         if (root is Window window)
+        {
             window.ReleaseMouseCapture();
+        }
 
         if (IsEnabled && Bounds.Contains(e.Position))
+        {
             IsChecked = !IsChecked;
+        }
 
         InvalidateVisual();
         e.Handled = true;

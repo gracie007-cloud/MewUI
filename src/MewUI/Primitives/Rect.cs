@@ -66,15 +66,24 @@ public readonly struct Rect : IEquatable<Rect>
         var bottom = Math.Min(Bottom, rect.Bottom);
 
         if (right > x && bottom > y)
+        {
             return new Rect(x, y, right - x, bottom - y);
+        }
 
         return Empty;
     }
 
     public Rect Union(Rect rect)
     {
-        if (IsEmpty) return rect;
-        if (rect.IsEmpty) return this;
+        if (IsEmpty)
+        {
+            return rect;
+        }
+
+        if (rect.IsEmpty)
+        {
+            return this;
+        }
 
         var x = Math.Min(X, rect.X);
         var y = Math.Min(Y, rect.Y);

@@ -35,7 +35,9 @@ internal sealed class GdiMeasurementContext : IGraphicsContext
     public Size MeasureText(string text, IFont font)
     {
         if (string.IsNullOrEmpty(text) || font is not GdiFont gdiFont)
+        {
             return Size.Empty;
+        }
 
         var oldFont = Gdi32.SelectObject(_hdc, gdiFont.Handle);
         try
@@ -61,14 +63,20 @@ internal sealed class GdiMeasurementContext : IGraphicsContext
     public Size MeasureText(string text, IFont font, double maxWidth)
     {
         if (string.IsNullOrEmpty(text) || font is not GdiFont gdiFont)
+        {
             return Size.Empty;
+        }
 
         if (double.IsNaN(maxWidth) || maxWidth <= 0 || double.IsInfinity(maxWidth))
+        {
             maxWidth = 1_000_000;
+        }
 
         var maxWidthPx = LayoutRounding.RoundToPixelInt(maxWidth, _dpiScale);
         if (maxWidthPx <= 0)
+        {
             maxWidthPx = LayoutRounding.RoundToPixelInt(1_000_000, _dpiScale);
+        }
 
         var oldFont = Gdi32.SelectObject(_hdc, gdiFont.Handle);
         try

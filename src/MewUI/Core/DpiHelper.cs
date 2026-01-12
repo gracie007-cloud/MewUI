@@ -20,10 +20,14 @@ public static class DpiHelper
     public static uint GetDpiForWindow(nint hwnd)
     {
         if (hwnd == 0)
+        {
             return GetSystemDpi();
+        }
 
         if (Application.IsRunning)
+        {
             return Application.Current.PlatformHost.GetDpiForWindow(hwnd);
+        }
 
         return GetSystemDpi();
     }

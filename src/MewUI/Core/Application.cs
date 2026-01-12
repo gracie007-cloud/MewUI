@@ -67,7 +67,9 @@ public sealed class Application
         set
         {
             if (value == null)
+            {
                 throw new ArgumentNullException(nameof(value));
+            }
 
             // Keep existing code working, but prefer enum configuration.
             if (ReferenceEquals(value, Direct2DGraphicsFactory.Instance))
@@ -107,12 +109,16 @@ public sealed class Application
     public static void Run(Window mainWindow)
     {
         if (_current != null)
+        {
             throw new InvalidOperationException("Application is already running.");
+        }
 
         lock (_syncLock)
         {
             if (_current != null)
+            {
                 throw new InvalidOperationException("Application is already running.");
+            }
 
             var app = new Application(DefaultPlatformHost);
             _current = app;
@@ -130,7 +136,9 @@ public sealed class Application
 
         var fatal = Interlocked.Exchange(ref _pendingFatalException, null);
         if (fatal != null)
+        {
             throw new InvalidOperationException("Unhandled exception in UI loop.", fatal);
+        }
     }
 
     /// <summary>
@@ -139,7 +147,10 @@ public sealed class Application
     public static void Quit()
     {
         if (_current == null)
+        {
             return;
+        }
+
         _current.PlatformHost.Quit(_current);
     }
 
@@ -149,7 +160,10 @@ public sealed class Application
     public static void DoEvents()
     {
         if (_current == null)
+        {
             return;
+        }
+
         _current.PlatformHost.DoEvents();
     }
 
@@ -186,9 +200,14 @@ public sealed class Application
     private static IPlatformHost CreateDefaultPlatformHost()
     {
         if (OperatingSystem.IsWindows())
+        {
             return new Win32PlatformHost();
+        }
+
         if (OperatingSystem.IsLinux())
+        {
             return new X11PlatformHost();
+        }
 
         throw new PlatformNotSupportedException("MewUI currently supports Windows and (experimental) Linux hosts only.");
     }

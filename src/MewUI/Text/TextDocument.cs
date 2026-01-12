@@ -23,7 +23,9 @@ internal sealed class TextDocument
         get
         {
             if ((uint)index >= (uint)Length)
+            {
                 throw new ArgumentOutOfRangeException(nameof(index));
+            }
 
             int gapSize = _gapEnd - _gapStart;
             return index < _gapStart ? _buffer[index] : _buffer[index + gapSize];
@@ -34,7 +36,9 @@ internal sealed class TextDocument
     {
         Clear();
         if (string.IsNullOrEmpty(text))
+        {
             return;
+        }
 
         Insert(0, text.AsSpan());
     }
@@ -48,10 +52,14 @@ internal sealed class TextDocument
     public void Insert(int index, ReadOnlySpan<char> text)
     {
         if ((uint)index > (uint)Length)
+        {
             throw new ArgumentOutOfRangeException(nameof(index));
+        }
 
         if (text.Length == 0)
+        {
             return;
+        }
 
         MoveGap(index);
         EnsureGap(text.Length);
@@ -63,16 +71,24 @@ internal sealed class TextDocument
     public void Remove(int index, int length)
     {
         if (length <= 0)
+        {
             return;
+        }
 
         if ((uint)index > (uint)Length)
+        {
             throw new ArgumentOutOfRangeException(nameof(index));
+        }
 
         if (index + length > Length)
+        {
             length = Length - index;
+        }
 
         if (length <= 0)
+        {
             return;
+        }
 
         MoveGap(index);
         _gapEnd += length;
@@ -81,10 +97,14 @@ internal sealed class TextDocument
     public void CopyTo(Span<char> destination, int start, int length)
     {
         if (length == 0)
+        {
             return;
+        }
 
         if ((uint)start > (uint)Length || start + length > Length)
+        {
             throw new ArgumentOutOfRangeException(nameof(start));
+        }
 
         int gapSize = _gapEnd - _gapStart;
         if (start + length <= _gapStart)
@@ -109,7 +129,9 @@ internal sealed class TextDocument
     {
         int length = Length;
         if (length == 0)
+        {
             return string.Empty;
+        }
 
         return string.Create(length, this, static (span, doc) => doc.CopyTo(span, 0, span.Length));
     }
@@ -117,10 +139,14 @@ internal sealed class TextDocument
     public string GetText(int start, int length)
     {
         if (length <= 0)
+        {
             return string.Empty;
+        }
 
         if ((uint)start > (uint)Length || start + length > Length)
+        {
             throw new ArgumentOutOfRangeException(nameof(start));
+        }
 
         return string.Create(length, (doc: this, start), static (span, state) =>
             state.doc.CopyTo(span, state.start, span.Length));
@@ -138,7 +164,9 @@ internal sealed class TextDocument
     {
         int gapSize = _gapEnd - _gapStart;
         if (gapSize >= required)
+        {
             return;
+        }
 
         int needed = required - gapSize;
         int newSize = Math.Max(_buffer.Length * 2, _buffer.Length + needed + 16);
@@ -159,7 +187,9 @@ internal sealed class TextDocument
     private void MoveGap(int index)
     {
         if (index == _gapStart)
+        {
             return;
+        }
 
         if (index < _gapStart)
         {

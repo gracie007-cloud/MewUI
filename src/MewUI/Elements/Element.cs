@@ -150,7 +150,9 @@ public abstract class Element
     {
         var root = FindVisualRoot();
         if (root is not ILayoutRoundingHost host || !host.UseLayoutRounding)
+        {
             return size;
+        }
 
         return LayoutRounding.RoundSizeToPixels(size, host.DpiScale);
     }
@@ -159,7 +161,9 @@ public abstract class Element
     {
         var root = FindVisualRoot();
         if (root is not ILayoutRoundingHost host || !host.UseLayoutRounding)
+        {
             return rect;
+        }
 
         return LayoutRounding.RoundRectToPixels(rect, host.DpiScale);
     }

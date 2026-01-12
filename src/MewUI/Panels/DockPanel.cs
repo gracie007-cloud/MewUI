@@ -24,14 +24,22 @@ public sealed class DockPanel : Panel
 
     public static void SetDock(Element element, Dock dock)
     {
-        if (element == null) throw new ArgumentNullException(nameof(element));
+        if (element == null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+
         DockMap.GetOrCreateValue(element).Dock = dock;
         element.InvalidateArrange();
     }
 
     public static Dock GetDock(Element element)
     {
-        if (element == null) throw new ArgumentNullException(nameof(element));
+        if (element == null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+
         return DockMap.TryGetValue(element, out var data) ? data.Dock : Dock.Left;
     }
 
@@ -44,7 +52,9 @@ public sealed class DockPanel : Panel
     protected override Size MeasureContent(Size availableSize)
     {
         if (Count == 0)
+        {
             return Size.Empty;
+        }
 
         var inner = availableSize.Deflate(Padding);
 
@@ -58,7 +68,9 @@ public sealed class DockPanel : Panel
         {
             var child = this[i];
             if (child is not UIElement ui || !ui.IsVisible)
+            {
                 continue;
+            }
 
             bool isLastFill = LastChildFill && i == last;
             var remaining = new Size(Math.Max(0, inner.Width - usedW), Math.Max(0, inner.Height - usedH));
@@ -118,7 +130,9 @@ public sealed class DockPanel : Panel
     protected override void ArrangeContent(Rect bounds)
     {
         if (Count == 0)
+        {
             return;
+        }
 
         var inner = bounds.Deflate(Padding);
 
@@ -132,7 +146,9 @@ public sealed class DockPanel : Panel
         {
             var child = this[i];
             if (child is not UIElement ui || !ui.IsVisible)
+            {
                 continue;
+            }
 
             bool isLastFill = LastChildFill && i == last;
             var dock = GetDock(child);

@@ -17,37 +17,54 @@ internal sealed class BmpDecoder : IImageDecoder
         bitmap = default;
 
         if (encoded.Length < 14 + 40)
+        {
             return false;
+        }
+
         if (encoded[0] != (byte)'B' || encoded[1] != (byte)'M')
+        {
             return false;
+        }
 
         int pixelDataOffset = ReadInt32LE(encoded, 10);
         int dibSize = ReadInt32LE(encoded, 14);
         if (dibSize < 40)
+        {
             return false;
+        }
 
         int width = ReadInt32LE(encoded, 18);
         int heightSigned = ReadInt32LE(encoded, 22);
         if (width <= 0 || heightSigned == 0)
+        {
             return false;
+        }
 
         bool bottomUp = heightSigned > 0;
         int height = Math.Abs(heightSigned);
 
         ushort planes = ReadUInt16LE(encoded, 26);
         if (planes != 1)
+        {
             return false;
+        }
 
         ushort bpp = ReadUInt16LE(encoded, 28);
         if (bpp != 24 && bpp != 32)
+        {
             return false;
+        }
 
         int compression = ReadInt32LE(encoded, 30);
         if (compression != 0) // BI_RGB
+        {
             return false;
+        }
 
         if (pixelDataOffset < 0 || pixelDataOffset >= encoded.Length)
+        {
             return false;
+        }
 
         int srcStride = bpp == 24
             ? ((width * 3 + 3) / 4) * 4
@@ -55,7 +72,9 @@ internal sealed class BmpDecoder : IImageDecoder
 
         int required = pixelDataOffset + srcStride * height;
         if (required > encoded.Length)
+        {
             return false;
+        }
 
         byte[] dst = new byte[width * height * 4];
 

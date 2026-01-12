@@ -95,7 +95,10 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
+
         _disposed = true;
 
         if (SmokeCapture.TryConsume(out var capturePath) && !string.IsNullOrEmpty(capturePath))
@@ -126,7 +129,9 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
             int stride = w * 4;
             var flipped = new byte[rgba.Length];
             for (int y = 0; y < h; y++)
+            {
                 Buffer.BlockCopy(rgba, (h - 1 - y) * stride, flipped, y * stride, stride);
+            }
 
             Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
             WritePpm(path, w, h, flipped);
@@ -167,7 +172,9 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
     public void Restore()
     {
         if (_stateStack.Count == 0)
+        {
             return;
+        }
 
         var state = _stateStack.Pop();
         _translateX = state.TranslateXDip;
@@ -325,12 +332,16 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
             var heap = new float[-used];
             used = BuildRoundedRectPointsPx(rect, radiusX, radiusY, thicknessPx, includeClose: true, heap);
             for (int i = 0; i < used; i += 2)
+            {
                 GL.Vertex2f(heap[i], heap[i + 1]);
+            }
         }
         else
         {
             for (int i = 0; i < used; i += 2)
+            {
                 GL.Vertex2f(buffer[i], buffer[i + 1]);
+            }
         }
         GL.End();
 
@@ -355,12 +366,16 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
             var heap = new float[-used];
             used = BuildRoundedRectPointsPx(rect, radiusX, radiusY, thicknessPx: 0, includeClose: true, heap);
             for (int i = 0; i < used; i += 2)
+            {
                 GL.Vertex2f(heap[i], heap[i + 1]);
+            }
         }
         else
         {
             for (int i = 0; i < used; i += 2)
+            {
                 GL.Vertex2f(buffer[i], buffer[i + 1]);
+            }
         }
         GL.End();
 
@@ -383,12 +398,16 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
             var heap = new float[-used];
             used = BuildEllipsePointsPx(bounds, thicknessPx, includeClose: true, heap);
             for (int i = 0; i < used; i += 2)
+            {
                 GL.Vertex2f(heap[i], heap[i + 1]);
+            }
         }
         else
         {
             for (int i = 0; i < used; i += 2)
+            {
                 GL.Vertex2f(buffer[i], buffer[i + 1]);
+            }
         }
         GL.End();
 
@@ -413,12 +432,16 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
             var heap = new float[-used];
             used = BuildEllipsePointsPx(bounds, thicknessPx: 0, includeClose: true, heap);
             for (int i = 0; i < used; i += 2)
+            {
                 GL.Vertex2f(heap[i], heap[i + 1]);
+            }
         }
         else
         {
             for (int i = 0; i < used; i += 2)
+            {
                 GL.Vertex2f(buffer[i], buffer[i + 1]);
+            }
         }
         GL.End();
 
@@ -432,7 +455,9 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
     public void DrawText(string text, Point location, IFont font, Color color)
     {
         if (string.IsNullOrEmpty(text))
+        {
             return;
+        }
 
         DrawText(text, new Rect(location.X, location.Y, 0, 0), font, color, TextAlignment.Left, TextAlignment.Top,
             text.AsSpan().IndexOfAny('\r', '\n') >= 0 ? TextWrapping.Wrap : TextWrapping.NoWrap);
@@ -444,7 +469,9 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         TextWrapping wrapping = TextWrapping.NoWrap)
     {
         if (string.IsNullOrEmpty(text))
+        {
             return;
+        }
 
         var boundsPx = ToDeviceRect(bounds);
         int widthPx = boundsPx.Width;
@@ -503,16 +530,22 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         // axis: 0 = width, 1 = height
         int viewport = axis == 0 ? _viewportWidthPx : _viewportHeightPx;
         if (extentPx <= 0)
+        {
             return 1;
+        }
 
         // Hard guard to avoid pathological allocations.
         int hardMax = Math.Max(256, viewport * 4);
         if (extentPx <= hardMax)
+        {
             return extentPx;
+        }
 
         // Prefer current clip size when available (TextBox uses clip to constrain content).
         if (_clipPx.HasValue)
+        {
             return Math.Clamp(axis == 0 ? _clipPx.Value.Width : _clipPx.Value.Height, 1, hardMax);
+        }
 
         // Otherwise clamp to remaining viewport space.
         int remaining = axis == 0 ? Math.Max(1, viewport - boundsPx.left) : Math.Max(1, viewport - boundsPx.top);
@@ -604,7 +637,9 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
     public void DrawImage(IImage image, Point location)
     {
         if (image == null)
+        {
             throw new ArgumentNullException(nameof(image));
+        }
 
         var dest = new Rect(location.X, location.Y, image.PixelWidth, image.PixelHeight);
         DrawImage(image, dest);
@@ -613,18 +648,26 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
     public void DrawImage(IImage image, Rect destRect)
     {
         if (image == null)
+        {
             throw new ArgumentNullException(nameof(image));
+        }
 
         if (image is not OpenGLImage glImage)
+        {
             throw new ArgumentException("Image must be an OpenGLImage.", nameof(image));
+        }
 
         uint tex = glImage.GetOrCreateTexture(_resources, _hwnd);
         if (tex == 0)
+        {
             return;
+        }
 
         var dst = ToDeviceRect(destRect);
         if (dst.Width <= 0 || dst.Height <= 0)
+        {
             return;
+        }
 
         GL.BindTexture(GL.GL_TEXTURE_2D, tex);
         GL.Color4ub(255, 255, 255, 255);
@@ -639,18 +682,26 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
     public void DrawImage(IImage image, Rect destRect, Rect sourceRect)
     {
         if (image == null)
+        {
             throw new ArgumentNullException(nameof(image));
+        }
 
         if (image is not OpenGLImage glImage)
+        {
             throw new ArgumentException("Image must be an OpenGLImage.", nameof(image));
+        }
 
         uint tex = glImage.GetOrCreateTexture(_resources, _hwnd);
         if (tex == 0)
+        {
             return;
+        }
 
         var dst = ToDeviceRect(destRect);
         if (dst.Width <= 0 || dst.Height <= 0)
+        {
             return;
+        }
 
         double u0 = Math.Clamp(sourceRect.X / image.PixelWidth, 0, 1);
         double v0 = Math.Clamp(sourceRect.Y / image.PixelHeight, 0, 1);
@@ -687,8 +738,16 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         int right = LayoutRounding.RoundToPixelInt(rect.Right + _translateX, DpiScale);
         int bottom = LayoutRounding.RoundToPixelInt(rect.Bottom + _translateY, DpiScale);
 
-        if (right < left) right = left;
-        if (bottom < top) bottom = top;
+        if (right < left)
+        {
+            right = left;
+        }
+
+        if (bottom < top)
+        {
+            bottom = top;
+        }
+
         return new RECT(left, top, right, bottom);
     }
 
@@ -704,7 +763,9 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         int count = includeClose ? segments + 1 : segments;
         int needed = count * 2;
         if (pts.Length < needed)
+        {
             return -needed;
+        }
 
         float offset = (thicknessPx & 1) == 1 ? 0.5f : 0f;
         for (int i = 0; i < count; i++)
@@ -748,7 +809,9 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         int pointCount = 4 * segmentPoints + (includeClose ? 1 : 0);
         int needed = pointCount * 2;
         if (pts.Length < needed)
+        {
             return -needed;
+        }
 
         int write = 0;
 

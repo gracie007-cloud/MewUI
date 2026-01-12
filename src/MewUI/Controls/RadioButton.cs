@@ -15,7 +15,9 @@ public class RadioButton : ToggleBase
     internal void EnsureGroupRegistered()
     {
         if (!IsChecked)
+        {
             return;
+        }
 
         RegisterToGroup();
     }
@@ -26,7 +28,9 @@ public class RadioButton : ToggleBase
         set
         {
             if (field == value)
+            {
                 return;
+            }
 
             field = value;
             InvalidateVisual();
@@ -48,9 +52,13 @@ public class RadioButton : ToggleBase
     protected override void OnIsCheckedChanged(bool value)
     {
         if (value)
+        {
             RegisterToGroup();
+        }
         else
+        {
             UnregisterFromGroup();
+        }
     }
 
     protected override void ToggleFromKeyboard()
@@ -75,17 +83,23 @@ public class RadioButton : ToggleBase
     {
         var root = FindVisualRoot();
         if (root is not Window window)
+        {
             return;
+        }
 
         string? group = string.IsNullOrWhiteSpace(GroupName) ? null : GroupName;
         var parentScope = group == null ? Parent : null;
         if (group == null && parentScope == null)
+        {
             return;
+        }
 
         if (_registeredWindow == window &&
             string.Equals(_registeredGroupName, group, StringComparison.Ordinal) &&
             _registeredParentScope == parentScope)
+        {
             return;
+        }
 
         UnregisterFromGroup();
 
@@ -99,7 +113,9 @@ public class RadioButton : ToggleBase
     {
         var window = _registeredWindow;
         if (window == null)
+        {
             return;
+        }
 
         window.RadioGroupUnchecked(this, _registeredGroupName, _registeredParentScope);
         _registeredWindow = null;
@@ -172,14 +188,18 @@ public class RadioButton : ToggleBase
         base.OnMouseDown(e);
 
         if (!IsEnabled || e.Button != MouseButton.Left)
+        {
             return;
+        }
 
         _isPressed = true;
         Focus();
 
         var root = FindVisualRoot();
         if (root is Window window)
+        {
             window.CaptureMouse(this);
+        }
 
         InvalidateVisual();
         e.Handled = true;
@@ -190,16 +210,22 @@ public class RadioButton : ToggleBase
         base.OnMouseUp(e);
 
         if (e.Button != MouseButton.Left || !_isPressed)
+        {
             return;
+        }
 
         _isPressed = false;
 
         var root = FindVisualRoot();
         if (root is Window window)
+        {
             window.ReleaseMouseCapture();
+        }
 
         if (IsEnabled && Bounds.Contains(e.Position))
+        {
             IsChecked = true;
+        }
 
         InvalidateVisual();
         e.Handled = true;

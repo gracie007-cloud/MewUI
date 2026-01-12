@@ -13,10 +13,15 @@ internal sealed class PngDecoder : IImageDecoder
 
         // PNG signature
         if (encoded.Length < 8)
+        {
             return false;
+        }
+
         ReadOnlySpan<byte> sig = stackalloc byte[] { 0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A };
         if (!encoded.Slice(0, 8).SequenceEqual(sig))
+        {
             return false;
+        }
 
         int width = 0;
         int height = 0;
@@ -35,7 +40,9 @@ internal sealed class PngDecoder : IImageDecoder
             int length = ReadInt32BE(encoded, offset);
             offset += 4;
             if (length < 0 || offset + 4 + length + 4 > encoded.Length)
+            {
                 return false;
+            }
 
             var type = encoded.Slice(offset, 4);
             offset += 4;
@@ -49,7 +56,9 @@ internal sealed class PngDecoder : IImageDecoder
             if (type.SequenceEqual("IHDR"u8))
             {
                 if (length != 13)
+                {
                     return false;
+                }
 
                 width = ReadInt32BE(data, 0);
                 height = ReadInt32BE(data, 4);
@@ -60,29 +69,47 @@ internal sealed class PngDecoder : IImageDecoder
                 interlace = data[12];
 
                 if (width <= 0 || height <= 0)
+                {
                     return false;
+                }
+
                 if (compression != 0 || filter != 0)
+                {
                     return false;
+                }
+
                 if (interlace != 0)
+                {
                     return false; // no Adam7 yet
+                }
+
                 if (bitDepth != 8)
+                {
                     return false; // keep it simple (fast path)
+                }
 
                 // Support: grayscale(0), rgb(2), indexed(3), rgba(6)
                 if (colorType != 0 && colorType != 2 && colorType != 3 && colorType != 6)
+                {
                     return false;
+                }
             }
             else if (type.SequenceEqual("PLTE"u8))
             {
                 if (length == 0 || (length % 3) != 0)
+                {
                     return false;
+                }
+
                 palette = data.ToArray();
             }
             else if (type.SequenceEqual("tRNS"u8))
             {
                 // For indexed: alpha table up to palette entries.
                 if (colorType == 3)
+                {
                     paletteAlpha = data.ToArray();
+                }
                 // Other color types ignored in this minimal loader.
             }
             else if (type.SequenceEqual("IDAT"u8))
@@ -96,7 +123,9 @@ internal sealed class PngDecoder : IImageDecoder
         }
 
         if (width == 0 || height == 0)
+        {
             return false;
+        }
 
         int srcBpp = colorType switch
         {
@@ -107,10 +136,14 @@ internal sealed class PngDecoder : IImageDecoder
             _ => 0
         };
         if (srcBpp == 0)
+        {
             return false;
+        }
 
         if (colorType == 3 && palette == null)
+        {
             return false;
+        }
 
         int rowBytes = checked(width * srcBpp);
         int expected = checked(height * (1 + rowBytes));
@@ -126,7 +159,9 @@ internal sealed class PngDecoder : IImageDecoder
         }
 
         if (inflated.Length < expected)
+        {
             return false;
+        }
 
         byte[] raw = new byte[checked(height * rowBytes)];
         Unfilter(inflated, raw, width, height, srcBpp, rowBytes);
@@ -216,8 +251,16 @@ internal sealed class PngDecoder : IImageDecoder
         int pa = Math.Abs(p - a);
         int pb = Math.Abs(p - b);
         int pc = Math.Abs(p - c);
-        if (pa <= pb && pa <= pc) return a;
-        if (pb <= pc) return b;
+        if (pa <= pb && pa <= pc)
+        {
+            return a;
+        }
+
+        if (pb <= pc)
+        {
+            return b;
+        }
+
         return c;
     }
 
@@ -284,14 +327,18 @@ internal sealed class PngDecoder : IImageDecoder
 
         // Indexed
         if (palette == null)
+        {
             return;
+        }
 
         int entries = palette.Length / 3;
         for (int i = 0; i < width * height; i++)
         {
             int idx = raw[si++];
             if ((uint)idx >= (uint)entries)
+            {
                 idx = 0;
+            }
 
             int p = idx * 3;
             byte r = palette[p + 0];
@@ -299,7 +346,9 @@ internal sealed class PngDecoder : IImageDecoder
             byte b = palette[p + 2];
             byte a = 0xFF;
             if (paletteAlpha != null && (uint)idx < (uint)paletteAlpha.Length)
+            {
                 a = paletteAlpha[idx];
+            }
 
             dstBgra[di + 0] = b;
             dstBgra[di + 1] = g;

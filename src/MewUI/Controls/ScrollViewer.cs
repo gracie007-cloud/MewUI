@@ -29,15 +29,21 @@ public sealed class ScrollViewer : Control
         set
         {
             if (field == value)
+            {
                 return;
+            }
 
             if (field != null)
+            {
                 field.Parent = null;
+            }
 
             field = value;
 
             if (field != null)
+            {
                 field.Parent = this;
+            }
 
             InvalidateMeasure();
             InvalidateVisual();
@@ -63,7 +69,10 @@ public sealed class ScrollViewer : Control
         {
             double clamped = ClampOffset(value, axis: 1);
             if (field.Equals(clamped))
+            {
                 return;
+            }
+
             field = clamped;
             InvalidateVisual();
         }
@@ -76,7 +85,10 @@ public sealed class ScrollViewer : Control
         {
             double clamped = ClampOffset(value, axis: 0);
             if (field.Equals(clamped))
+            {
                 return;
+            }
+
             field = clamped;
             InvalidateVisual();
         }
@@ -168,7 +180,9 @@ public sealed class ScrollViewer : Control
     public override void Render(IGraphicsContext context)
     {
         if (!IsVisible)
+        {
             return;
+        }
 
         // Optional background/border (thin style defaults to none).
         if (Background.A > 0 || BorderThickness > 0)
@@ -187,30 +201,48 @@ public sealed class ScrollViewer : Control
         context.Restore();
 
         // Bars render on top (overlay).
-        if (_vBar.IsVisible) _vBar.Render(context);
-        if (_hBar.IsVisible) _hBar.Render(context);
+        if (_vBar.IsVisible)
+        {
+            _vBar.Render(context);
+        }
+
+        if (_hBar.IsVisible)
+        {
+            _hBar.Render(context);
+        }
     }
 
     public override UIElement? HitTest(Point point)
     {
         if (!IsVisible || !IsHitTestVisible)
+        {
             return null;
+        }
 
         if (_vBar.IsVisible && _vBar.Bounds.Contains(point))
+        {
             return _vBar;
+        }
+
         if (_hBar.IsVisible && _hBar.Bounds.Contains(point))
+        {
             return _hBar;
+        }
 
         var borderInset = GetBorderVisualInset();
         var viewport = GetViewportBounds(Bounds, borderInset);
         if (!viewport.Contains(point))
+        {
             return Bounds.Contains(point) ? this : null;
+        }
 
         if (Content is UIElement uiContent)
         {
             var hit = uiContent.HitTest(point);
             if (hit != null)
+            {
                 return hit;
+            }
         }
 
         return this;
@@ -221,10 +253,14 @@ public sealed class ScrollViewer : Control
         base.OnMouseWheel(e);
 
         if (e.Handled)
+        {
             return;
+        }
 
         if (!_vBar.IsVisible && !_hBar.IsVisible)
+        {
             return;
+        }
 
         // Prefer vertical scroll unless horizontal wheel is explicit.
         if (!e.IsHorizontal && _vBar.IsVisible)
@@ -247,7 +283,10 @@ public sealed class ScrollViewer : Control
         double step = GetTheme().ScrollWheelStep;
         int notches = Math.Sign(delta);
         if (notches == 0)
+        {
             return;
+        }
+
         VerticalOffset += notches * step;
         SyncBars();
     }
@@ -257,7 +296,10 @@ public sealed class ScrollViewer : Control
         double step = GetTheme().ScrollWheelStep;
         int notches = Math.Sign(delta);
         if (notches == 0)
+        {
             return;
+        }
+
         HorizontalOffset += notches * step;
         SyncBars();
     }
@@ -306,7 +348,10 @@ public sealed class ScrollViewer : Control
         double viewport = axis == 0 ? _viewport.Width : _viewport.Height;
         double max = Math.Max(0, extent - viewport);
         if (double.IsNaN(value) || double.IsInfinity(value))
+        {
             return 0;
+        }
+
         return Math.Clamp(value, 0, max);
     }
 
@@ -335,7 +380,14 @@ public sealed class ScrollViewer : Control
 
     protected override void OnDispose()
     {
-        if (_vBar is IDisposable dv) dv.Dispose();
-        if (_hBar is IDisposable dh) dh.Dispose();
+        if (_vBar is IDisposable dv)
+        {
+            dv.Dispose();
+        }
+
+        if (_hBar is IDisposable dh)
+        {
+            dh.Dispose();
+        }
     }
 }

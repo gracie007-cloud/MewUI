@@ -26,11 +26,16 @@ public class TextBox : TextBase
     protected override string NormalizeText(string text)
     {
         if (text.Length == 0)
+        {
             return string.Empty;
+        }
 
         text = text.Replace("\r\n", string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
         if (!AcceptTab && text.Contains('\t'))
+        {
             text = text.Replace("\t", string.Empty);
+        }
+
         return text;
     }
 
@@ -139,7 +144,9 @@ public class TextBox : TextBase
             // Capture for selection
             var root = FindVisualRoot();
             if (root is Window window)
+            {
                 window.CaptureMouse(this);
+            }
 
             EnsureCaretVisible();
             InvalidateVisual();
@@ -160,9 +167,13 @@ public class TextBox : TextBase
             // This matches common native text box behavior and enables selecting off-screen text.
             const double edgeDip = 8;
             if (e.Position.X < contentBounds.X + edgeDip)
+            {
                 _scrollOffset += e.Position.X - (contentBounds.X + edgeDip);
+            }
             else if (e.Position.X > contentBounds.Right - edgeDip)
+            {
                 _scrollOffset += e.Position.X - (contentBounds.Right - edgeDip);
+            }
 
             ClampScrollOffset();
 
@@ -186,14 +197,19 @@ public class TextBox : TextBase
         {
             var root = FindVisualRoot();
             if (root is Window window)
+            {
                 window.ReleaseMouseCapture();
+            }
         }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Handled || IsReadOnly && !IsNavigationKey(e.Key)) return;
+        if (e.Handled || IsReadOnly && !IsNavigationKey(e.Key))
+        {
+            return;
+        }
 
         bool shift = e.ShiftKey;
         bool ctrl = e.ControlKey;
@@ -234,12 +250,20 @@ public class TextBox : TextBase
                 break;
 
             case Key.Backspace:
-                if (!IsReadOnly) HandleBackspace(ctrl);
+                if (!IsReadOnly)
+                {
+                    HandleBackspace(ctrl);
+                }
+
                 e.Handled = true;
                 break;
 
             case Key.Delete:
-                if (!IsReadOnly) HandleDelete(ctrl);
+                if (!IsReadOnly)
+                {
+                    HandleDelete(ctrl);
+                }
+
                 e.Handled = true;
                 break;
         }
@@ -250,7 +274,10 @@ public class TextBox : TextBase
     protected override void OnTextInput(TextInputEventArgs e)
     {
         base.OnTextInput(e);
-        if (IsReadOnly) return;
+        if (IsReadOnly)
+        {
+            return;
+        }
 
         var text = e.Text ?? string.Empty;
 
@@ -265,13 +292,19 @@ public class TextBox : TextBase
         }
 
         if (text.Contains('\r') || text.Contains('\n'))
+        {
             text = text.Replace("\r\n", string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
+        }
 
         if (!AcceptTab && text.Contains('\t'))
+        {
             text = text.Replace("\t", string.Empty);
+        }
 
         if (text.Length == 0)
+        {
             return;
+        }
 
         // Delete selection if any
         DeleteSelection();
@@ -288,16 +321,23 @@ public class TextBox : TextBase
 
     private int GetCharacterIndexFromX(double x)
     {
-        if (string.IsNullOrEmpty(Text)) return 0;
+        if (string.IsNullOrEmpty(Text))
+        {
+            return 0;
+        }
 
         using var measure = BeginTextMeasurement();
 
         if (x <= 0)
+        {
             return 0;
+        }
 
         double totalWidth = measure.Context.MeasureText(Text, measure.Font).Width;
         if (x >= totalWidth)
+        {
             return Text.Length;
+        }
 
         // Binary search to avoid O(n^2) measurement cost for long text.
         int lo = 0;
@@ -307,16 +347,23 @@ public class TextBox : TextBase
             int mid = lo + ((hi - lo) / 2);
             double w = mid > 0 ? measure.Context.MeasureText(Text[..mid], measure.Font).Width : 0;
             if (w < x)
+            {
                 lo = mid + 1;
+            }
             else
+            {
                 hi = mid;
+            }
         }
 
         int idx = Math.Clamp(lo, 0, Text.Length);
 
         // Snap to the nearest caret position using midpoints for better feel.
         if (idx <= 0)
+        {
             return 0;
+        }
+
         double w0 = measure.Context.MeasureText(Text[..(idx - 1)], measure.Font).Width;
         double w1 = measure.Context.MeasureText(Text[..idx], measure.Font).Width;
         return x < (w0 + w1) / 2 ? idx - 1 : idx;
@@ -359,19 +406,43 @@ public class TextBox : TextBase
 
     private int FindPreviousWordBoundary(int from)
     {
-        if (from <= 0) return 0;
+        if (from <= 0)
+        {
+            return 0;
+        }
+
         int pos = from - 1;
-        while (pos > 0 && char.IsWhiteSpace(Text[pos])) pos--;
-        while (pos > 0 && !char.IsWhiteSpace(Text[pos - 1])) pos--;
+        while (pos > 0 && char.IsWhiteSpace(Text[pos]))
+        {
+            pos--;
+        }
+
+        while (pos > 0 && !char.IsWhiteSpace(Text[pos - 1]))
+        {
+            pos--;
+        }
+
         return pos;
     }
 
     private int FindNextWordBoundary(int from)
     {
-        if (from >= Text.Length) return Text.Length;
+        if (from >= Text.Length)
+        {
+            return Text.Length;
+        }
+
         int pos = from;
-        while (pos < Text.Length && !char.IsWhiteSpace(Text[pos])) pos++;
-        while (pos < Text.Length && char.IsWhiteSpace(Text[pos])) pos++;
+        while (pos < Text.Length && !char.IsWhiteSpace(Text[pos]))
+        {
+            pos++;
+        }
+
+        while (pos < Text.Length && char.IsWhiteSpace(Text[pos]))
+        {
+            pos++;
+        }
+
         return pos;
     }
 
@@ -406,7 +477,10 @@ public class TextBox : TextBase
 
     private void DeleteSelection()
     {
-        if (_selectionLength == 0) return;
+        if (_selectionLength == 0)
+        {
+            return;
+        }
 
         int start = Math.Min(_selectionStart, _selectionStart + _selectionLength);
         int length = Math.Abs(_selectionLength);
@@ -421,12 +495,16 @@ public class TextBox : TextBase
     protected override void PasteFromClipboardCore()
     {
         if (!TryClipboardGetText(out var text) || string.IsNullOrEmpty(text))
+        {
             return;
+        }
 
         // Single-line: preserve separation by converting newlines/tabs to spaces.
         text = text.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", " ");
         if (!AcceptTab)
+        {
             text = text.Replace("\t", " ");
+        }
 
         InsertTextAtCaretForEdit(text);
     }

@@ -30,7 +30,9 @@ public abstract class TextBase : Control
             var normalized = NormalizeText(value ?? string.Empty);
             var current = GetTextCore();
             if (current == normalized)
+            {
                 return;
+            }
 
             var old = current;
             SetTextCore(normalized);
@@ -41,7 +43,9 @@ public abstract class TextBase : Control
 
             OnTextChanged(old, normalized);
             if (TextChanged != null)
+            {
                 TextChanged(GetTextCore());
+            }
         }
     }
 
@@ -74,7 +78,9 @@ public abstract class TextBase : Control
     protected virtual string GetTextCore()
     {
         if (_cachedTextVersion == _documentVersion && _cachedText != null)
+        {
             return _cachedText;
+        }
 
         _cachedText = _document.GetText();
         _cachedTextVersion = _documentVersion;
@@ -102,11 +108,15 @@ public abstract class TextBase : Control
     {
         base.OnKeyDown(e);
         if (e.Handled)
+        {
             return;
+        }
 
         bool ctrl = e.ControlKey;
         if (!ctrl)
+        {
             return;
+        }
 
         switch (e.Key)
         {
@@ -122,13 +132,19 @@ public abstract class TextBase : Control
 
             case Key.X:
                 if (!IsReadOnly)
+                {
                     CutToClipboardCore();
+                }
+
                 e.Handled = true;
                 return;
 
             case Key.V:
                 if (!IsReadOnly)
+                {
                     PasteFromClipboardCore();
+                }
+
                 e.Handled = true;
                 return;
         }
@@ -149,11 +165,15 @@ public abstract class TextBase : Control
             onSourceChanged: () =>
             {
                 if (IsFocused)
+                {
                     return;
+                }
 
                 var value = NormalizeText(get() ?? string.Empty);
                 if (GetTextCore() == value)
+                {
                     return;
+                }
 
                 _suppressBindingSet = true;
                 try { Text = value; }
@@ -166,7 +186,9 @@ public abstract class TextBase : Control
             existing?.Invoke(text);
 
             if (_suppressBindingSet)
+            {
                 return;
+            }
 
             _textBinding?.Set(text);
         };
@@ -186,7 +208,9 @@ public abstract class TextBase : Control
     protected void NotifyTextChanged()
     {
         if (TextChanged != null)
+        {
             TextChanged(GetTextCore());
+        }
     }
 
     protected void BumpDocumentVersion()
@@ -199,7 +223,10 @@ public abstract class TextBase : Control
     protected void InsertIntoDocument(int index, ReadOnlySpan<char> text)
     {
         if (text.Length == 0)
+        {
             return;
+        }
+
         BumpDocumentVersion();
         _document.Insert(index, text);
     }
@@ -207,7 +234,10 @@ public abstract class TextBase : Control
     protected void RemoveFromDocument(int index, int length)
     {
         if (length <= 0)
+        {
             return;
+        }
+
         BumpDocumentVersion();
         _document.Remove(index, length);
     }
@@ -223,7 +253,9 @@ public abstract class TextBase : Control
     protected virtual void CopyToClipboardCore()
     {
         if (_selectionLength == 0)
+        {
             return;
+        }
 
         int start = Math.Min(_selectionStart, _selectionStart + _selectionLength);
         int end = Math.Max(_selectionStart, _selectionStart + _selectionLength);
@@ -234,7 +266,9 @@ public abstract class TextBase : Control
     protected virtual void CutToClipboardCore()
     {
         if (_selectionLength == 0)
+        {
             return;
+        }
 
         CopyToClipboardCore();
         DeleteSelectionForEdit();
@@ -243,7 +277,9 @@ public abstract class TextBase : Control
     protected virtual void PasteFromClipboardCore()
     {
         if (!TryClipboardGetText(out var text) || string.IsNullOrEmpty(text))
+        {
             return;
+        }
 
         InsertTextAtCaretForEdit(text);
     }
@@ -251,7 +287,9 @@ public abstract class TextBase : Control
     protected virtual bool DeleteSelectionForEdit()
     {
         if (_selectionLength == 0)
+        {
             return false;
+        }
 
         int start = Math.Min(_selectionStart, _selectionStart + _selectionLength);
         int length = Math.Abs(_selectionLength);
@@ -268,7 +306,9 @@ public abstract class TextBase : Control
     {
         text = NormalizeText(text ?? string.Empty);
         if (text.Length == 0)
+        {
             return;
+        }
 
         DeleteSelectionForEdit();
 
@@ -282,7 +322,9 @@ public abstract class TextBase : Control
     protected bool TryClipboardSetText(string text)
     {
         if (!Application.IsRunning)
+        {
             return false;
+        }
 
         var clipboard = Application.Current.PlatformHost.Clipboard;
         return clipboard.TrySetText(text ?? string.Empty);
@@ -292,7 +334,9 @@ public abstract class TextBase : Control
     {
         text = string.Empty;
         if (!Application.IsRunning)
+        {
             return false;
+        }
 
         var clipboard = Application.Current.PlatformHost.Clipboard;
         return clipboard.TryGetText(out text);

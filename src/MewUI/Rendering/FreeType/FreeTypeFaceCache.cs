@@ -44,11 +44,15 @@ internal sealed unsafe class FreeTypeFaceCache
 
             int err = FT.FT_New_Face(lib.Handle, fontPath, 0, out nint face);
             if (err != 0 || face == 0)
+            {
                 throw new InvalidOperationException($"FT_New_Face failed: {err} ({fontPath})");
+            }
 
             err = FT.FT_Set_Pixel_Sizes(face, 0, (uint)Math.Max(1, pixelHeight));
             if (err != 0)
+            {
                 throw new InvalidOperationException($"FT_Set_Pixel_Sizes failed: {err}");
+            }
 
             return new FaceEntry(face);
         }
@@ -66,11 +70,15 @@ internal sealed unsafe class FreeTypeFaceCache
                 {
                     uint gindex = GetGlyphIndex(c);
                     if (gindex == 0)
+                    {
                         return 0;
+                    }
 
                     int err = FT.FT_Get_Advance(Face, gindex, FreeTypeLoad.FT_LOAD_DEFAULT, out nint advFixed);
                     if (err != 0)
+                    {
                         return 0;
+                    }
 
                     // FT_Fixed 16.16 pixels (scaled).
                     double px = (long)advFixed / 65536.0;
@@ -88,13 +96,18 @@ internal sealed unsafe class FreeTypeFaceCache
         public void Dispose()
         {
             if (_disposed)
+            {
                 return;
+            }
+
             _disposed = true;
 
             var face = Face;
             Face = 0;
             if (face != 0)
+            {
                 FT.FT_Done_Face(face);
+            }
         }
     }
 }

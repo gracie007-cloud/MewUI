@@ -45,7 +45,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     private static void AssertHr(int hr, string op)
     {
         if (hr >= 0)
+        {
             return;
+        }
 
         string msg = $"Direct2D: {op} failed: 0x{hr:X8}";
         Debug.Fail(msg);
@@ -55,7 +57,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
 
         try
         {
@@ -70,13 +74,18 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
                 int hr = D2D1VTable.EndDraw((ID2D1RenderTarget*)_renderTarget);
                 AssertHr(hr, "EndDraw");
                 if (hr == D2DERR_RECREATE_TARGET || hr == D2DERR_WRONG_RESOURCE_DOMAIN)
+                {
                     _onRecreateTarget?.Invoke();
+                }
             }
         }
         finally
         {
             foreach (var (_, brush) in _solidBrushes)
+            {
                 ComHelpers.Release(brush);
+            }
+
             _solidBrushes.Clear();
 
             _renderTarget = 0;
@@ -89,7 +98,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void Restore()
     {
         if (_states.Count == 0 || _renderTarget == 0)
+        {
             return;
+        }
 
         var state = _states.Pop();
         while (_clipDepth > state.clipDepth)
@@ -105,7 +116,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void SetClip(Rect rect)
     {
         if (_renderTarget == 0)
+        {
             return;
+        }
 
         D2D1VTable.PushAxisAlignedClip((ID2D1RenderTarget*)_renderTarget, ToRectF(rect));
         _clipDepth++;
@@ -120,7 +133,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void Clear(Color color)
     {
         if (_renderTarget == 0)
+        {
             return;
+        }
 
         D2D1VTable.Clear((ID2D1RenderTarget*)_renderTarget, ToColorF(color));
     }
@@ -128,7 +143,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void DrawLine(Point start, Point end, Color color, double thickness = 1)
     {
         if (_renderTarget == 0)
+        {
             return;
+        }
 
         nint brush = GetSolidBrush(color);
         float stroke = QuantizeStrokeDip((float)thickness);
@@ -157,7 +174,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void DrawRectangle(Rect rect, Color color, double thickness = 1)
     {
         if (_renderTarget == 0)
+        {
             return;
+        }
 
         nint brush = GetSolidBrush(color);
         float stroke = QuantizeStrokeDip((float)thickness);
@@ -167,7 +186,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void FillRectangle(Rect rect, Color color)
     {
         if (_renderTarget == 0)
+        {
             return;
+        }
 
         nint brush = GetSolidBrush(color);
         D2D1VTable.FillRectangle((ID2D1RenderTarget*)_renderTarget, ToRectF(rect), brush);
@@ -176,7 +197,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void DrawRoundedRectangle(Rect rect, double radiusX, double radiusY, Color color, double thickness = 1)
     {
         if (_renderTarget == 0)
+        {
             return;
+        }
 
         nint brush = GetSolidBrush(color);
         float stroke = QuantizeStrokeDip((float)thickness);
@@ -192,7 +215,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void FillRoundedRectangle(Rect rect, double radiusX, double radiusY, Color color)
     {
         if (_renderTarget == 0)
+        {
             return;
+        }
 
         nint brush = GetSolidBrush(color);
         var rr = new D2D1_ROUNDED_RECT(ToRectF(rect), (float)radiusX, (float)radiusY);
@@ -202,7 +227,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void DrawEllipse(Rect bounds, Color color, double thickness = 1)
     {
         if (_renderTarget == 0)
+        {
             return;
+        }
 
         nint brush = GetSolidBrush(color);
         float stroke = QuantizeStrokeDip((float)thickness);
@@ -222,7 +249,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void FillEllipse(Rect bounds, Color color)
     {
         if (_renderTarget == 0)
+        {
             return;
+        }
 
         nint brush = GetSolidBrush(color);
         var center = new D2D1_POINT_2F((float)(bounds.X + bounds.Width / 2 + _translateX), (float)(bounds.Y + bounds.Height / 2 + _translateY));
@@ -236,10 +265,14 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public void DrawText(string text, Rect bounds, IFont font, Color color, TextAlignment horizontalAlignment = TextAlignment.Left, TextAlignment verticalAlignment = TextAlignment.Top, TextWrapping wrapping = TextWrapping.NoWrap)
     {
         if (_renderTarget == 0 || string.IsNullOrEmpty(text))
+        {
             return;
+        }
 
         if (font is not DirectWriteFont dwFont)
+        {
             throw new ArgumentException("Font must be a DirectWriteFont", nameof(font));
+        }
 
         nint textFormat = 0;
         try
@@ -248,7 +281,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
             var style = dwFont.IsItalic ? DWRITE_FONT_STYLE.ITALIC : DWRITE_FONT_STYLE.NORMAL;
             int hr = DWriteVTable.CreateTextFormat((IDWriteFactory*)_dwriteFactory, dwFont.Family, weight, style, (float)dwFont.Size, out textFormat);
             if (hr < 0 || textFormat == 0)
+            {
                 return;
+            }
 
             DWriteVTable.SetTextAlignment(textFormat, horizontalAlignment switch
             {
@@ -282,10 +317,14 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     public Size MeasureText(string text, IFont font, double maxWidth)
     {
         if (string.IsNullOrEmpty(text))
+        {
             return Size.Empty;
+        }
 
         if (font is not DirectWriteFont dwFont)
+        {
             throw new ArgumentException("Font must be a DirectWriteFont", nameof(font));
+        }
 
         nint textFormat = 0;
         nint textLayout = 0;
@@ -295,16 +334,22 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
             var style = dwFont.IsItalic ? DWRITE_FONT_STYLE.ITALIC : DWRITE_FONT_STYLE.NORMAL;
             int hr = DWriteVTable.CreateTextFormat((IDWriteFactory*)_dwriteFactory, dwFont.Family, weight, style, (float)dwFont.Size, out textFormat);
             if (hr < 0 || textFormat == 0)
+            {
                 return Size.Empty;
+            }
 
             float w = maxWidth >= float.MaxValue ? float.MaxValue : (float)Math.Max(0, maxWidth);
             hr = DWriteVTable.CreateTextLayout((IDWriteFactory*)_dwriteFactory, text, textFormat, w, float.MaxValue, out textLayout);
             if (hr < 0 || textLayout == 0)
+            {
                 return Size.Empty;
+            }
 
             hr = DWriteVTable.GetMetrics(textLayout, out var metrics);
             if (hr < 0)
+            {
                 return Size.Empty;
+            }
 
             return new Size(metrics.widthIncludingTrailingWhitespace, metrics.height);
         }
@@ -330,11 +375,15 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     private void DrawImageCore(Direct2DImage image, Rect destRect, Rect sourceRect)
     {
         if (_renderTarget == 0)
+        {
             return;
+        }
 
         nint bmp = image.GetOrCreateBitmap(_renderTarget, _renderTargetGeneration);
         if (bmp == 0)
+        {
             return;
+        }
 
         var dst = ToRectF(destRect);
         var src = new D2D1_RECT_F(
@@ -350,11 +399,15 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     {
         uint key = color.ToArgb();
         if (_solidBrushes.TryGetValue(key, out var brush) && brush != 0)
+        {
             return brush;
+        }
 
         int hr = D2D1VTable.CreateSolidColorBrush((ID2D1RenderTarget*)_renderTarget, ToColorF(color), out brush);
         if (hr < 0 || brush == 0)
+        {
             return 0;
+        }
 
         _solidBrushes[key] = brush;
         return brush;
@@ -380,7 +433,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
         var r = ToRectF(rect);
         var snap = GetHalfPixelDipForStroke(thickness);
         if (snap == 0)
+        {
             return r;
+        }
 
         // Inset by half a device pixel so the centered stroke lands on pixel centers.
         return new D2D1_RECT_F(r.left + snap, r.top + snap, r.right - snap, r.bottom - snap);
@@ -389,7 +444,9 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     private float QuantizeStrokeDip(float thickness)
     {
         if (thickness <= 0)
+        {
             return 0;
+        }
 
         // Snap stroke width to whole device pixels for consistent borders at fractional DPI scales
         // (e.g. 125%: 1 DIP == 1.25px -> render as 1px).
@@ -401,15 +458,21 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     private float GetHalfPixelDipForStroke(float thickness)
     {
         if (thickness <= 0)
+        {
             return 0;
+        }
 
         float strokePx = thickness * (float)DpiScale;
         float rounded = (float)Math.Round(strokePx);
         if (Math.Abs(strokePx - rounded) > 0.001f)
+        {
             return 0;
+        }
 
         if (((int)rounded & 1) == 0)
+        {
             return 0;
+        }
 
         return 0.5f / (float)DpiScale;
     }
