@@ -13,10 +13,7 @@ public record class Theme
         get => _current;
         set
         {
-            if (value == null)
-            {
-                throw new ArgumentNullException(nameof(value));
-            }
+            ArgumentNullException.ThrowIfNull(value);
 
             if (_current == value)
             {
@@ -57,6 +54,8 @@ public record class Theme
     public Color TextBoxDisabledBackground => Palette.TextBoxDisabledBackground;
     public Color FocusRect => Palette.FocusRect;
 
+    public double BaseControlHeight { get; init; }
+
     public double ControlCornerRadius { get; init; }
 
     public string FontFamily { get; init; }
@@ -82,6 +81,7 @@ public record class Theme
     private Theme(
         string name,
         Palette palette,
+        double baseControlHeight,
         double controlCornerRadius,
         string fontFamily,
         double fontSize,
@@ -95,6 +95,7 @@ public record class Theme
     {
         Name = name;
         Palette = palette;
+        BaseControlHeight = baseControlHeight;
         ControlCornerRadius = controlCornerRadius;
         FontFamily = fontFamily;
         FontSize = fontSize;
@@ -110,14 +111,12 @@ public record class Theme
 
     public Theme WithPalette(Palette palette)
     {
-        if (palette == null)
-        {
-            throw new ArgumentNullException(nameof(palette));
-        }
+        ArgumentNullException.ThrowIfNull(palette);
 
         return new Theme(
             name: Name,
             palette: palette,
+            baseControlHeight: BaseControlHeight,
             controlCornerRadius: ControlCornerRadius,
             fontFamily: FontFamily,
             fontSize: FontSize,
@@ -144,6 +143,7 @@ public record class Theme
         return new Theme(
             name: "Light",
             palette: palette,
+            baseControlHeight: 28,
             controlCornerRadius: 4,
             fontFamily: "Segoe UI",
             fontSize: 12,
@@ -170,6 +170,7 @@ public record class Theme
         return new Theme(
             name: "Dark",
             palette: palette,
+            baseControlHeight: 28,
             controlCornerRadius: 4,
             fontFamily: "Segoe UI",
             fontSize: 12,

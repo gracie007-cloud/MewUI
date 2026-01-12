@@ -18,10 +18,20 @@ public class TextBox : TextBase
 
     public TextBox()
     {
-        BorderThickness = 1; 
+        BorderThickness = 1;
         Padding = new Thickness(4);
-        MinHeight = 28;
-  }
+        MinHeight = Theme.Current.BaseControlHeight;
+    }
+
+    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
+    {
+        base.OnThemeChanged(oldTheme, newTheme);
+
+        if (MinHeight == oldTheme.BaseControlHeight)
+        {
+            MinHeight = newTheme.BaseControlHeight;
+        }
+    }
 
     protected override string NormalizeText(string text)
     {

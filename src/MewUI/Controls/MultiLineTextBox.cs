@@ -41,6 +41,7 @@ public sealed class MultiLineTextBox : TextBase
     {
         BorderThickness = 1;
         Padding = new Thickness(4);
+        MinHeight = Theme.Current.BaseControlHeight;
 
         _vBar = new ScrollBar { Orientation = Orientation.Vertical, IsVisible = false };
         _hBar = new ScrollBar { Orientation = Orientation.Horizontal, IsVisible = false };
@@ -49,6 +50,16 @@ public sealed class MultiLineTextBox : TextBase
 
         _vBar.ValueChanged = v => { _verticalOffset = v; InvalidateVisual(); };
         _hBar.ValueChanged = v => { _horizontalOffset = v; InvalidateVisual(); };
+    }
+
+    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
+    {
+        base.OnThemeChanged(oldTheme, newTheme);
+
+        if (MinHeight == oldTheme.BaseControlHeight)
+        {
+            MinHeight = newTheme.BaseControlHeight;
+        }
     }
 
     /// <summary>

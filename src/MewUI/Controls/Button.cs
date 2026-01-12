@@ -22,7 +22,17 @@ public class Button : Control
     {
         BorderThickness = 1;
         Padding = new Thickness(12, 4, 12, 4);
-		MinHeight = 28;
+        MinHeight = Theme.Current.BaseControlHeight;
+    }
+
+    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
+    {
+        base.OnThemeChanged(oldTheme, newTheme);
+
+        if (MinHeight == oldTheme.BaseControlHeight)
+        {
+            MinHeight = newTheme.BaseControlHeight;
+        }
     }
 
     /// <summary>
@@ -202,10 +212,7 @@ public class Button : Control
 
     public void SetContentBinding(Func<string> get, Action<Action>? subscribe = null, Action<Action>? unsubscribe = null)
     {
-        if (get == null)
-        {
-            throw new ArgumentNullException(nameof(get));
-        }
+        ArgumentNullException.ThrowIfNull(get);
 
         _contentBinding?.Dispose();
         _contentBinding = new ValueBinding<string>(

@@ -102,12 +102,17 @@ public sealed class ComboBox : Control, IPopupOwner
         // Do not set explicit Height, otherwise FrameworkElement.MeasureOverride will clamp DesiredSize
         // and the drop-down cannot expand. Use MinHeight as the default header height.
         Height = double.NaN;
-        MinHeight = 28;
+        MinHeight = Theme.Current.BaseControlHeight;
     }
 
     protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
     {
         base.OnThemeChanged(oldTheme, newTheme);
+
+        if (MinHeight == oldTheme.BaseControlHeight)
+        {
+            MinHeight = newTheme.BaseControlHeight;
+        }
 
         // The popup ListBox can exist while the dropdown is closed, so it won't be in the Window visual tree
         // and would miss theme broadcasts. Keep it in sync here.
@@ -331,15 +336,8 @@ public sealed class ComboBox : Control, IPopupOwner
         Action<Action>? subscribe = null,
         Action<Action>? unsubscribe = null)
     {
-        if (get == null)
-        {
-            throw new ArgumentNullException(nameof(get));
-        }
-
-        if (set == null)
-        {
-            throw new ArgumentNullException(nameof(set));
-        }
+        ArgumentNullException.ThrowIfNull(get);
+        ArgumentNullException.ThrowIfNull(set);
 
         _selectedIndexBinding?.Dispose();
         _selectedIndexBinding = new ValueBinding<int>(
