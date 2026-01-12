@@ -73,15 +73,8 @@ public static class ControlExtensions
 
     public static T BindIsVisible<T>(this T element, ObservableValue<bool> source) where T : UIElement
     {
-        if (element == null)
-        {
-            throw new ArgumentNullException(nameof(element));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(source);
 
         element.SetIsVisibleBinding(
             get: () => source.Value,
@@ -92,15 +85,8 @@ public static class ControlExtensions
 
     public static T BindIsEnabled<T>(this T element, ObservableValue<bool> source) where T : UIElement
     {
-        if (element == null)
-        {
-            throw new ArgumentNullException(nameof(element));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(source);
 
         element.SetIsEnabledBinding(
             get: () => source.Value,
@@ -207,15 +193,8 @@ public static class ControlExtensions
 
     public static Label BindText(this Label label, ObservableValue<string> source)
     {
-        if (label == null)
-        {
-            throw new ArgumentNullException(nameof(label));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(label);
+        ArgumentNullException.ThrowIfNull(source);
 
         label.SetTextBinding(
             get: () => source.Value,
@@ -226,20 +205,9 @@ public static class ControlExtensions
 
     public static Label BindText<TSource>(this Label label, ObservableValue<TSource> source, Func<TSource, string> convert)
     {
-        if (label == null)
-        {
-            throw new ArgumentNullException(nameof(label));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
-
-        if (convert == null)
-        {
-            throw new ArgumentNullException(nameof(convert));
-        }
+        ArgumentNullException.ThrowIfNull(label);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(convert);
 
         label.SetTextBinding(
             get: () => convert(source.Value) ?? string.Empty,
@@ -266,15 +234,8 @@ public static class ControlExtensions
 
     public static Button CanClick(this Button button, Func<bool> canClick)
     {
-        if (button == null)
-        {
-            throw new ArgumentNullException(nameof(button));
-        }
-
-        if (canClick == null)
-        {
-            throw new ArgumentNullException(nameof(canClick));
-        }
+        ArgumentNullException.ThrowIfNull(button);
+        ArgumentNullException.ThrowIfNull(canClick);
 
         button.CanClick = canClick;
         return button;
@@ -282,15 +243,8 @@ public static class ControlExtensions
 
     public static Button BindContent(this Button button, ObservableValue<string> source)
     {
-        if (button == null)
-        {
-            throw new ArgumentNullException(nameof(button));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(button);
+        ArgumentNullException.ThrowIfNull(source);
 
         button.SetContentBinding(
             get: () => source.Value,
@@ -335,15 +289,8 @@ public static class ControlExtensions
 
     public static TextBox BindText(this TextBox textBox, ObservableValue<string> source)
     {
-        if (textBox == null)
-        {
-            throw new ArgumentNullException(nameof(textBox));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(textBox);
+        ArgumentNullException.ThrowIfNull(source);
 
         textBox.SetTextBinding(
             get: () => source.Value,
@@ -377,15 +324,8 @@ public static class ControlExtensions
 
     public static CheckBox BindIsChecked(this CheckBox checkBox, ObservableValue<bool> source)
     {
-        if (checkBox == null)
-        {
-            throw new ArgumentNullException(nameof(checkBox));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(checkBox);
+        ArgumentNullException.ThrowIfNull(source);
 
         checkBox.SetIsCheckedBinding(
             get: () => source.Value,
@@ -425,15 +365,8 @@ public static class ControlExtensions
 
     public static RadioButton BindIsChecked(this RadioButton radioButton, ObservableValue<bool> source)
     {
-        if (radioButton == null)
-        {
-            throw new ArgumentNullException(nameof(radioButton));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(radioButton);
+        ArgumentNullException.ThrowIfNull(source);
 
         radioButton.SetIsCheckedBinding(
             get: () => source.Value,
@@ -484,15 +417,8 @@ public static class ControlExtensions
 
     public static ListBox BindSelectedIndex(this ListBox listBox, ObservableValue<int> source)
     {
-        if (listBox == null)
-        {
-            throw new ArgumentNullException(nameof(listBox));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(listBox);
+        ArgumentNullException.ThrowIfNull(source);
 
         listBox.SetSelectedIndexBinding(
             get: () => source.Value,
@@ -544,15 +470,8 @@ public static class ControlExtensions
 
     public static MultiLineTextBox BindText(this MultiLineTextBox textBox, ObservableValue<string> source)
     {
-        if (textBox == null)
-        {
-            throw new ArgumentNullException(nameof(textBox));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(textBox);
+        ArgumentNullException.ThrowIfNull(source);
 
         textBox.SetTextBinding(
             get: () => source.Value,
@@ -597,15 +516,8 @@ public static class ControlExtensions
 
     public static ComboBox BindSelectedIndex(this ComboBox comboBox, ObservableValue<int> source)
     {
-        if (comboBox == null)
-        {
-            throw new ArgumentNullException(nameof(comboBox));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(comboBox);
+        ArgumentNullException.ThrowIfNull(source);
 
         comboBox.SetSelectedIndexBinding(
             get: () => source.Value,
@@ -613,6 +525,80 @@ public static class ControlExtensions
             subscribe: h => source.Changed += h,
             unsubscribe: h => source.Changed -= h);
         return comboBox;
+    }
+
+    #endregion
+
+    #region TabItem
+
+    public static TabItem Header(this TabItem tab, string header)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+        tab.Header = new Label().Text(header ?? string.Empty);
+        return tab;
+    }
+
+    public static TabItem Header(this TabItem tab, Element header)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+        ArgumentNullException.ThrowIfNull(header);
+        tab.Header = header;
+        return tab;
+    }
+
+    public static TabItem Content(this TabItem tab, Element content)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+        ArgumentNullException.ThrowIfNull(content);
+        tab.Content = content;
+        return tab;
+    }
+
+    public static TabItem IsEnabled(this TabItem tab, bool isEnabled = true)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+        tab.IsEnabled = isEnabled;
+        return tab;
+    }
+
+    #endregion
+
+    #region TabControl
+
+    public static TabControl TabItems(this TabControl tabControl, params TabItem[] tabs)
+    {
+        ArgumentNullException.ThrowIfNull(tabControl);
+        ArgumentNullException.ThrowIfNull(tabs);
+
+        tabControl.ClearTabs();
+        tabControl.AddTabs(tabs);
+        return tabControl;
+    }
+
+    public static TabControl SelectedIndex(this TabControl tabControl, int selectedIndex)
+    {
+        tabControl.SelectedIndex = selectedIndex;
+        return tabControl;
+    }
+
+    public static TabControl OnSelectionChanged(this TabControl tabControl, Action<int> handler)
+    {
+        tabControl.SelectionChanged = handler;
+        return tabControl;
+    }
+
+    public static TabControl Tab(this TabControl tabControl, string header, Element content)
+    {
+        ArgumentNullException.ThrowIfNull(tabControl);
+        tabControl.AddTab(new TabItem().Header(header).Content(content));
+        return tabControl;
+    }
+
+    public static TabControl Tab(this TabControl tabControl, Element header, Element content)
+    {
+        ArgumentNullException.ThrowIfNull(tabControl);
+        tabControl.AddTab(new TabItem().Header(header).Content(content));
+        return tabControl;
     }
 
     #endregion
@@ -639,15 +625,8 @@ public static class ControlExtensions
 
     public static ProgressBar BindValue(this ProgressBar progressBar, ObservableValue<double> source)
     {
-        if (progressBar == null)
-        {
-            throw new ArgumentNullException(nameof(progressBar));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(progressBar);
+        ArgumentNullException.ThrowIfNull(source);
 
         progressBar.SetValueBinding(
             get: () => source.Value,
@@ -692,15 +671,8 @@ public static class ControlExtensions
 
     public static Slider BindValue(this Slider slider, ObservableValue<double> source)
     {
-        if (slider == null)
-        {
-            throw new ArgumentNullException(nameof(slider));
-        }
-
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(slider);
+        ArgumentNullException.ThrowIfNull(source);
 
         slider.SetValueBinding(
             get: () => source.Value,
