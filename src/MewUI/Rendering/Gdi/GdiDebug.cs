@@ -18,6 +18,10 @@ public static class GdiDebug
 
     public static GdiDumpStages DumpStages { get; set; } = GdiDumpStages.None;
 
+    // When enabled, very thin non-axis-aligned lines can use a faster Wu AA path
+    // instead of SSAA. Disabled by default because SSAA produces higher quality.
+    public static bool UseWuLineAa { get; set; }
+
     private static int _dumpAaCount;
 
     internal static bool TryGetNextAaDumpIndex(out int index)
