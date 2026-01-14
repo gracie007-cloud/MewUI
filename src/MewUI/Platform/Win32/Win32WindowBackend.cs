@@ -155,13 +155,19 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
             case WindowMessages.WM_LBUTTONDOWN:
                 return HandleMouseButton(lParam, MouseButton.Left, isDown: true);
+            case WindowMessages.WM_LBUTTONDBLCLK:
+                return HandleMouseButton(lParam, MouseButton.Left, isDown: true);
             case WindowMessages.WM_LBUTTONUP:
                 return HandleMouseButton(lParam, MouseButton.Left, isDown: false);
             case WindowMessages.WM_RBUTTONDOWN:
                 return HandleMouseButton(lParam, MouseButton.Right, isDown: true);
+            case WindowMessages.WM_RBUTTONDBLCLK:
+                return HandleMouseButton(lParam, MouseButton.Right, isDown: true);
             case WindowMessages.WM_RBUTTONUP:
                 return HandleMouseButton(lParam, MouseButton.Right, isDown: false);
             case WindowMessages.WM_MBUTTONDOWN:
+                return HandleMouseButton(lParam, MouseButton.Middle, isDown: true);
+            case WindowMessages.WM_MBUTTONDBLCLK:
                 return HandleMouseButton(lParam, MouseButton.Middle, isDown: true);
             case WindowMessages.WM_MBUTTONUP:
                 return HandleMouseButton(lParam, MouseButton.Middle, isDown: false);
@@ -251,6 +257,8 @@ internal sealed class Win32WindowBackend : IWindowBackend
             Window.SetDpi(actualDpi);
             Window.RaiseDpiChanged(oldDpi, actualDpi);
             SetClientSize(Window.Width, Window.Height);
+            // Force layout recalculation with the correct DPI before first paint
+            Window.PerformLayout();
         }
 
         User32.GetClientRect(Handle, out var clientRect);
@@ -355,11 +363,11 @@ internal sealed class Win32WindowBackend : IWindowBackend
         Window.SetIsActive(active);
         if (active)
         {
-            Window.Activated?.Invoke();
+            Window.RaiseActivated();
         }
         else
         {
-            Window.Deactivated?.Invoke();
+            Window.RaiseDeactivated();
         }
 
         return 0;
@@ -414,6 +422,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
         else
         {
             element?.RaiseMouseUp(args);
+            Window.RequerySuggested();
         }
 
         return 0;
@@ -524,6 +533,8 @@ internal sealed class Win32WindowBackend : IWindowBackend
         {
             Window.FocusManager.FocusedElement?.RaiseKeyUp(args);
         }
+
+        Window.RequerySuggested();
 
         return args.Handled ? 0 : User32.DefWindowProc(Handle, msg, wParam, lParam);
     }

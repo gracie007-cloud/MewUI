@@ -88,7 +88,7 @@ public sealed class ComboBox : Control, IPopupOwner
         }
     }
 
-    public Action<int>? SelectionChanged { get; set; }
+    public event Action<int>? SelectionChanged;
 
     public override bool Focusable => true;
 
@@ -352,22 +352,23 @@ public sealed class ComboBox : Control, IPopupOwner
                 finally { _updatingFromSource = false; }
             });
 
-        var existing = SelectionChanged;
-        SelectionChanged = i =>
-        {
-            existing?.Invoke(i);
-
-            if (_updatingFromSource)
-            {
-                return;
-            }
-
-            _selectedIndexBinding?.Set(i);
-        };
+        // Ensure the binding forwarder is registered once (no duplicates), without tracking extra state.
+        SelectionChanged -= ForwardSelectionChangedToBinding;
+        SelectionChanged += ForwardSelectionChangedToBinding;
 
         _updatingFromSource = true;
         try { SelectedIndex = get(); }
         finally { _updatingFromSource = false; }
+    }
+
+    private void ForwardSelectionChangedToBinding(int index)
+    {
+        if (_updatingFromSource)
+        {
+            return;
+        }
+
+        _selectedIndexBinding?.Set(index);
     }
 
     private double ResolveItemHeight()
@@ -432,12 +433,6 @@ public sealed class ComboBox : Control, IPopupOwner
             }
 
             _popupList.SelectedIndex = SelectedIndex;
-            _popupList.SelectionChanged = i =>
-            {
-                SelectedIndex = i;
-                _restoreFocusAfterPopupClose = true;
-                IsDropDownOpen = false;
-            };
         }
         else
         {
@@ -451,9 +446,19 @@ public sealed class ComboBox : Control, IPopupOwner
             _popupList.SelectedIndex = SelectedIndex;
         }
 
+        _popupList.SelectionChanged -= OnPopupListSelectionChanged;
+        _popupList.SelectionChanged += OnPopupListSelectionChanged;
+
         var popupBounds = CalculatePopupBounds(window);
         window.ShowPopup(this, _popupList, popupBounds);
         window.FocusManager.SetFocus(_popupList);
+    }
+
+    private void OnPopupListSelectionChanged(int index)
+    {
+        SelectedIndex = index;
+        _restoreFocusAfterPopupClose = true;
+        IsDropDownOpen = false;
     }
 
     private void ClosePopup()
@@ -530,10 +535,12 @@ public sealed class ComboBox : Control, IPopupOwner
         if (_popupList != null)
         {
             ClosePopup();
+            _popupList.SelectionChanged -= OnPopupListSelectionChanged;
             _popupList.Dispose();
             _popupList = null;
         }
 
+        SelectionChanged -= ForwardSelectionChangedToBinding;
         _selectedIndexBinding?.Dispose();
         _selectedIndexBinding = null;
     }

@@ -68,8 +68,8 @@ public sealed class MultiLineTextBox : TextBase
         _vBar.Parent = this;
         _hBar.Parent = this;
 
-        _vBar.ValueChanged = v => SetVerticalOffset(v);
-        _hBar.ValueChanged = v => SetHorizontalOffset(v);
+        _vBar.ValueChanged += v => SetVerticalOffset(v);
+        _hBar.ValueChanged += v => SetHorizontalOffset(v);
     }
 
     protected override Rect GetInteractionContentBounds()
@@ -80,12 +80,12 @@ public sealed class MultiLineTextBox : TextBase
         var viewportBounds = innerBounds;
         if (_vBar.IsVisible)
         {
-            viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, theme.ScrollBarHitThickness + 1, 0));
+            viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, theme.ScrollBarHitThickness, 0));
         }
 
         if (_hBar.IsVisible)
         {
-            viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, 0, theme.ScrollBarHitThickness + 1));
+            viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, 0, theme.ScrollBarHitThickness));
         }
 
         return viewportBounds;
@@ -145,7 +145,7 @@ public sealed class MultiLineTextBox : TextBase
             if (value && _lineStarts.Count > WrapLineCountHardLimit)
             {
                 // Cannot re-enable for very large documents.
-                WrapChanged?.Invoke(false);
+                NotifyWrapChanged(false);
                 return;
             }
 
@@ -237,7 +237,7 @@ public sealed class MultiLineTextBox : TextBase
         // Wrap: a vertical scrollbar reduces wrap width, which may increase the total height.
         if (WrapEnabled && needV)
         {
-            double reducedWrapWidth = Math.Max(1, wrapWidth - theme.ScrollBarHitThickness - 1);
+            double reducedWrapWidth = Math.Max(1, wrapWidth - theme.ScrollBarHitThickness);
             extentH = GetExtentHeight(reducedWrapWidth);
             needV = extentH > viewportH + 0.5;
         }

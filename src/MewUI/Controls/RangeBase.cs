@@ -36,7 +36,7 @@ public abstract class RangeBase : Control
         set => SetValueCore(value, fromUser: true);
     }
 
-    public Action<double>? ValueChanged { get; set; }
+    public event Action<double>? ValueChanged;
 
     protected void SetValueFromSource(double value) => SetValueCore(value, fromUser: false);
 
@@ -100,4 +100,3 @@ public abstract class RangeBase : Control
         return value;
     }
 }
-

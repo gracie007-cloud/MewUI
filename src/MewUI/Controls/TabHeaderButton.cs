@@ -14,7 +14,7 @@ internal sealed class TabHeaderButton : ContentControl
     public int Index { get; set; }
     public bool IsSelected { get; set; }
     public bool IsTabEnabled { get; set; } = true;
-    public Action<int>? Clicked { get; set; }
+    public event Action<int>? Clicked;
 
     protected override Color DefaultBackground => Theme.Current.Palette.ButtonFace;
     protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;

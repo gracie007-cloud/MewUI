@@ -47,7 +47,7 @@ public class Button : Control
     /// <summary>
     /// Click event handler (AOT-compatible).
     /// </summary>
-    public Action? Click { get; set; }
+    public event Action? Click;
 
     public Func<bool>? CanClick
     {

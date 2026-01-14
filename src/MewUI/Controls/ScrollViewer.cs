@@ -88,13 +88,13 @@ public sealed class ScrollViewer : ContentControl
         _vBar.Parent = this;
         _hBar.Parent = this;
 
-        _vBar.ValueChanged = v =>
+        _vBar.ValueChanged += v =>
         {
             VerticalOffset = v;
             InvalidateVisual();
         };
 
-        _hBar.ValueChanged = v =>
+        _hBar.ValueChanged += v =>
         {
             HorizontalOffset = v;
             InvalidateVisual();
@@ -109,7 +109,12 @@ public sealed class ScrollViewer : ContentControl
             .Deflate(new Thickness(borderInset));
 
         var theme = GetTheme();
-        double barThickness = theme.ScrollBarHitThickness + 1;
+        double barThickness = theme.ScrollBarHitThickness;
+
+        // Get DPI scale for consistent layout rounding between Measure and Arrange.
+        // Without this, viewport calculated here may differ from the one in ArrangeContent/Render
+        // due to rounding differences, causing content clipping at non-100% DPI.
+        var dpiScale = GetDpi() / 96.0;
 
         if (Content is not UIElement content)
         {
@@ -133,6 +138,10 @@ public sealed class ScrollViewer : ContentControl
             double viewportH = Math.Max(0, slotH - (_hBar.IsVisible ? barThickness : 0));
             viewportW = Math.Max(0, viewportW - Padding.HorizontalThickness);
             viewportH = Math.Max(0, viewportH - Padding.VerticalThickness);
+
+            // Apply layout rounding to viewport to match Arrange/Render calculations.
+            viewportW = Core.LayoutRounding.RoundToPixel(viewportW, dpiScale);
+            viewportH = Core.LayoutRounding.RoundToPixel(viewportH, dpiScale);
             _viewport = new Size(viewportW, viewportH);
 
             var measureSize = new Size(
@@ -357,7 +366,7 @@ public sealed class ScrollViewer : ContentControl
     private Rect GetContentViewportBounds(Rect bounds, double borderInset)
     {
         var theme = GetTheme();
-        double t = theme.ScrollBarHitThickness + 1;
+        double t = theme.ScrollBarHitThickness;
         var viewport = GetChromeBounds(bounds, borderInset);
         if (_vBar.IsVisible)
         {

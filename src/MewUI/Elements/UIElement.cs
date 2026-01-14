@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Aprillz.MewUI.Binding;
 using Aprillz.MewUI.Input;
 using Aprillz.MewUI.Primitives;
@@ -84,17 +86,17 @@ public abstract class UIElement : Element
 
     #region Events (using Action delegates for AOT compatibility)
 
-    public Action? GotFocus { get; set; }
-    public Action? LostFocus { get; set; }
-    public Action? MouseEnter { get; set; }
-    public Action? MouseLeave { get; set; }
-    public Action<MouseEventArgs>? MouseDown { get; set; }
-    public Action<MouseEventArgs>? MouseUp { get; set; }
-    public Action<MouseEventArgs>? MouseMove { get; set; }
-    public Action<MouseWheelEventArgs>? MouseWheel { get; set; }
-    public Action<KeyEventArgs>? KeyDown { get; set; }
-    public Action<KeyEventArgs>? KeyUp { get; set; }
-    public Action<TextInputEventArgs>? TextInput { get; set; }
+    public event Action? GotFocus;
+    public event Action? LostFocus;
+    public event Action? MouseEnter;
+    public event Action? MouseLeave;
+    public event Action<MouseEventArgs>? MouseDown;
+    public event Action<MouseEventArgs>? MouseUp;
+    public event Action<MouseEventArgs>? MouseMove;
+    public event Action<MouseWheelEventArgs>? MouseWheel;
+    public event Action<KeyEventArgs>? KeyDown;
+    public event Action<KeyEventArgs>? KeyUp;
+    public event Action<TextInputEventArgs>? TextInput;
 
     #endregion
 

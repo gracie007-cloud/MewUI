@@ -193,35 +193,35 @@ public class Window : ContentControl
 
     #region Events
 
-    public Action? Loaded { get; set; }
+    public event Action? Loaded;
 
-    public Action? Closed { get; set; }
+    public event Action? Closed;
 
-    public Action? Activated { get; set; }
+    public event Action? Activated;
 
-    public Action? Deactivated { get; set; }
+    public event Action? Deactivated;
 
-    public Action<Size>? SizeChanged { get; set; }
+    public event Action<Size>? SizeChanged;
 
-    public Action<uint, uint>? DpiChanged { get; set; }
+    public event Action<uint, uint>? DpiChanged;
 
-    public Action<Theme, Theme>? ThemeChanged { get; set; }
+    public event Action<Theme, Theme>? ThemeChanged;
 
-    public Action? FirstFrameRendered { get; set; }
+    public event Action? FirstFrameRendered;
 
     /// <summary>
     /// Preview (tunneling) keyboard events for the whole window.
     /// If <see cref="KeyEventArgs.Handled"/> is set, the focused element will not receive the event.
     /// </summary>
-    public Action<KeyEventArgs>? PreviewKeyDown { get; set; }
+    public event Action<KeyEventArgs>? PreviewKeyDown;
 
-    public Action<KeyEventArgs>? PreviewKeyUp { get; set; }
+    public event Action<KeyEventArgs>? PreviewKeyUp;
 
     /// <summary>
     /// Preview (tunneling) text input for the whole window.
     /// If <see cref="TextInputEventArgs.Handled"/> is set, the focused element will not receive the event.
     /// </summary>
-    public Action<TextInputEventArgs>? PreviewTextInput { get; set; }
+    public event Action<TextInputEventArgs>? PreviewTextInput;
 
     #endregion
 
@@ -230,6 +230,10 @@ public class Window : ContentControl
     internal void RaisePreviewKeyUp(KeyEventArgs e) => PreviewKeyUp?.Invoke(e);
 
     internal void RaisePreviewTextInput(TextInputEventArgs e) => PreviewTextInput?.Invoke(e);
+
+    internal void RaiseActivated() => Activated?.Invoke();
+
+    internal void RaiseDeactivated() => Deactivated?.Invoke();
 
     public Theme Theme
     {

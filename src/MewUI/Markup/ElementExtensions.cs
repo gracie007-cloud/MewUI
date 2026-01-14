@@ -234,9 +234,14 @@ public static class ElementExtensions
         return element;
     }
 
-    public static T Stretch<T>(this T element) where T : FrameworkElement
+    public static T StretchHorizontal<T>(this T element) where T : FrameworkElement
     {
         element.HorizontalAlignment = Elements.HorizontalAlignment.Stretch;
+        return element;
+    }
+
+    public static T StretchVertical<T>(this T element) where T : FrameworkElement
+    {
         element.VerticalAlignment = Elements.VerticalAlignment.Stretch;
         return element;
     }

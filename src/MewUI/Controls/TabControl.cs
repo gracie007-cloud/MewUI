@@ -51,7 +51,7 @@ public sealed class TabControl : Control
 
     public TabItem? SelectedTab => SelectedIndex >= 0 && SelectedIndex < _tabs.Count ? _tabs[SelectedIndex] : null;
 
-    public Action<int>? SelectionChanged { get; set; }
+    public event Action<int>? SelectionChanged;
 
     public ScrollMode VerticalScroll
     {
@@ -349,11 +349,11 @@ public sealed class TabControl : Control
                 IsSelected = i == SelectedIndex,
                 IsTabEnabled = tab.IsEnabled,
                 Content = tab.Header!,
-                Clicked = idx =>
-                {
-                    SelectedIndex = idx;
-                    Focus();
-                },
+            };
+            header.Clicked += idx =>
+            {
+                SelectedIndex = idx;
+                Focus();
             };
 
             _headerStrip.Add(header);
@@ -380,6 +380,24 @@ public sealed class TabControl : Control
 
     private void UpdateSelection()
     {
+        var root = FindVisualRoot();
+        var window = root as Window;
+        var oldContent = _contentHost.Content;
+        bool focusWasInOldContent = false;
+
+        if (window != null && oldContent != null)
+        {
+            var focused = window.FocusManager.FocusedElement;
+            for (Element? current = focused; current != null; current = current.Parent)
+            {
+                if (ReferenceEquals(current, oldContent))
+                {
+                    focusWasInOldContent = true;
+                    break;
+                }
+            }
+        }
+
         RefreshFocusCache();
         for (int i = 0; i < _headerStrip.Count; i++)
         {
@@ -416,6 +434,23 @@ public sealed class TabControl : Control
         _pendingOffsetRestore = true;
         InvalidateMeasure();
         InvalidateVisual();
+
+        if (window != null)
+        {
+            // If the selected tab swap detached the focused element, move focus into the new tab
+            // so KeyUp/Focus-based RequerySuggested keeps working (and key events don't go to a detached element).
+            if (focusWasInOldContent)
+            {
+                if (!window.FocusManager.SetFocus(this))
+                {
+                    window.RequerySuggested();
+                }
+            }
+            else
+            {
+                window.RequerySuggested();
+            }
+        }
     }
 
     private void SelectPreviousTab()

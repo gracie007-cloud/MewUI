@@ -36,7 +36,7 @@ public abstract class ToggleBase : Control
         }
     }
 
-    public Action<bool>? CheckedChanged { get; set; }
+    public event Action<bool>? CheckedChanged;
 
     public override bool Focusable => true;
 

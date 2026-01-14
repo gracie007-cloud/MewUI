@@ -470,6 +470,8 @@ internal sealed class X11WindowBackend : IWindowBackend
             {
                 Window.FocusManager.FocusedElement?.RaiseKeyUp(args);
             }
+
+            Window.RequerySuggested();
         }
     }
 
@@ -552,6 +554,7 @@ internal sealed class X11WindowBackend : IWindowBackend
         else
         {
             element.RaiseMouseUp(args);
+            Window.RequerySuggested();
         }
     }
 
@@ -595,6 +598,8 @@ internal sealed class X11WindowBackend : IWindowBackend
             Window.SetClientSizeDip(attrs.width / Window.DpiScale, attrs.height / Window.DpiScale);
         }
 
+        // Force layout recalculation with the correct DPI
+        Window.PerformLayout();
         _needsRender = true;
     }
 

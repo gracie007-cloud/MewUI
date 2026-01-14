@@ -57,10 +57,7 @@ public abstract class TextBase : Control
             _selectionLength = 0;
 
             OnTextChanged(old, normalized);
-            if (TextChanged != null)
-            {
-                TextChanged(GetTextCore());
-            }
+            TextChanged?.Invoke(GetTextCore());
         }
     }
 
@@ -86,8 +83,8 @@ public abstract class TextBase : Control
         set { field = Math.Clamp(value, 0, GetTextLengthCore()); InvalidateVisual(); }
     }
 
-    public Action<string>? TextChanged { get; set; }
-    public Action<bool>? WrapChanged { get; set; }
+    public event Action<string>? TextChanged;
+    public event Action<bool>? WrapChanged;
 
     public bool CanUndo => _undo.Count > 0;
 
@@ -622,6 +619,9 @@ public abstract class TextBase : Control
         Action<Action>? subscribe = null,
         Action<Action>? unsubscribe = null)
     {
+        ArgumentNullException.ThrowIfNull(get);
+        ArgumentNullException.ThrowIfNull(set);
+
         _textBinding?.Dispose();
         _textBinding = new ValueBinding<string>(
             get,
@@ -646,18 +646,9 @@ public abstract class TextBase : Control
                 finally { _suppressBindingSet = false; }
             });
 
-        var existing = TextChanged;
-        TextChanged = text =>
-        {
-            existing?.Invoke(text);
-
-            if (_suppressBindingSet)
-            {
-                return;
-            }
-
-            _textBinding?.Set(text);
-        };
+        // Ensure the binding forwarder is registered once (no duplicates), without tracking extra state.
+        TextChanged -= ForwardTextChangedToBinding;
+        TextChanged += ForwardTextChangedToBinding;
 
         _suppressBindingSet = true;
         try { Text = NormalizeText(get() ?? string.Empty); }
@@ -667,16 +658,29 @@ public abstract class TextBase : Control
     protected override void OnDispose()
     {
         _document.Dispose();
+        TextChanged -= ForwardTextChangedToBinding;
         _textBinding?.Dispose();
         _textBinding = null;
     }
 
     protected void NotifyTextChanged()
     {
-        if (TextChanged != null)
+        TextChanged?.Invoke(GetTextCore());
+    }
+
+    protected void NotifyWrapChanged(bool value)
+    {
+        WrapChanged?.Invoke(value);
+    }
+
+    private void ForwardTextChangedToBinding(string text)
+    {
+        if (_suppressBindingSet)
         {
-            TextChanged(GetTextCore());
+            return;
         }
+
+        _textBinding?.Set(text);
     }
 
     public void Undo()

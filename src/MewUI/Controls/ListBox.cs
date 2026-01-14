@@ -61,7 +61,7 @@ public class ListBox : Control
         set { field = value; InvalidateMeasure(); InvalidateVisual(); }
     } = new Thickness(8, 2, 8, 2);
 
-    public Action<int>? SelectionChanged { get; set; }
+    public event Action<int>? SelectionChanged;
 
     public override bool Focusable => true;
 
@@ -75,7 +75,7 @@ public class ListBox : Control
 
         _vBar = new ScrollBar { Orientation = Panels.Orientation.Vertical, IsVisible = false };
         _vBar.Parent = this;
-        _vBar.ValueChanged = v =>
+        _vBar.ValueChanged += v =>
         {
             _verticalOffset = ClampVerticalOffset(v);
             InvalidateVisual();
@@ -178,7 +178,7 @@ public class ListBox : Control
         bool needV = _extentHeight > _viewportHeight + 0.5;
         if (needV && double.IsPositiveInfinity(widthLimit))
         {
-            maxWidth += theme.ScrollBarHitThickness + 1;
+            maxWidth += theme.ScrollBarHitThickness;
         }
 
         double desiredHeight = double.IsPositiveInfinity(availableSize.Height)
@@ -263,7 +263,7 @@ public class ListBox : Control
         var viewportBounds = innerBounds;
         if (_vBar.IsVisible)
         {
-            viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, theme.ScrollBarHitThickness + 1, 0));
+            viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, theme.ScrollBarHitThickness, 0));
         }
 
         var contentBounds = viewportBounds.Deflate(Padding);
@@ -346,7 +346,7 @@ public class ListBox : Control
         var viewportBounds = innerBounds;
         if (_vBar.IsVisible)
         {
-            viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, theme.ScrollBarHitThickness + 1, 0));
+            viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, theme.ScrollBarHitThickness, 0));
         }
 
         var contentBounds = viewportBounds.Deflate(Padding);
@@ -530,26 +530,28 @@ public class ListBox : Control
                 finally { _updatingFromSource = false; }
             });
 
-        var existing = SelectionChanged;
-        SelectionChanged = i =>
-        {
-            existing?.Invoke(i);
-
-            if (_updatingFromSource)
-            {
-                return;
-            }
-
-            _selectedIndexBinding?.Set(i);
-        };
+        // Ensure the binding forwarder is registered once (no duplicates), without tracking extra state.
+        SelectionChanged -= ForwardSelectionChangedToBinding;
+        SelectionChanged += ForwardSelectionChangedToBinding;
 
         _updatingFromSource = true;
         try { SelectedIndex = get(); }
         finally { _updatingFromSource = false; }
     }
 
+    private void ForwardSelectionChangedToBinding(int index)
+    {
+        if (_updatingFromSource)
+        {
+            return;
+        }
+
+        _selectedIndexBinding?.Set(index);
+    }
+
     protected override void OnDispose()
     {
+        SelectionChanged -= ForwardSelectionChangedToBinding;
         _selectedIndexBinding?.Dispose();
         _selectedIndexBinding = null;
     }

@@ -1,3 +1,5 @@
+using System;
+
 using Aprillz.MewUI.Controls;
 using Aprillz.MewUI.Binding;
 using Aprillz.MewUI.Core;
@@ -99,67 +101,67 @@ public static class ControlExtensions
 
     public static T OnGotFocus<T>(this T element, Action handler) where T : UIElement
     {
-        element.GotFocus = handler;
+        element.GotFocus += handler;
         return element;
     }
 
     public static T OnLostFocus<T>(this T element, Action handler) where T : UIElement
     {
-        element.LostFocus = handler;
+        element.LostFocus += handler;
         return element;
     }
 
     public static T OnMouseEnter<T>(this T element, Action handler) where T : UIElement
     {
-        element.MouseEnter = handler;
+        element.MouseEnter += handler;
         return element;
     }
 
     public static T OnMouseLeave<T>(this T element, Action handler) where T : UIElement
     {
-        element.MouseLeave = handler;
+        element.MouseLeave += handler;
         return element;
     }
 
     public static T OnMouseDown<T>(this T element, Action<MouseEventArgs> handler) where T : UIElement
     {
-        element.MouseDown = handler;
+        element.MouseDown += handler;
         return element;
     }
 
     public static T OnMouseUp<T>(this T element, Action<MouseEventArgs> handler) where T : UIElement
     {
-        element.MouseUp = handler;
+        element.MouseUp += handler;
         return element;
     }
 
     public static T OnMouseMove<T>(this T element, Action<MouseEventArgs> handler) where T : UIElement
     {
-        element.MouseMove = handler;
+        element.MouseMove += handler;
         return element;
     }
 
     public static T OnMouseWheel<T>(this T element, Action<MouseWheelEventArgs> handler) where T : UIElement
     {
-        element.MouseWheel = handler;
+        element.MouseWheel += handler;
         return element;
     }
 
     public static T OnKeyDown<T>(this T element, Action<KeyEventArgs> handler) where T : UIElement
     {
-        element.KeyDown = handler;
+        element.KeyDown += handler;
         return element;
     }
 
     public static T OnKeyUp<T>(this T element, Action<KeyEventArgs> handler) where T : UIElement
     {
-        element.KeyUp = handler;
+        element.KeyUp += handler;
         return element;
     }
 
     public static T OnTextInput<T>(this T element, Action<TextInputEventArgs> handler) where T : UIElement
     {
-        element.TextInput = handler;
+        element.TextInput += handler;
         return element;
     }
 
@@ -256,11 +258,11 @@ public static class ControlExtensions
 
     public static Button OnClick(this Button button, Action handler)
     {
-        button.Click = handler;
+        button.Click += handler;
         return button;
     }
 
-    public static Button CanClick(this Button button, Func<bool> canClick)
+    public static Button OnCanClick(this Button button, Func<bool> canClick)
     {
         ArgumentNullException.ThrowIfNull(button);
         ArgumentNullException.ThrowIfNull(canClick);
@@ -276,6 +278,18 @@ public static class ControlExtensions
 
         button.SetContentBinding(
             get: () => source.Value,
+            subscribe: h => source.Changed += h,
+            unsubscribe: h => source.Changed -= h);
+        return button;
+    }
+
+    public static Button BindContent<TSource>(this Button button, ObservableValue<TSource> source, Func<TSource, string> convert)
+    {
+        ArgumentNullException.ThrowIfNull(button);
+        ArgumentNullException.ThrowIfNull(source);
+
+        button.SetContentBinding(
+            get: () => convert(source.Value) ?? string.Empty,
             subscribe: h => source.Changed += h,
             unsubscribe: h => source.Changed -= h);
         return button;
@@ -311,7 +325,7 @@ public static class ControlExtensions
 
     public static TextBox OnTextChanged(this TextBox textBox, Action<string> handler)
     {
-        textBox.TextChanged = handler;
+        textBox.TextChanged += handler;
         return textBox;
     }
 
@@ -346,7 +360,7 @@ public static class ControlExtensions
 
     public static CheckBox OnCheckedChanged(this CheckBox checkBox, Action<bool> handler)
     {
-        checkBox.CheckedChanged = handler;
+        checkBox.CheckedChanged += handler;
         return checkBox;
     }
 
@@ -387,7 +401,7 @@ public static class ControlExtensions
 
     public static RadioButton OnCheckedChanged(this RadioButton radioButton, Action<bool> handler)
     {
-        radioButton.CheckedChanged = handler;
+        radioButton.CheckedChanged += handler;
         return radioButton;
     }
 
@@ -439,7 +453,7 @@ public static class ControlExtensions
 
     public static ListBox OnSelectionChanged(this ListBox listBox, Action<int> handler)
     {
-        listBox.SelectionChanged = handler;
+        listBox.SelectionChanged += handler;
         return listBox;
     }
 
@@ -492,18 +506,13 @@ public static class ControlExtensions
 
     public static MultiLineTextBox OnWrapChanged(this MultiLineTextBox textBox, Action<bool> handler)
     {
-        var existing = textBox.WrapChanged;
-        textBox.WrapChanged = v =>
-        {
-            existing?.Invoke(v);
-            handler(v);
-        };
+        textBox.WrapChanged += handler;
         return textBox;
     }
 
     public static MultiLineTextBox OnTextChanged(this MultiLineTextBox textBox, Action<string> handler)
     {
-        textBox.TextChanged = handler;
+        textBox.TextChanged += handler;
         return textBox;
     }
 
@@ -549,7 +558,7 @@ public static class ControlExtensions
 
     public static ComboBox OnSelectionChanged(this ComboBox comboBox, Action<int> handler)
     {
-        comboBox.SelectionChanged = handler;
+        comboBox.SelectionChanged += handler;
         return comboBox;
     }
 
@@ -622,7 +631,7 @@ public static class ControlExtensions
 
     public static TabControl OnSelectionChanged(this TabControl tabControl, Action<int> handler)
     {
-        tabControl.SelectionChanged = handler;
+        tabControl.SelectionChanged += handler;
         return tabControl;
     }
 
@@ -704,7 +713,7 @@ public static class ControlExtensions
 
     public static Slider OnValueChanged(this Slider slider, Action<double> handler)
     {
-        slider.ValueChanged = handler;
+        slider.ValueChanged += handler;
         return slider;
     }
 
@@ -733,67 +742,67 @@ public static class ControlExtensions
 
     public static Window OnLoaded(this Window window, Action handler)
     {
-        window.Loaded = handler;
+        window.Loaded += handler;
         return window;
     }
 
     public static Window OnClosed(this Window window, Action handler)
     {
-        window.Closed = handler;
+        window.Closed += handler;
         return window;
     }
 
     public static Window OnActivated(this Window window, Action handler)
     {
-        window.Activated = handler;
+        window.Activated += handler;
         return window;
     }
 
     public static Window OnDeactivated(this Window window, Action handler)
     {
-        window.Deactivated = handler;
+        window.Deactivated += handler;
         return window;
     }
 
     public static Window OnSizeChanged(this Window window, Action<Size> handler)
     {
-        window.SizeChanged = handler;
+        window.SizeChanged += handler;
         return window;
     }
 
     public static Window OnDpiChanged(this Window window, Action<uint, uint> handler)
     {
-        window.DpiChanged = handler;
+        window.DpiChanged += handler;
         return window;
     }
 
     public static Window OnThemeChanged(this Window window, Action<Theme, Theme> handler)
     {
-        window.ThemeChanged = handler;
+        window.ThemeChanged += handler;
         return window;
     }
 
     public static Window OnFirstFrameRendered(this Window window, Action handler)
     {
-        window.FirstFrameRendered = handler;
+        window.FirstFrameRendered += handler;
         return window;
     }
 
     public static Window OnPreviewKeyDown(this Window window, Action<KeyEventArgs> handler)
     {
-        window.PreviewKeyDown = handler;
+        window.PreviewKeyDown += handler;
         return window;
     }
 
     public static Window OnPreviewKeyUp(this Window window, Action<KeyEventArgs> handler)
     {
-        window.PreviewKeyUp = handler;
+        window.PreviewKeyUp += handler;
         return window;
     }
 
     public static Window OnPreviewTextInput(this Window window, Action<TextInputEventArgs> handler)
     {
-        window.PreviewTextInput = handler;
+        window.PreviewTextInput += handler;
         return window;
     }
 

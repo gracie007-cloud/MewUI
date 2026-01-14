@@ -21,7 +21,6 @@ var metricsTimer = new DispatcherTimer(TimeSpan.FromSeconds(2));
 metricsTimer.Tick += (_, _) => UpdateMetrics(appendLog: false);
 
 Window window;
-Button enabledButton = null!;
 var accentSwatches = new List<(Color color, Button button)>();
 var currentAccent = Theme.Current.Palette.Accent;
 Theme.Current = Theme.Light;
@@ -61,6 +60,12 @@ var root = new Window()
                             .Header("Binding")
                             .Content(
                                 BindSamples()
+                            ),
+
+                        new TabItem()
+                            .Header("Commanding")
+                            .Content(
+                                CommandingSamples()
                             )
                     )
             )
@@ -227,7 +232,7 @@ Element NormalControls()
                                 .BindText(vm.AsyncStatus)
                         )
                 ),
-          
+
             new TabControl()
                 .Height(160)
                 .TabItems(
@@ -398,7 +403,6 @@ Element NormalControls()
                                         )
                                 ),
 
-
                                 new DockPanel()
                                     .Spacing(8)
                                     .Children(
@@ -413,10 +417,7 @@ Element NormalControls()
                                             .Height(76)
                                     )
                         )
-
-                    
                 ),
-
 
             new Grid()
                 .Columns("Auto,*")
@@ -460,7 +461,7 @@ Element NormalControls()
                                         .Text("Wrap")
                                         .OnCheckedChanged(x => notesTextBox.Wrap = x)
                                 )
-                        )                
+                        )
                 )
         );
 }
@@ -484,10 +485,155 @@ FrameworkElement ImageDemo() => new GroupBox()
             )
     );
 
+FrameworkElement CommandingSamples()
+{
+    var commandLog = new ObservableValue<string>("Command log:");
+    var inputText = new ObservableValue<string>(string.Empty);
+    var counter = new ObservableValue<int>(0);
+    var isFeatureEnabled = new ObservableValue<bool>(false);
+
+    return new StackPanel()
+        .Vertical()
+        .Spacing(16)
+        .Children(
+            new Label()
+                .Text("Commanding Demo")
+                .Bold()
+                .FontSize(14),
+
+            new Label()
+                .Text("Delegate-based commanding (Action + Func<bool>) for Native AOT compatibility."),
+
+            // Example 1: Basic CanExecute based on text input
+            new GroupBox()
+                .Header("CanExecute with Input Validation")
+                .Content(
+                    new StackPanel()
+                        .Vertical()
+                        .Spacing(8)
+                        .Children(
+                            new Label()
+                                .Text("Enter text to enable the Submit button:"),
+
+                            new TextBox()
+                                .Placeholder("Type something...")
+                                .BindText(vm.InputText),
+
+                            new Button()
+                                .Content("Submit")
+                                .OnCanClick(() => !string.IsNullOrWhiteSpace(vm.InputText.Value))
+                                .OnClick(() => { vm.CommandLog.Value = $"Submitted: \"{vm.InputText.Value}\" at {DateTime.Now:HH:mm:ss}"; })
+                        )
+                ),
+
+            // Example 2: Counter with bounds
+            new GroupBox()
+                .Header("Counter with Min/Max Bounds")
+                .Content(
+                    new StackPanel()
+                        .Vertical()
+                        .Spacing(8)
+                        .Children(
+                            new Label()
+                                .BindText(vm.Counter, c => $"Count: {c} (range: 0-10)"),
+
+                            new StackPanel()
+                                .Horizontal()
+                                .Spacing(8)
+                                .Children(
+                                    new Button()
+                                        .Content("- Decrement")
+                                        .Width(100)
+                                        .OnCanClick(() => vm.Counter.Value > 0)
+                                        .OnClick(() => { vm.Counter.Value--; vm.CommandLog.Value = $"Decremented to {vm.Counter.Value}"; }),
+
+                                    new Button()
+                                        .Content("+ Increment")
+                                        .Width(100)
+                                        .OnCanClick(() => vm.Counter.Value < 10)
+                                        .OnClick(() => { vm.Counter.Value++; vm.CommandLog.Value = $"Incremented to {vm.Counter.Value}"; }),
+
+                                    new Button()
+                                        .Content("Reset")
+                                        .Width(80)
+                                        .OnCanClick(() => vm.Counter.Value != 5)
+                                        .OnClick(() => { vm.Counter.Value = 5; vm.CommandLog.Value = "Reset to 5"; })
+                                )
+                        )
+                ),
+
+            // Example 3: Feature toggle affecting multiple commands
+            new GroupBox()
+                .Header("Feature Toggle (Multiple Commands)")
+                .Content(
+                    new StackPanel()
+                        .Vertical()
+                        .Spacing(8)
+                        .Children(
+                            new CheckBox()
+                                .Text("Enable Premium Features")
+                                .BindIsChecked(vm.IsFeatureEnabled),
+
+                            new StackPanel()
+                                .Horizontal()
+                                .Spacing(8)
+                                .Children(
+                                    new Button()
+                                        .Content("Export PDF")
+                                        .OnCanClick(() => vm.IsFeatureEnabled.Value)
+                                        .OnClick(() => { vm.CommandLog.Value = "Exporting PDF..."; }),
+
+                                    new Button()
+                                        .Content("Cloud Sync")
+                                        .OnCanClick(() => vm.IsFeatureEnabled.Value)
+                                        .OnClick(() => { vm.CommandLog.Value = "Syncing to cloud..."; }),
+
+                                    new Button()
+                                        .Content("Analytics")
+                                        .OnCanClick(() => vm.IsFeatureEnabled.Value)
+                                        .OnClick(() => { vm.CommandLog.Value = "Opening analytics..."; })
+                                ),
+
+                            new Label()
+                                .Text("(Enable the checkbox above to unlock these features)")
+                                .FontSize(11)
+                        )
+                ),
+
+            // Example 4: Combined conditions
+            new GroupBox()
+                .Header("Combined Conditions")
+                .Content(
+                    new StackPanel()
+                        .Vertical()
+                        .Spacing(8)
+                        .Children(
+                            new Label()
+                                .Text("Button enabled when: text is entered AND feature is enabled AND counter > 0"),
+
+                            new Button()
+                                .Content("Execute Complex Action")
+                                .OnCanClick(() =>
+                                    !string.IsNullOrWhiteSpace(vm.InputText.Value) &&
+                                    vm.IsFeatureEnabled.Value &&
+                                    vm.Counter.Value > 0)
+                                .OnClick(() => { vm.CommandLog.Value = $"Complex action: text=\"{vm.InputText.Value}\", count={vm.Counter.Value}"; })
+                        )
+                ),
+
+            // Command log output
+            new GroupBox()
+                .Header("Command Log")
+                .Content(
+                    new Label()
+                        .BindText(vm.CommandLog)
+                        .FontFamily("Consolas")
+                )
+        );
+}
+
 FrameworkElement BindSamples()
 {
-    var selectionItemCount = new ObservableValue<int>(4);
-
     return new StackPanel()
         .Vertical()
         .Children(
@@ -544,21 +690,12 @@ FrameworkElement BindSamples()
                     .Children(
                         new CheckBox()
                             .Text("Enabled")
-                            .Apply(cb =>
-                            {
-                                cb.CheckedChanged = v =>
-                                {
-                                    vm.EnabledButtonText.Value = v ? "Enabled action" : "Disabled action";
-                                    enabledButton?.IsEnabled = v;
-                                };
-                            })
                             .BindIsChecked(vm.IsEnabled),
 
                         new Button()
-                            .Ref(out enabledButton)
-                            .BindContent(vm.EnabledButtonText)
+                            .BindContent(vm.IsEnabled, x => x ? "Enabled action" : "Disabled action")
+                            .BindIsEnabled(vm.IsEnabled)
                             .OnClick(() => MessageBox.Show(window.Handle, "Enabled button clicked", "Aprillz.MewUI Demo", MessageBoxButtons.Ok, MessageBoxIcon.Information))
-                            .Apply(b => b.IsEnabled = vm.IsEnabled.Value)
                     ),
 
                 new Label()
@@ -602,11 +739,11 @@ FrameworkElement BindSamples()
                                         }
 
                                         selectionListBox.InvalidateMeasure();
-                                        selectionItemCount.Value = items.Count;
+                                        vm.SelectionItemCount.Value = items.Count;
                                     }),
 
                                 new Label()
-                                    .BindText(selectionItemCount, c => $"Items: {c:N0}")
+                                    .BindText(vm.SelectionItemCount, c => $"Items: {c:N0}")
                             )
                     )
 
@@ -736,11 +873,20 @@ class DemoViewModel
 
     public ObservableValue<bool> IsEnabled { get; } = new(true);
 
-    public ObservableValue<string> EnabledButtonText { get; } = new("Enabled action");
-
     public ObservableValue<int> SelectedIndex { get; } = new(1, v => Math.Max(-1, v));
 
     public ObservableValue<string> AsyncStatus { get; } = new("Async: idle");
+
+    public ObservableValue<string> CommandLog { get; } = new ObservableValue<string>("Command log:");
+
+    public ObservableValue<string> InputText { get; } = new ObservableValue<string>(string.Empty);
+
+    public ObservableValue<int> Counter { get; } = new ObservableValue<int>(0);
+
+    public ObservableValue<bool> IsFeatureEnabled { get; } = new ObservableValue<bool>(false);
+
+    public ObservableValue<int> SelectionItemCount { get; } = new ObservableValue<int>(4);
+
 }
 
 public static class Extensions
