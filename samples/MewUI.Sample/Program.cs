@@ -487,11 +487,6 @@ FrameworkElement ImageDemo() => new GroupBox()
 
 FrameworkElement CommandingSamples()
 {
-    var commandLog = new ObservableValue<string>("Command log:");
-    var inputText = new ObservableValue<string>(string.Empty);
-    var counter = new ObservableValue<int>(0);
-    var isFeatureEnabled = new ObservableValue<bool>(false);
-
     return new StackPanel()
         .Vertical()
         .Spacing(16)
