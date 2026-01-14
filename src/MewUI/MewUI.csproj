@@ -10,7 +10,7 @@
     <!-- Assembly Info -->
     <RootNamespace>Aprillz.MewUI</RootNamespace>
     <AssemblyName>Aprillz.MewUI</AssemblyName>
-    <Version>0.6.1</Version>
+    <Version>0.6.2</Version>
     <Authors>Aprillz</Authors>
     <Description>A cross-platform and lightweight, code-first .NET GUI library aimed at NativeAOT</Description>
 
@@ -18,14 +18,14 @@
     <PackageId>Aprillz.MewUI</PackageId>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>NUGET_README.md</PackageReadmeFile>
-    <PackageIcon>logo-256.png</PackageIcon>
+    <PackageIcon>logo_c-256.png</PackageIcon>
     <PublishRepositoryUrl>false</PublishRepositoryUrl>
     <IncludeSymbols>false</IncludeSymbols>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\..\NUGET_README.md" Pack="true" PackagePath="\" />
-    <None Include="..\..\assets\logo\logo-256.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\assets\logo\logo_c-256.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
