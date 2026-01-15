@@ -209,7 +209,6 @@ The sample defaults to `Direct2D` on Windows, and `OpenGL` on Linux.
 - `Direct2D`: slower startup and larger resident memory, but better suited for complex layouts/effects
 - `GDI`: lightweight and fast startup, but CPU-heavy and not ideal for high-DPI, large windows, or complex UIs
 - `OpenGL`: cross-platform and works with the Linux/X11 host, but currently more limited and still experimental
-
 ---
 ## 🪟 Platform Abstraction
 
@@ -218,6 +217,12 @@ Windowing and the message loop are abstracted behind a platform layer.
 Currently implemented:
 - Windows (`Win32PlatformHost`)
 - Linux/X11 (experimental)
+
+---
+## 📄Docs
+
+- [C# Markup](docs/CSharpMarkup.md)
+- [Binding](docs/Binding.md)
 
 ---
 ## 🧭 Roadmap (TODO)

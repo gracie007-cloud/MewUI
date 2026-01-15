@@ -223,6 +223,13 @@ Theme.Current = Theme.Current.WithAccent(Color.FromRgb(214, 176, 82));
 - Linux/X11 (experimental)
 
 ---
+## 📄 문서
+
+- [C# Markup](ko/docs/CSharpMarkup.md)
+- [Binding](ko/docs/Binding.md)
+
+
+---
 ## 🧭 로드맵 (TODO)
 
 **컨트롤**
