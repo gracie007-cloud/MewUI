@@ -19,7 +19,9 @@ var currentAccent = Theme.Current.Palette.Accent;
 Theme.Current = Theme.Light;
 
 var vm = new DemoViewModel();
+
 var logo = ImageSource.FromFile("logo-256.png");
+var april = ImageSource.FromFile("april.jpg");
 
 var root = new Window()
     .Ref(out window)
@@ -472,7 +474,17 @@ FrameworkElement ImageDemo() => new GroupBox()
                     .StretchMode(ImageStretch.Uniform),
 
                 new Image()
+                    .Source(april)
+                    .Size(96, 96)
+                    .StretchMode(ImageStretch.Uniform),
+
+                new Image()
                     .SourceFile("logo-256.png")
+                    .Size(96, 96)
+                    .StretchMode(ImageStretch.Uniform),
+
+                new Image()
+                    .SourceFile("april.jpg")
                     .Size(96, 96)
                     .StretchMode(ImageStretch.Uniform)
             )

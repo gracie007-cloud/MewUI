@@ -5,10 +5,17 @@ public static class ImageDecoders
     private static readonly object _lock = new();
     private static readonly Dictionary<ImageFormat, IImageDecoder> _decoders = new();
 
+    /// <summary>
+    /// Optional debug logger for decode failures and format detection.
+    /// Keep null in production for zero overhead.
+    /// </summary>
+    public static Action<string>? DebugLog { get; set; }
+
     static ImageDecoders()
     {
         Register(new BmpDecoder());
         Register(new PngDecoder());
+        Register(new JpegDecoder());
     }
 
     public static void Register(IImageDecoder decoder)
