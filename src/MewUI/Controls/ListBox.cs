@@ -8,7 +8,7 @@ public class ListBox : Control
     private ValueBinding<int>? _selectedIndexBinding;
     private bool _updatingFromSource;
     private readonly ScrollBar _vBar;
-    private double _verticalOffset;
+    private readonly ScrollController _scroll = new();
     private double _extentHeight;
     private double _viewportHeight;
     private int? _pendingScrollIntoViewIndex;
@@ -72,7 +72,9 @@ public class ListBox : Control
         _vBar.Parent = this;
         _vBar.ValueChanged += v =>
         {
-            _verticalOffset = ClampVerticalOffset(v);
+            _scroll.DpiScale = GetDpi() / 96.0;
+            _scroll.SetMetricsDip(axis: 1, extentDip: _extentHeight, viewportDip: GetViewportHeightDip());
+            _scroll.SetOffsetDip(axis: 1, v);
             InvalidateVisual();
         };
     }
@@ -164,17 +166,18 @@ public class ListBox : Control
 
         // Cache extent/viewport for scroll bar (viewport is approximated here; final value computed in Arrange).
         _extentHeight = height;
+        var dpiScale = GetDpi() / 96.0;
         _viewportHeight = double.IsPositiveInfinity(availableSize.Height)
             ? height
-            : Math.Max(0, availableSize.Height - Padding.VerticalThickness - borderInset * 2);
+            : LayoutRounding.RoundToPixel(
+                Math.Max(0, availableSize.Height - Padding.VerticalThickness - borderInset * 2),
+                dpiScale);
 
-        // If the vertical scrollbar becomes visible, it consumes horizontal space (inside the control).
-        // When we're auto-sizing width (infinite width available), reserve that space so text doesn't get clipped.
+        _scroll.DpiScale = dpiScale;
+        _scroll.SetMetricsDip(axis: 1, extentDip: _extentHeight, viewportDip: _viewportHeight);
+
+        // Vertical scrollbar is overlay in ListBox (it does not consume horizontal space).
         bool needV = _extentHeight > _viewportHeight + 0.5;
-        if (needV && double.IsPositiveInfinity(widthLimit))
-        {
-            maxWidth += theme.ScrollBarHitThickness;
-        }
 
         double desiredHeight = double.IsPositiveInfinity(availableSize.Height)
             ? height
@@ -194,8 +197,11 @@ public class ListBox : Control
         var borderInset = GetBorderVisualInset();
         var innerBounds = snapped.Deflate(new Thickness(borderInset));
 
-        _viewportHeight = Math.Max(0, innerBounds.Height - Padding.VerticalThickness);
-        _verticalOffset = ClampVerticalOffset(_verticalOffset);
+        var dpiScale = GetDpi() / 96.0;
+        _viewportHeight = LayoutRounding.RoundToPixel(Math.Max(0, innerBounds.Height - Padding.VerticalThickness), dpiScale);
+        _scroll.DpiScale = dpiScale;
+        _scroll.SetMetricsDip(axis: 1, extentDip: _extentHeight, viewportDip: _viewportHeight);
+        _scroll.SetOffsetPx(axis: 1, _scroll.GetOffsetPx(axis: 1));
 
         bool needV = _extentHeight > _viewportHeight + 0.5;
         _vBar.IsVisible = needV;
@@ -210,7 +216,7 @@ public class ListBox : Control
             _vBar.ViewportSize = _viewportHeight;
             _vBar.SmallChange = theme.ScrollBarSmallChange;
             _vBar.LargeChange = theme.ScrollBarLargeChange;
-            _vBar.Value = _verticalOffset;
+            _vBar.Value = _scroll.GetOffsetDip(axis: 1);
 
             _vBar.Arrange(new Rect(
                 innerBounds.Right - t - inset,
@@ -230,6 +236,7 @@ public class ListBox : Control
     {
         var theme = GetTheme();
         var bounds = GetSnappedBorderBounds(Bounds);
+        var dpiScale = GetDpi() / 96.0;
         double radius = theme.ControlCornerRadius;
         var borderInset = GetBorderVisualInset();
         double itemRadius = Math.Max(0, radius - borderInset);
@@ -256,23 +263,26 @@ public class ListBox : Control
 
         var innerBounds = bounds.Deflate(new Thickness(borderInset));
         var viewportBounds = innerBounds;
-        if (_vBar.IsVisible)
-        {
-            viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, theme.ScrollBarHitThickness, 0));
-        }
 
-        var contentBounds = viewportBounds.Deflate(Padding);
+        var contentBounds = LayoutRounding.SnapRectEdgesToPixels(viewportBounds.Deflate(Padding), dpiScale);
 
         context.Save();
-        context.SetClip(contentBounds);
+        // Expand the clip by 1 device pixel on right/bottom so 1px strokes/glyph overhang at the edge
+        // don't get clipped under an ancestor clip.
+        double onePx = 1.0 / dpiScale;
+        var clip = LayoutRounding.SnapRectEdgesToPixelsOutward(
+            new Rect(contentBounds.X, contentBounds.Y, contentBounds.Width + onePx, contentBounds.Height + onePx),
+            dpiScale);
+        context.SetClip(clip);
 
         var font = GetFont();
         double itemHeight = ResolveItemHeight();
+        double verticalOffset = _scroll.GetOffsetDip(axis: 1);
 
         // Even when "virtualization" is disabled, only paint the visible range.
         // (Clipping makes off-screen work pure overhead for large item counts.)
-        int first = itemHeight <= 0 ? 0 : Math.Max(0, (int)Math.Floor(_verticalOffset / itemHeight));
-        double offsetInItem = itemHeight <= 0 ? 0 : _verticalOffset - first * itemHeight;
+        int first = itemHeight <= 0 ? 0 : Math.Max(0, (int)Math.Floor(verticalOffset / itemHeight));
+        double offsetInItem = itemHeight <= 0 ? 0 : verticalOffset - first * itemHeight;
         double yStart = contentBounds.Y - offsetInItem;
         int visibleCount = itemHeight <= 0 ? _items.Count : (int)Math.Ceiling((contentBounds.Height + offsetInItem) / itemHeight) + 1;
         int lastExclusive = Math.Min(_items.Count, first + Math.Max(0, visibleCount));
@@ -337,16 +347,13 @@ public class ListBox : Control
 
         var theme = GetTheme();
         var bounds = GetSnappedBorderBounds(Bounds);
+        var dpiScale = GetDpi() / 96.0;
         var innerBounds = bounds.Deflate(new Thickness(GetBorderVisualInset()));
         var viewportBounds = innerBounds;
-        if (_vBar.IsVisible)
-        {
-            viewportBounds = viewportBounds.Deflate(new Thickness(0, 0, theme.ScrollBarHitThickness, 0));
-        }
 
-        var contentBounds = viewportBounds.Deflate(Padding);
+        var contentBounds = LayoutRounding.SnapRectEdgesToPixels(viewportBounds.Deflate(Padding), dpiScale);
 
-        int index = (int)((e.Position.Y - contentBounds.Y + _verticalOffset) / ResolveItemHeight());
+        int index = (int)((e.Position.Y - contentBounds.Y + _scroll.GetOffsetDip(axis: 1)) / ResolveItemHeight());
         if (index >= 0 && index < _items.Count)
         {
             SelectedIndex = index;
@@ -369,8 +376,10 @@ public class ListBox : Control
             return;
         }
 
-        _verticalOffset = ClampVerticalOffset(_verticalOffset - notches * GetTheme().ScrollWheelStep);
-        _vBar.Value = _verticalOffset;
+        _scroll.DpiScale = GetDpi() / 96.0;
+        _scroll.SetMetricsDip(axis: 1, extentDip: _extentHeight, viewportDip: GetViewportHeightDip());
+        _scroll.ScrollByNotches(axis: 1, notches: -notches, stepDip: GetTheme().ScrollWheelStep);
+        _vBar.Value = _scroll.GetOffsetDip(axis: 1);
         InvalidateVisual();
         e.Handled = true;
     }
@@ -429,7 +438,8 @@ public class ListBox : Control
         double itemTop = index * itemHeight;
         double itemBottom = itemTop + itemHeight;
 
-        double newOffset = _verticalOffset;
+        double oldOffset = _scroll.GetOffsetDip(axis: 1);
+        double newOffset = oldOffset;
         if (itemTop < newOffset)
         {
             newOffset = itemTop;
@@ -439,16 +449,18 @@ public class ListBox : Control
             newOffset = itemBottom - viewport;
         }
 
-        newOffset = ClampVerticalOffset(newOffset);
-        if (newOffset.Equals(_verticalOffset))
+        _scroll.DpiScale = GetDpi() / 96.0;
+        _scroll.SetMetricsDip(axis: 1, extentDip: _extentHeight, viewportDip: viewport);
+        _scroll.SetOffsetDip(axis: 1, newOffset);
+        double applied = _scroll.GetOffsetDip(axis: 1);
+        if (applied.Equals(oldOffset))
         {
             return;
         }
 
-        _verticalOffset = newOffset;
         if (_vBar.IsVisible)
         {
-            _vBar.Value = _verticalOffset;
+            _vBar.Value = applied;
         }
 
         InvalidateVisual();
@@ -479,17 +491,6 @@ public class ListBox : Control
         return Math.Max(18, FontSize * 2);
     }
 
-    private double ClampVerticalOffset(double value)
-    {
-        double max = Math.Max(0, _extentHeight - _viewportHeight);
-        if (double.IsNaN(value) || double.IsInfinity(value))
-        {
-            return 0;
-        }
-
-        return Math.Clamp(value, 0, max);
-    }
-
     private double GetViewportHeightDip()
     {
         if (Bounds.Width > 0 && Bounds.Height > 0)
@@ -497,7 +498,8 @@ public class ListBox : Control
             var snapped = GetSnappedBorderBounds(Bounds);
             var borderInset = GetBorderVisualInset();
             var innerBounds = snapped.Deflate(new Thickness(borderInset));
-            return Math.Max(0, innerBounds.Height - Padding.VerticalThickness);
+            var dpiScale = GetDpi() / 96.0;
+            return LayoutRounding.RoundToPixel(Math.Max(0, innerBounds.Height - Padding.VerticalThickness), dpiScale);
         }
 
         return _viewportHeight;
