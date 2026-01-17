@@ -24,4 +24,14 @@ public interface IWindowBackend : IDisposable
     void CaptureMouse(UIElement element);
 
     void ReleaseMouseCapture();
+
+    /// <summary>
+    /// Converts a point from window client coordinates (DIPs) to screen coordinates (device pixels).
+    /// </summary>
+    Point ClientToScreen(Point clientPointDip);
+
+    /// <summary>
+    /// Converts a point from screen coordinates (device pixels) to window client coordinates (DIPs).
+    /// </summary>
+    Point ScreenToClient(Point screenPointPx);
 }

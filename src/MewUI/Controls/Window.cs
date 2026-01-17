@@ -122,6 +122,26 @@ public class Window : ContentControl
 
     public nint Handle => _backend?.Handle ?? 0;
 
+    internal Point ClientToScreen(Point clientPointDip)
+    {
+        if (_backend == null || Handle == 0)
+        {
+            throw new InvalidOperationException("Window is not initialized.");
+        }
+
+        return _backend.ClientToScreen(clientPointDip);
+    }
+
+    internal Point ScreenToClient(Point screenPointPx)
+    {
+        if (_backend == null || Handle == 0)
+        {
+            throw new InvalidOperationException("Window is not initialized.");
+        }
+
+        return _backend.ScreenToClient(screenPointPx);
+    }
+
     public WindowSize WindowSize
     {
         get;

@@ -346,6 +346,11 @@ internal sealed class Win32WindowBackend : IWindowBackend
             suggestedRect.Width, suggestedRect.Height,
             0x0004 | 0x0010); // SWP_NOZORDER | SWP_NOACTIVATE
 
+        // WM_SIZE is usually sent after SetWindowPos, but we need a consistent client size for the
+        // layout pass we run below (otherwise a stale _clientSizeDip can cause a 1-frame "broken" layout).
+        User32.GetClientRect(Handle, out var clientRect);
+        Window.SetClientSizeDip(clientRect.Width / Window.DpiScale, clientRect.Height / Window.DpiScale);
+
         Window.RaiseDpiChanged(oldDpi, newDpi);
         Window.PerformLayout();
         Window.Invalidate();
@@ -616,11 +621,21 @@ internal sealed class Win32WindowBackend : IWindowBackend
         return new Point(x / Window.DpiScale, y / Window.DpiScale);
     }
 
-    private Point ClientToScreen(Point clientPoint)
+    private Point ClientToScreenInternal(Point clientPoint)
     {
         var pt = new POINT((int)(clientPoint.X * Window.DpiScale), (int)(clientPoint.Y * Window.DpiScale));
         User32.ClientToScreen(Handle, ref pt);
         return new Point(pt.x, pt.y);
+    }
+
+    public Point ClientToScreen(Point clientPointDip)
+        => ClientToScreenInternal(clientPointDip);
+
+    public Point ScreenToClient(Point screenPointPx)
+    {
+        var pt = new POINT((int)screenPointPx.X, (int)screenPointPx.Y);
+        User32.ScreenToClient(Handle, ref pt);
+        return new Point(pt.x / Window.DpiScale, pt.y / Window.DpiScale);
     }
 
     public void Dispose()

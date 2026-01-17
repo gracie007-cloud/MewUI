@@ -111,6 +111,40 @@ internal sealed class X11WindowBackend : IWindowBackend
         }
     }
 
+    public Point ClientToScreen(Point clientPointDip)
+    {
+        if (Display == 0 || Handle == 0)
+        {
+            throw new InvalidOperationException("Window is not initialized.");
+        }
+
+        int screen = NativeX11.XDefaultScreen(Display);
+        nint root = NativeX11.XRootWindow(Display, screen);
+
+        int x = (int)Math.Round(clientPointDip.X * Window.DpiScale);
+        int y = (int)Math.Round(clientPointDip.Y * Window.DpiScale);
+
+        NativeX11.XTranslateCoordinates(Display, Handle, root, x, y, out int rx, out int ry, out _);
+        return new Point(rx, ry);
+    }
+
+    public Point ScreenToClient(Point screenPointPx)
+    {
+        if (Display == 0 || Handle == 0)
+        {
+            throw new InvalidOperationException("Window is not initialized.");
+        }
+
+        int screen = NativeX11.XDefaultScreen(Display);
+        nint root = NativeX11.XRootWindow(Display, screen);
+
+        int x = (int)Math.Round(screenPointPx.X);
+        int y = (int)Math.Round(screenPointPx.Y);
+
+        NativeX11.XTranslateCoordinates(Display, root, Handle, x, y, out int cx, out int cy, out _);
+        return new Point(cx / Window.DpiScale, cy / Window.DpiScale);
+    }
+
     private void CreateWindow()
     {
         Display = _host.Display;

@@ -1,4 +1,5 @@
 using Aprillz.MewUI.Controls;
+using Aprillz.MewUI;
 
 namespace Aprillz.MewUI.Platform.Linux;
 
@@ -28,6 +29,12 @@ internal sealed class LinuxWindowBackend : IWindowBackend
     public void CaptureMouse(UIElement element) { }
 
     public void ReleaseMouseCapture() { }
+
+    public Point ClientToScreen(Point clientPointDip)
+        => throw new PlatformNotSupportedException("Linux window backend is not implemented yet.");
+
+    public Point ScreenToClient(Point screenPointPx)
+        => throw new PlatformNotSupportedException("Linux window backend is not implemented yet.");
 
     public void Dispose()
     {

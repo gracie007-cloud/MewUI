@@ -117,6 +117,17 @@ internal static partial class X11
 
     [LibraryImport(LibraryName)]
     public static partial int XSetWMNormalHints(nint display, nint window, ref XSizeHints hints);
+
+    [LibraryImport(LibraryName)]
+    public static partial int XTranslateCoordinates(
+        nint display,
+        nint src_w,
+        nint dest_w,
+        int src_x,
+        int src_y,
+        out int dest_x_return,
+        out int dest_y_return,
+        out nint child_return);
 }
 
 [StructLayout(LayoutKind.Sequential)]
