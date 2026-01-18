@@ -798,6 +798,10 @@ public class Window : ContentControl
     {
         entry.Element.Measure(new Size(entry.Bounds.Width, entry.Bounds.Height));
         entry.Element.Arrange(entry.Bounds);
+
+        // Keep the stored bounds consistent with the actually arranged (layout-rounded) bounds,
+        // otherwise hit-testing (e.g. mouse wheel on popup content) can miss by sub-pixel rounding.
+        entry.Bounds = entry.Element.Bounds;
     }
 
     public override UIElement? HitTest(Point point)

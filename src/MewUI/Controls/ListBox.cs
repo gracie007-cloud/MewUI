@@ -58,6 +58,37 @@ public class ListBox : Control
 
     public event Action<int>? SelectionChanged;
 
+    /// <summary>
+    /// Fired when the user activates an item (e.g. click or Enter), even if the selection didn't change.
+    /// </summary>
+    public event Action<int>? ItemActivated;
+
+    private bool TryGetItemIndexAt(Point position, out int index)
+    {
+        index = -1;
+
+        // Don't treat scrollbar interaction as item hit/activation.
+        if (_vBar.IsVisible && _vBar.Bounds.Contains(position))
+        {
+            return false;
+        }
+
+        var bounds = GetSnappedBorderBounds(Bounds);
+        var dpiScale = GetDpi() / 96.0;
+        var innerBounds = bounds.Deflate(new Thickness(GetBorderVisualInset()));
+        var viewportBounds = innerBounds;
+        var contentBounds = LayoutRounding.SnapRectEdgesToPixels(viewportBounds.Deflate(Padding), dpiScale);
+
+        double itemHeight = ResolveItemHeight();
+        if (itemHeight <= 0)
+        {
+            return false;
+        }
+
+        index = (int)((position.Y - contentBounds.Y + _scroll.GetOffsetDip(1)) / itemHeight);
+        return index >= 0 && index < _items.Count;
+    }
+
     public override bool Focusable => true;
 
     protected override Color DefaultBackground => Theme.Current.Palette.ControlBackground;
@@ -339,20 +370,31 @@ public class ListBox : Control
 
         Focus();
 
-        var theme = GetTheme();
-        var bounds = GetSnappedBorderBounds(Bounds);
-        var dpiScale = GetDpi() / 96.0;
-        var innerBounds = bounds.Deflate(new Thickness(GetBorderVisualInset()));
-        var viewportBounds = innerBounds;
-
-        var contentBounds = LayoutRounding.SnapRectEdgesToPixels(viewportBounds.Deflate(Padding), dpiScale);
-
-        int index = (int)((e.Position.Y - contentBounds.Y + _scroll.GetOffsetDip(1)) / ResolveItemHeight());
-        if (index >= 0 && index < _items.Count)
+        if (TryGetItemIndexAt(e.Position, out int index))
         {
             SelectedIndex = index;
             e.Handled = true;
         }
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+
+        if (!IsEnabled || e.Handled || e.Button != MouseButton.Left)
+        {
+            return;
+        }
+
+        if (!TryGetItemIndexAt(e.Position, out int index))
+        {
+            return;
+        }
+
+        // Ensure selection matches the activated item (can differ if mouse-down started elsewhere).
+        SelectedIndex = index;
+        ItemActivated?.Invoke(index);
+        e.Handled = true;
     }
 
     protected override void OnMouseWheel(MouseWheelEventArgs e)
@@ -404,6 +446,14 @@ public class ListBox : Control
             }
 
             e.Handled = true;
+        }
+        else if (e.Key == Key.Enter)
+        {
+            if (SelectedIndex >= 0 && SelectedIndex < _items.Count)
+            {
+                ItemActivated?.Invoke(SelectedIndex);
+                e.Handled = true;
+            }
         }
     }
 

@@ -10,6 +10,7 @@ public sealed class ComboBox : Control, IPopupOwner
     private bool _restoreFocusAfterPopupClose;
     private ValueBinding<int>? _selectedIndexBinding;
     private bool _updatingFromSource;
+    private Rect? _lastPopupBounds;
 
     public IList<string> Items => _items;
 
@@ -408,6 +409,30 @@ public sealed class ComboBox : Control, IPopupOwner
 
     private const double ArrowAreaWidth = 22;
 
+    private ListBox EnsurePopupList()
+    {
+        if (_popupList == null)
+        {
+            _popupList = new ListBox();
+            _popupList.SelectionChanged += OnPopupListSelectionChanged;
+            _popupList.ItemActivated += OnPopupListItemActivated;
+        }
+
+        return _popupList;
+    }
+
+    private void SyncPopupList(ListBox list)
+    {
+        list.Items.Clear();
+        foreach (var item in _items)
+        {
+            list.AddItem(item);
+        }
+
+        list.SelectedIndex = SelectedIndex;
+        list.ItemHeight = ResolveItemHeight();
+    }
+
     private void ShowPopup()
     {
         var root = FindVisualRoot();
@@ -416,38 +441,21 @@ public sealed class ComboBox : Control, IPopupOwner
             return;
         }
 
-        if (_popupList == null)
-        {
-            _popupList = new ListBox();
-            _popupList.Items.Clear();
-            foreach (var item in _items)
-            {
-                _popupList.AddItem(item);
-            }
-
-            _popupList.SelectedIndex = SelectedIndex;
-        }
-        else
-        {
-            // Sync items/selection.
-            _popupList.Items.Clear();
-            foreach (var item in _items)
-            {
-                _popupList.AddItem(item);
-            }
-
-            _popupList.SelectedIndex = SelectedIndex;
-        }
-
-        _popupList.SelectionChanged -= OnPopupListSelectionChanged;
-        _popupList.SelectionChanged += OnPopupListSelectionChanged;
+        var list = EnsurePopupList();
+        SyncPopupList(list);
 
         var popupBounds = CalculatePopupBounds(window);
-        window.ShowPopup(this, _popupList, popupBounds);
-        window.FocusManager.SetFocus(_popupList);
+        window.ShowPopup(this, list, popupBounds);
+        _lastPopupBounds = popupBounds;
+        window.FocusManager.SetFocus(list);
     }
 
     private void OnPopupListSelectionChanged(int index)
+    {
+        SelectedIndex = index;
+     }
+
+    private void OnPopupListItemActivated(int index)
     {
         SelectedIndex = index;
         _restoreFocusAfterPopupClose = true;
@@ -466,6 +474,8 @@ public sealed class ComboBox : Control, IPopupOwner
         {
             window.ClosePopup(_popupList);
         }
+
+        _lastPopupBounds = null;
     }
 
     private void UpdatePopupBounds()
@@ -482,7 +492,13 @@ public sealed class ComboBox : Control, IPopupOwner
         }
 
         var popupBounds = CalculatePopupBounds(window);
+        if (_lastPopupBounds is Rect last && popupBounds.Equals(last))
+        {
+            return;
+        }
+
         window.UpdatePopup(_popupList, popupBounds);
+        _lastPopupBounds = popupBounds;
     }
 
     private Rect CalculatePopupBounds(Window window)
@@ -494,20 +510,8 @@ public sealed class ComboBox : Control, IPopupOwner
             width = 120;
         }
 
-        _popupList!.Measure(new Size(width, double.PositiveInfinity));
-        double desiredHeight = _popupList.DesiredSize.Height;
-        double height = Math.Min(desiredHeight, Math.Max(0, MaxDropDownHeight));
-
-        double x = bounds.X;
-        double belowY = bounds.Bottom;
-        double aboveY = bounds.Y - height;
-
         var client = window.ClientSizeDip;
-
-        bool fitsBelow = belowY + height <= client.Height;
-        bool fitsAbove = aboveY >= 0;
-
-        double y = fitsBelow || !fitsAbove ? belowY : aboveY;
+        double x = bounds.X;
 
         // Clamp horizontally to client area.
         if (x + width > client.Width)
@@ -520,6 +524,49 @@ public sealed class ComboBox : Control, IPopupOwner
             x = 0;
         }
 
+        // Do not measure the popup ListBox with infinite height; it can reset its scroll state.
+        double itemHeight = ResolveItemHeight();
+        double chrome = _popupList!.Padding.VerticalThickness + (_popupList.BorderThickness * 2);
+        double desiredHeight = _items.Count * itemHeight + chrome;
+        double maxHeight = Math.Max(0, MaxDropDownHeight);
+        double desiredClamped = Math.Min(desiredHeight, maxHeight);
+
+        double belowY = bounds.Bottom;
+        double availableBelow = Math.Max(0, client.Height - belowY);
+        double availableAbove = Math.Max(0, bounds.Y);
+
+        bool preferBelow = availableBelow >= availableAbove;
+
+        double height;
+        double y;
+
+        if (preferBelow)
+        {
+            if (availableBelow > 0 || availableAbove <= 0)
+            {
+                y = belowY;
+                height = Math.Min(desiredClamped, availableBelow);
+            }
+            else
+            {
+                height = Math.Min(desiredClamped, availableAbove);
+                y = bounds.Y - height;
+            }
+        }
+        else
+        {
+            if (availableAbove > 0 || availableBelow <= 0)
+            {
+                height = Math.Min(desiredClamped, availableAbove);
+                y = bounds.Y - height;
+            }
+            else
+            {
+                y = belowY;
+                height = Math.Min(desiredClamped, availableBelow);
+            }
+        }
+
         return new Rect(x, y, width, height);
     }
 
@@ -529,6 +576,7 @@ public sealed class ComboBox : Control, IPopupOwner
         {
             ClosePopup();
             _popupList.SelectionChanged -= OnPopupListSelectionChanged;
+            _popupList.ItemActivated -= OnPopupListItemActivated;
             _popupList.Dispose();
             _popupList = null;
         }
@@ -544,6 +592,7 @@ public sealed class ComboBox : Control, IPopupOwner
         {
             _isDropDownOpen = false;
             InvalidateVisual();
+            _lastPopupBounds = null;
 
             var root = FindVisualRoot();
             if (root is Window window && window.FocusManager.FocusedElement == popup)
