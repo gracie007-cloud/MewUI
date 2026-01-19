@@ -164,15 +164,16 @@ var label  = new Label().BindText(percent, v => $"Percent ({v:P0})");
 ---
 ## 🧱 Controls / Panels
 
-Controls:
-- `Button`  
+Controls (implemented):
+- `Button`
 - `Label`, `Image`
 - `TextBox`, `MultiLineTextBox`
-- `CheckBox`, `RadioButton`, 
+- `CheckBox`, `RadioButton`
 - `ComboBox`, `ListBox`
 - `Slider`, `ProgressBar`
 - `TabControl`, `GroupBox`
-- `Window`  
+- `MenuBar`, `ContextMenu`, `ToolTip` (in-window popups)
+- `Window`
 - `DispatcherTimer`
 
 Panels:
@@ -217,6 +218,14 @@ Windowing and the message loop are abstracted behind a platform layer.
 Currently implemented:
 - Windows (`Win32PlatformHost`)
 - Linux/X11 (experimental)
+
+### Linux dialogs dependency
+On Linux, `MessageBox` and file dialogs are currently implemented via external tools:
+- `zenity` (GNOME/GTK)
+- `kdialog` (KDE)
+
+If neither is available in `PATH`, MewUI throws:
+`PlatformNotSupportedException: No supported Linux dialog tool found (zenity/kdialog).`
 
 ---
 ## 📄Docs

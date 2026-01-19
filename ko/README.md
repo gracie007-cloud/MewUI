@@ -167,15 +167,16 @@ var label  = new Label()
 ---
 ## 🧱 컨트롤 / 패널
 
-컨트롤:
-- `Button`  
+컨트롤(구현됨):
+- `Button`
 - `Label`, `Image`
 - `TextBox`, `MultiLineTextBox`
-- `CheckBox`, `RadioButton`, 
+- `CheckBox`, `RadioButton`
 - `ComboBox`, `ListBox`
 - `Slider`, `ProgressBar`
 - `TabControl`, `GroupBox`
-- `Window`  
+- `MenuBar`, `ContextMenu`, `ToolTip` (창 내부 팝업)
+- `Window`
 - `DispatcherTimer`
 
 패널:
@@ -221,6 +222,14 @@ Theme.Current = Theme.Current.WithAccent(Color.FromRgb(214, 176, 82));
 현재 구현
 - Windows (`Win32PlatformHost`)
 - Linux/X11 (experimental)
+
+### Linux Dialog 의존성
+Linux에서 `MessageBox` 및 파일 다이얼로그는 현재 외부 도구를 통해 구현되어 있습니다:
+- `zenity` (GNOME/GTK)
+- `kdialog` (KDE)
+
+두 도구가 모두 `PATH`에서 발견되지 않으면 아래 예외가 발생합니다:
+`PlatformNotSupportedException: No supported Linux dialog tool found (zenity/kdialog).`
 
 ---
 ## 📄 문서
