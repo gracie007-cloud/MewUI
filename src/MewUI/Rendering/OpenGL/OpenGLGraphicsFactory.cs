@@ -1,17 +1,10 @@
 using System.Collections.Concurrent;
 
-using Aprillz.MewUI;
+using Aprillz.MewUI.Rendering.FreeType;
+using Aprillz.MewUI.Rendering.Gdi;
 using Aprillz.MewUI.Resources;
 
 namespace Aprillz.MewUI.Rendering.OpenGL;
-
-#if MEWUI_OPENGL_WIN32
-using Aprillz.MewUI.Rendering.Gdi;
-#endif
-
-#if MEWUI_OPENGL_X11
-using Aprillz.MewUI.Rendering.FreeType;
-#endif
 
 public sealed class OpenGLGraphicsFactory : IGraphicsFactory, IWindowResourceReleaser
 {
@@ -19,41 +12,40 @@ public sealed class OpenGLGraphicsFactory : IGraphicsFactory, IWindowResourceRel
 
     private readonly ConcurrentDictionary<nint, IOpenGLWindowResources> _windows = new();
 
-    private OpenGLGraphicsFactory() { }
+    private OpenGLGraphicsFactory()
+    { }
 
     public GraphicsBackend Backend => GraphicsBackend.OpenGL;
 
     public IFont CreateFont(string family, double size, FontWeight weight = FontWeight.Normal,
         bool italic = false, bool underline = false, bool strikethrough = false)
     {
-#if MEWUI_OPENGL_WIN32
-        uint dpi = DpiHelper.GetSystemDpi();
-        return new GdiFont(family, size, weight, italic, underline, strikethrough, dpi);
-#elif MEWUI_OPENGL_X11
+        if (OperatingSystem.IsWindows())
+        {
+            uint dpi = DpiHelper.GetSystemDpi();
+            return new GdiFont(family, size, weight, italic, underline, strikethrough, dpi);
+        }
+
         var path = LinuxFontResolver.ResolveFontPath(family, weight, italic);
         int px = (int)Math.Max(1, Math.Round(size)); // Assume 96dpi for now.
         return path != null
             ? new FreeTypeFont(family, size, weight, italic, underline, strikethrough, path, px)
             : new BasicFont(family, size, weight, italic, underline, strikethrough);
-#else
-        return new BasicFont(family, size, weight, italic, underline, strikethrough);
-#endif
     }
 
     public IFont CreateFont(string family, double size, uint dpi, FontWeight weight = FontWeight.Normal,
         bool italic = false, bool underline = false, bool strikethrough = false)
     {
-#if MEWUI_OPENGL_WIN32
-        return new GdiFont(family, size, weight, italic, underline, strikethrough, dpi);
-#elif MEWUI_OPENGL_X11
+        if (OperatingSystem.IsWindows())
+        {
+            return new GdiFont(family, size, weight, italic, underline, strikethrough, dpi);
+        }
+
         var path = LinuxFontResolver.ResolveFontPath(family, weight, italic);
         int px = (int)Math.Max(1, Math.Round(size * dpi / 96.0, MidpointRounding.AwayFromZero));
         return path != null
             ? new FreeTypeFont(family, size, weight, italic, underline, strikethrough, path, px)
             : new BasicFont(family, size, weight, italic, underline, strikethrough);
-#else
-        return new BasicFont(family, size, weight, italic, underline, strikethrough);
-#endif
     }
 
     public IImage CreateImageFromFile(string path) =>
@@ -76,28 +68,31 @@ public sealed class OpenGLGraphicsFactory : IGraphicsFactory, IWindowResourceRel
 
         var resources = _windows.GetOrAdd(hwnd, _ =>
         {
-#if MEWUI_OPENGL_WIN32
-            return WglOpenGLWindowResources.Create(hwnd, hdc);
-#elif MEWUI_OPENGL_X11
-            // Linux: hwnd = X11 Window (Drawable), hdc = Display*
-            return GlxOpenGLWindowResources.Create(hdc, hwnd);
-#else
-            throw new PlatformNotSupportedException("This OpenGL backend build is not configured for the current platform.");
-#endif
+            if (OperatingSystem.IsWindows())
+            {
+                return WglOpenGLWindowResources.Create(hwnd, hdc);
+            }
+
+            if (OperatingSystem.IsLinux())
+            {
+                // Linux: hwnd = X11 Window (Drawable), hdc = Display*
+                return GlxOpenGLWindowResources.Create(hdc, hwnd);
+            }
+
+            throw new PlatformNotSupportedException("OpenGL backend is supported on Windows and Linux only.");
         });
         return new OpenGLGraphicsContext(hwnd, hdc, dpiScale, resources);
     }
 
     public IGraphicsContext CreateMeasurementContext(uint dpi)
     {
-#if MEWUI_OPENGL_WIN32
-        var hdc = Native.User32.GetDC(0);
-        return new GdiMeasurementContext(hdc, dpi);
-#elif MEWUI_OPENGL_X11
+        if (OperatingSystem.IsWindows())
+        {
+            var hdc = Aprillz.MewUI.Native.User32.GetDC(0);
+            return new GdiMeasurementContext(hdc, dpi);
+        }
+
         return new OpenGLMeasurementContext(dpi);
-#else
-        return new OpenGLMeasurementContext(dpi);
-#endif
     }
 
     public void ReleaseWindowResources(nint hwnd)
