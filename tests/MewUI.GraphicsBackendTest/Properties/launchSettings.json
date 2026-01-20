@@ -1,0 +1,15 @@
+{
+  "profiles": {
+    "DirectX": {
+      "commandName": "Project"
+    },
+    "OpenGL": {
+      "commandName": "Project",
+      "commandLineArgs": "--gl"
+    },
+    "GDI": {
+      "commandName": "Project",
+      "commandLineArgs": "--gdi"
+    }
+  }
+}
