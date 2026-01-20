@@ -760,12 +760,20 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
             return -needed;
         }
 
-        float offset = (thicknessPx & 1) == 1 ? 0.5f : 0f;
+        // Pixel snapping for odd stroke widths:
+        // For a 1px stroke, OpenGL's rasterization matches best when the path lies on half-pixel edges.
+        // Instead of shifting the whole ellipse, shrink radii by 0.5 so the center stays stable.
+        float snap = (thicknessPx & 1) == 1 ? 0.5f : 0f;
+        if (snap != 0)
+        {
+            rx = Math.Max(0.5f, rx - snap);
+            ry = Math.Max(0.5f, ry - snap);
+        }
         for (int i = 0; i < count; i++)
         {
             float t = (float)(i % segments) / segments * (float)(Math.PI * 2);
-            float x = cx + (float)Math.Cos(t) * rx + offset;
-            float y = cy + (float)Math.Sin(t) * ry + offset;
+            float x = cx + (float)Math.Cos(t) * rx;
+            float y = cy + (float)Math.Sin(t) * ry;
             int o = i * 2;
             pts[o] = x;
             pts[o + 1] = y;
