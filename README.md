@@ -13,7 +13,7 @@
 
 ---
 
-**😺 MewUI** is a cross-platform and lightweight, code-first .NET GUI library aimed at NativeAOT.
+**😺 MewUI** is a cross-platform and lightweight, code-first .NET GUI framework aimed at NativeAOT.
 
 ### 🧪 Experimental Prototype
   > [!IMPORTANT]  
@@ -117,7 +117,7 @@ https://github.com/user-attachments/assets/40f4da93-6176-4b2c-9799-09751ca27009
 ---
 ## 🎯 Concept
 
-### MewUI is a code-first UI library with three priorities:
+### MewUI is a code-first GUI framework with three priorities:
 - **NativeAOT + trimming friendliness**
 - **Small footprint, fast startup, low memory usage**
 - **Fluent C# markup** for building UI trees (no XAML)

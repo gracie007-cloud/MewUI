@@ -11,7 +11,7 @@
 
 ---
 
-**😺 MewUI**는 **크로스플랫폼** **NativeAOT + Trim** 앱을 목표로 하는, 코드 기반(code-first) 경량 .NET GUI 라이브러리입니다.
+**😺 MewUI**는 **크로스플랫폼** **NativeAOT + Trim** 앱을 목표로 하는, 코드 기반(code-first) 경량 .NET GUI 프레임워크입니다.
 
 ### 🧪 실험적 프로토타입
   > [!IMPORTANT]
@@ -118,7 +118,7 @@ https://github.com/user-attachments/assets/40f4da93-6176-4b2c-9799-09751ca27009
 ---
 ## 🎯 컨셉
 
-### MewUI는 아래 4가지를 최우선으로 둔 code-first UI 라이브러리
+### MewUI는 아래 4가지를 최우선으로 둔 code-first GUI 프레임워크
 - **NativeAOT + Trim 친화**
 - 작은 크기, 빠른 시작시간, 적은 메모리 사용
 - **XAML 없이 Fluent한 C# 마크업**으로 UI 트리 구성
