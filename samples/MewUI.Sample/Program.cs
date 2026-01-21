@@ -204,7 +204,7 @@ FrameworkElement AccentPicker() => new StackPanel()
             .Spacing(8)
             .ItemWidth(28)
             .ItemHeight(28)
-            .Children(Theme.BuiltInAccents.Select(AccentSwatch).ToArray())
+            .Children(BuiltInAccent.Accents.Select(AccentSwatch).ToArray())
     );
 
 Button AccentSwatch(Accent accent) =>
