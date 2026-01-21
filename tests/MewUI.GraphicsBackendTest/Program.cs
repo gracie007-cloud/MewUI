@@ -1,8 +1,6 @@
 using Aprillz.MewUI;
-using Aprillz.MewUI.Backends;
 using Aprillz.MewUI.Controls;
 using Aprillz.MewUI.GraphicsBackendTest;
-using Aprillz.MewUI.PlatformHosts;
 
 static void Startup()
 {
@@ -10,25 +8,22 @@ static void Startup()
 
     if (OperatingSystem.IsWindows())
     {
-        Win32Platform.Register();
-
         if (args.Any(a => a is "--gdi"))
         {
-            GdiBackend.Register();
+            Application.DefaultGraphicsBackend = GraphicsBackend.Gdi;
         }
         else if (args.Any(a => a is "--gl"))
         {
-            OpenGLWin32Backend.Register();
+            Application.DefaultGraphicsBackend = GraphicsBackend.OpenGL;
         }
         else
         {
-            Direct2DBackend.Register();
+            Application.DefaultGraphicsBackend = GraphicsBackend.Direct2D;
         }
     }
     else
     {
-        X11Platform.Register();
-        OpenGLX11Backend.Register();
+        Application.DefaultGraphicsBackend = GraphicsBackend.OpenGL;
     }
 }
 
@@ -36,7 +31,7 @@ Startup();
 
 var window = new Window()
     .Title("MewUI.GraphicsBackendTest")
-    .Fixed(1000, 800)
+    .Fixed(1000, 860)
     .Content(new GraphicsBackendTestView());
 
 Application.Run(window);
