@@ -4,8 +4,6 @@ public sealed class Palette
 {
     private readonly ThemeSeed _seed;
 
-    public string Name { get; }
-
     public Color WindowBackground { get; }
 
     public Color WindowText { get; }
@@ -49,12 +47,10 @@ public sealed class Palette
     public ThemeSeed Seed => _seed;
 
     public Palette(
-        string name,
         ThemeSeed baseColors,
         Color accent,
         Color? accentText = null)
     {
-        Name = name;
         _seed = baseColors;
 
         var windowBackground = baseColors.WindowBackground;
@@ -96,7 +92,7 @@ public sealed class Palette
 
     public Palette WithAccent(Color accent, Color? accentText = null)
     {
-        return new Palette(Name, _seed, accent, accentText);
+        return new Palette(_seed, accent, accentText);
     }
 
     public static bool IsDarkBackground(Color color) => (color.R + color.G + color.B) < 128 * 3;
@@ -104,7 +100,7 @@ public sealed class Palette
     private static Color ComputeControlBorder(Color windowBackground, Color windowText, Color accent)
     {
         var isDark = IsDarkBackground(windowBackground);
-        var baseBorder = windowBackground.Lerp(windowText, isDark ? 0.15 : 0.21);
+        var baseBorder = windowBackground.Lerp(windowText, isDark ? 0.23 : 0.21);
         return baseBorder.Lerp(accent, isDark ? 0.04 : 0.05);
     }
 

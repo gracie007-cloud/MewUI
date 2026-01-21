@@ -1,9 +1,14 @@
 namespace Aprillz.MewUI;
 
-public readonly record struct ThemeSeed(
-    Color WindowBackground,
-    Color WindowText,
-    Color ControlBackground,
-    Color ButtonFace,
-    Color ButtonDisabledBackground);
+public record ThemeSeed
+{
+    public required Color WindowBackground { get; init; }
 
+    public required Color WindowText { get; init; }
+
+    public required Color ControlBackground { get; init; }
+
+    public required Color ButtonFace { get; init; }
+
+    public required Color ButtonDisabledBackground { get; init; }
+}
