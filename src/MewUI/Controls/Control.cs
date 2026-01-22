@@ -20,17 +20,17 @@ public abstract class Control : FrameworkElement, IDisposable
 
     protected virtual Color DefaultBackground => Color.Transparent;
 
-    protected virtual Color DefaultForeground => Theme.Current.Palette.WindowText;
+    protected virtual Color DefaultForeground => GetTheme().Palette.WindowText;
 
     protected virtual Color DefaultBorderBrush => Color.Transparent;
 
-    protected virtual string DefaultFontFamily => Theme.Current.FontFamily;
+    protected virtual string DefaultFontFamily => GetTheme().FontFamily;
 
-    protected virtual double DefaultFontSize => Theme.Current.FontSize;
+    protected virtual double DefaultFontSize => GetTheme().FontSize;
 
-    protected virtual FontWeight DefaultFontWeight => Theme.Current.FontWeight;
+    protected virtual FontWeight DefaultFontWeight => GetTheme().FontWeight;
 
-    internal static bool PreferFillStrokeTrick { get; } = true;
+    internal static bool PreferFillStrokeTrick { get; } = false;
 
     public string? ToolTipText { get; set; }
 
@@ -251,10 +251,7 @@ public abstract class Control : FrameworkElement, IDisposable
     /// </summary>
     protected IFont GetFont(IGraphicsFactory factory)
     {
-        if (_font == null)
-        {
-            _font = factory.CreateFont(FontFamily, FontSize, GetDpi(), FontWeight);
-        }
+        _font ??= factory.CreateFont(FontFamily, FontSize, GetDpi(), FontWeight);
 
         return _font;
     }
@@ -265,23 +262,17 @@ public abstract class Control : FrameworkElement, IDisposable
     {
         _font?.Dispose();
         _font = null;
+
         InvalidateMeasure();
         InvalidateVisual();
     }
 
-    internal void NotifyThemeChanged(Theme oldTheme, Theme newTheme) => OnThemeChanged(oldTheme, newTheme);
-
-    protected virtual void OnThemeChanged(Theme oldTheme, Theme newTheme)
+    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
     {
         _font?.Dispose();
         _font = null;
-        InvalidateMeasure();
-        InvalidateVisual();
-    }
 
-    protected Theme GetTheme()
-    {
-        return Theme.Current;
+        base.OnThemeChanged(oldTheme, newTheme);
     }
 
     protected readonly struct VisualState

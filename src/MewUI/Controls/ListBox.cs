@@ -55,7 +55,7 @@ public class ListBox : Control
     {
         get;
         set { field = value; InvalidateMeasure(); InvalidateVisual(); }
-    } = Theme.Current.ListItemPadding;
+    }
 
     public event Action<int>? SelectionChanged;
 
@@ -92,13 +92,15 @@ public class ListBox : Control
 
     public override bool Focusable => true;
 
-    protected override Color DefaultBackground => Theme.Current.Palette.ControlBackground;
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBackground => GetTheme().Palette.ControlBackground;
+
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
 
     public ListBox()
     {
         BorderThickness = 1;
         Padding = new Thickness(1);
+        ItemPadding = GetTheme().ListItemPadding;
 
         _vBar = new ScrollBar { Orientation = Orientation.Vertical, IsVisible = false };
         _vBar.Parent = this;

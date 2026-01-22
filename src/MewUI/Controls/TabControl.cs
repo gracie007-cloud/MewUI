@@ -94,9 +94,9 @@ public sealed class TabControl : Control
         }
     }
 
-    protected override Color DefaultBackground => Theme.Current.Palette.ContainerBackground;
+    protected override Color DefaultBackground => GetTheme().Palette.ContainerBackground;
 
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
 
     public override bool Focusable => true;
 
@@ -222,6 +222,7 @@ public sealed class TabControl : Control
     public void AddTabs(params TabItem[] tabs)
     {
         ArgumentNullException.ThrowIfNull(tabs);
+
         for (int i = 0; i < tabs.Length; i++)
         {
             AddTab(tabs[i]);
@@ -325,17 +326,20 @@ public sealed class TabControl : Control
             inner.Width,
             Math.Max(0, inner.Height - headerRect.Height + theme.ControlCornerRadius - borderInset));
 
-        if (contentRect.Height > 0)
+
+        var outline = GetOutlineColor(theme);
+
+
+        if (contentRect.Height <= 0)
         {
-            context.FillRectangle(contentRect, contentBg);
+            return;
         }
+
+        DrawBackgroundAndBorder(context, contentRect, contentBg, outline, 0);
 
         if (borderInset > 0)
         {
-            // Outline: focus color should wrap selected header + content.
-            var outline = GetOutlineColor(theme);
-            DrawContentOutline(context, contentRect, outline, borderInset);
-            //context.DrawRectangle(contentRect, outline, borderInset);
+            DrawContentOutline(context, contentRect, contentBg, borderInset);
         }
     }
 
@@ -557,40 +561,23 @@ public sealed class TabControl : Control
             return;
         }
 
-        thickness = Math.Max(1, thickness);
+        var halfThickness = (thickness / 2);
 
         var topY = contentRect.Y;
         var leftX = contentRect.X;
         var rightX = contentRect.Right;
-        var bottomY = contentRect.Bottom;
 
-        // Left / Right / Bottom always.
-        context.DrawLine(new Point(leftX, topY), new Point(leftX, bottomY), color, thickness);
-        context.DrawLine(new Point(rightX, topY), new Point(rightX, bottomY), color, thickness);
-        context.DrawLine(new Point(leftX, bottomY), new Point(rightX, bottomY), color, thickness);
-
-        // Top: leave a gap under the selected tab so the outline wraps header + content.
         if (SelectedIndex >= 0 &&
             SelectedIndex < _headerStrip.Count &&
             _headerStrip[SelectedIndex] is TabHeaderButton btn &&
             btn.Bounds.Width > 0)
         {
-            double gapL = Math.Clamp(btn.Bounds.X, leftX, rightX);
-            double gapR = Math.Clamp(btn.Bounds.Right, leftX, rightX);
+            double gapL = Math.Clamp(btn.Bounds.Left + thickness, leftX, rightX);
+            double gapR = Math.Clamp(btn.Bounds.Right - thickness, leftX, rightX);
 
-            if (gapL > leftX)
-            {
-                context.DrawLine(new Point(leftX, topY), new Point(gapL + thickness, topY), color, thickness);
-            }
+            var rect = new Rect(gapL, topY - halfThickness, gapR - gapL, thickness * 2);
 
-            if (gapR < rightX)
-            {
-                context.DrawLine(new Point(gapR - thickness, topY), new Point(rightX, topY), color, thickness);
-            }
-        }
-        else
-        {
-            context.DrawLine(new Point(leftX, topY), new Point(rightX, topY), color, thickness);
+            context.FillRectangle(rect, color);
         }
     }
 }

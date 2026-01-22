@@ -11,7 +11,13 @@ public abstract class RangeBase : Control
         get => _minimum;
         set
         {
-            _minimum = Sanitize(value);
+            var sanitized = Sanitize(value);
+            if (_minimum.Equals(sanitized))
+            {
+                return;
+            }
+
+            _minimum = sanitized;
             CoerceValueAfterRangeChange();
             InvalidateVisual();
         }
@@ -22,7 +28,13 @@ public abstract class RangeBase : Control
         get => _maximum;
         set
         {
-            _maximum = Sanitize(value);
+            var sanitized = Sanitize(value);
+            if (_maximum.Equals(sanitized))
+            {
+                return;
+            }
+
+            _maximum = sanitized;
             CoerceValueAfterRangeChange();
             InvalidateVisual();
         }

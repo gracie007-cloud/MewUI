@@ -20,6 +20,7 @@ public sealed class ContextMenu : Control, IPopupOwner
     private double _maxTextWidth;
     private double _maxShortcutWidth;
     private bool _hasAnyShortcut;
+    private Thickness? _itemPadding;
 
     public Menu Menu => _menu;
 
@@ -33,9 +34,9 @@ public sealed class ContextMenu : Control, IPopupOwner
 
     public Thickness ItemPadding
     {
-        get;
-        set { field = value; InvalidateMeasure(); InvalidateVisual(); }
-    } = Theme.Current.ListItemPadding;
+        get => _itemPadding ??= GetTheme().ListItemPadding;
+        set { _itemPadding = value; InvalidateMeasure(); InvalidateVisual(); }
+    }
 
     public double MaxMenuHeight
     {
@@ -72,9 +73,9 @@ public sealed class ContextMenu : Control, IPopupOwner
         };
     }
 
-    protected override Color DefaultBackground => Theme.Current.Palette.ControlBackground;
+    protected override Color DefaultBackground => GetTheme().Palette.ControlBackground;
 
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
 
     public void AddItem(string text, Action? onClick = null, bool isEnabled = true, string? shortcutText = null)
     {

@@ -7,8 +7,8 @@ namespace Aprillz.MewUI.Controls;
 /// </summary>
 public sealed class GroupBox : HeaderedContentControl
 {
-    protected override Color DefaultBackground => Theme.Current.Palette.ContainerBackground;
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBackground => GetTheme().Palette.ContainerBackground;
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
     protected override bool InvalidateOnMouseOverChanged => false;
 
     public double HeaderInset
@@ -20,8 +20,8 @@ public sealed class GroupBox : HeaderedContentControl
     public GroupBox()
     {
         BorderThickness = 1;
-        Padding = new Thickness(10);
-        HeaderSpacing = 8;
+        Padding = new Thickness(8);
+        HeaderSpacing = 4;
     }
 
     public override bool Focusable => false;

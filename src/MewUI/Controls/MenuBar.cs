@@ -46,9 +46,9 @@ public sealed class MenuBar : Control, IPopupOwner
         }
     }
 
-    protected override Color DefaultBackground => Theme.Current.Palette.ButtonFace;
+    protected override Color DefaultBackground => GetTheme().Palette.ButtonFace;
 
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
 
     protected override Size MeasureContent(Size availableSize)
     {

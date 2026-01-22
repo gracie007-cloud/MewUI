@@ -11,14 +11,14 @@ internal sealed class TabHeaderButton : ContentControl
     public bool IsTabEnabled { get; set; } = true;
     public event Action<int>? Clicked;
 
-    protected override Color DefaultBackground => Theme.Current.Palette.ButtonFace;
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBackground => GetTheme().Palette.ButtonFace;
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
 
     public TabHeaderButton()
     {
         BorderThickness = 1;
         Padding = new Thickness(8, 4, 8, 4);
-        MinHeight = Theme.Current.BaseControlHeight;
+        MinHeight = GetTheme().BaseControlHeight;
     }
 
     // Keep header buttons out of the default Tab focus order.
@@ -69,7 +69,7 @@ internal sealed class TabHeaderButton : ContentControl
         // Top-only rounding via clipping:
         // Draw a taller rounded-rect, then clip to the real bounds so the bottom corners are clipped away.
         // This keeps the header looking like VS-style "document tabs" without requiring path geometry support.
-        var rounded = new Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height + radius + 2);
+        var rounded = new Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height + radius + 4);
 
         // Use fill-based border (outer + inner) to avoid stroke centering being clipped by the tight clip.
         DrawBackgroundAndBorder(context, rounded, bg, border, radiusDip);

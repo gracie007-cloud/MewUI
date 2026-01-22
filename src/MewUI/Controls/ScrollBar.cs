@@ -17,7 +17,16 @@ public sealed class ScrollBar : RangeBase
     public double ViewportSize
     {
         get;
-        set { field = value; InvalidateVisual(); }
+        set
+        {
+            if (field.Equals(value))
+            {
+                return;
+            }
+
+            field = value;
+            InvalidateVisual();
+        }
     }
 
     public double SmallChange { get; set; } = 24;

@@ -8,25 +8,6 @@ public record class Theme
 
     public static Theme Dark => field ??= CreateDark();
 
-    public static Theme Current
-    {
-        get => field ?? Light;
-        set
-        {
-            ArgumentNullException.ThrowIfNull(value);
-
-            if (field == value)
-            {
-                return;
-            }
-
-            var old = Current;
-            field = value;
-            CurrentChanged?.Invoke(old, value);
-        }
-    }
-
-    public static Action<Theme, Theme>? CurrentChanged { get; set; }
 
     internal static Theme DefaultMericTheme { get; } = new Theme
     {

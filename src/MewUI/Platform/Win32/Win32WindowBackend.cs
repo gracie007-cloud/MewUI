@@ -296,11 +296,6 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
         User32.GetClientRect(Handle, out var clientRect);
         Window.SetClientSizeDip(clientRect.Width / Window.DpiScale, clientRect.Height / Window.DpiScale);
-
-        if (Window.Background.A == 0)
-        {
-            Window.Background = Window.Theme.Palette.WindowBackground;
-        }
     }
 
     private void ApplyIcons()

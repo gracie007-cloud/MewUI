@@ -29,14 +29,14 @@ public sealed class MultiLineTextBox : TextBase
     private readonly ScrollBar _vBar;
     private readonly ScrollBar _hBar;
 
-    protected override Color DefaultBackground => Theme.Current.Palette.ControlBackground;
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBackground => GetTheme().Palette.ControlBackground;
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
 
     public MultiLineTextBox()
     {
         BorderThickness = 1;
         Padding = new Thickness(4);
-        MinHeight = Theme.Current.BaseControlHeight;
+        MinHeight = GetTheme().BaseControlHeight;
         AcceptReturn = true;
 
         _textView = new MultiLineTextView(

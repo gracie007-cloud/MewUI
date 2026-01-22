@@ -797,7 +797,7 @@ internal sealed class OpenGLGraphicsContext : IGraphicsContext
         rx = Math.Min(rx, w / 2f);
         ry = Math.Min(ry, h / 2f);
 
-        int arcSegments = Math.Clamp((int)Math.Ceiling(Math.Max(rx, ry) * 1.0f), 16, 96);
+        int arcSegments = Math.Clamp((int)Math.Ceiling(Math.Max(rx, ry) * 1.0f), 8, 96);
 
         float offset = (thicknessPx & 1) == 1 ? 0.5f : 0f;
         left += offset;

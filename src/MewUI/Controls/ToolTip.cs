@@ -27,9 +27,9 @@ public sealed class ToolTip : Control
         BorderThickness = 1;
     }
 
-    protected override Color DefaultBackground => Theme.Current.Palette.ControlBackground;
+    protected override Color DefaultBackground => GetTheme().Palette.ControlBackground;
 
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
 
     protected override Size MeasureContent(Size availableSize)
     {

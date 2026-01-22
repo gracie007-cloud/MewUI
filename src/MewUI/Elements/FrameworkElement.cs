@@ -7,6 +7,8 @@ using Aprillz.MewUI.Rendering;
 /// </summary>
 public abstract class FrameworkElement : UIElement
 {
+    private Theme _theme = Application.IsRunning ? Application.Current.Theme : Theme.Light;
+
     /// <summary>
     /// Gets the graphics factory from the owning window, or the default factory.
     /// </summary>
@@ -127,6 +129,17 @@ public abstract class FrameworkElement : UIElement
     /// Gets the content bounds (bounds minus padding).
     /// </summary>
     protected Rect ContentBounds => Bounds.Deflate(Padding);
+
+    internal void NotifyThemeChanged(Theme oldTheme, Theme newTheme)
+    {
+        _theme = newTheme;
+
+        OnThemeChanged(oldTheme, newTheme);
+    }
+
+    protected virtual void OnThemeChanged(Theme oldTheme, Theme newTheme) { }
+
+    protected Theme GetTheme() => _theme;
 
     protected override Rect GetArrangedBounds(Rect finalRect)
     {

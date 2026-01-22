@@ -16,7 +16,7 @@ metricsTimer.Tick += (_, _) => UpdateMetrics(appendLog: false);
 Window window;
 var accentSwatches = new List<(Accent accent, Button button)>();
 var currentAccent = Theme.DefaultAccent;
-Theme.Current = Theme.Light;
+var theme = Theme.Light;
 Label title = null!;
 var vm = new DemoViewModel();
 
@@ -94,7 +94,7 @@ Element HeaderSection() => new StackPanel()
         new Label()
             .Ref(out title)
             .Text("Aprillz.MewUI Demo")
-            .Foreground(Theme.Current.Palette.Accent)
+            .Foreground(theme.Palette.Accent)
             .FontSize(20)
             .Bold(),
 
@@ -176,8 +176,8 @@ Element ThemeControls() => new StackPanel()
             .Content("Toggle Theme")
             .OnClick(() =>
             {
-                var nextBase = Palette.IsDarkBackground(Theme.Current.Palette.WindowBackground) ? Theme.Light : Theme.Dark;
-                Theme.Current = window.Theme = nextBase.WithAccent(currentAccent);
+                var nextBase = Palette.IsDarkBackground(Application.Current.Theme.Palette.WindowBackground) ? Theme.Light : Theme.Dark;
+                Application.Current.Theme = nextBase.WithAccent(currentAccent);
                 UpdateAccentSwatches();
             }),
 
@@ -210,7 +210,7 @@ FrameworkElement AccentPicker() => new StackPanel()
 Button AccentSwatch(Accent accent) =>
     new Button()
         .Content(string.Empty)
-        .Background(window.Theme.GetAccentColor(accent))
+        .Background(theme.GetAccentColor(accent))
         .ToolTip(accent.ToString())
         .OnClick(() => ApplyAccent(accent))
         .Apply(b => accentSwatches.Add((accent, b)));
@@ -828,18 +828,18 @@ void UpdateAccentSwatches()
 {
     foreach (var (accent, button) in accentSwatches)
     {
-        button.Background = window.Theme.GetAccentColor(accent);
+        button.Background = Application.Current.Theme.GetAccentColor(accent);
         bool selected = currentAccent == accent;
         button.BorderThickness = selected ? 2 : 1;
     }
-    title.Foreground = Theme.Current.Palette.Accent;
+    title.Foreground = Application.Current.Theme.Palette.Accent;
 }
 
 void ApplyAccent(Accent accent)
 {
     currentAccent = accent;
-    var nextBase = Palette.IsDarkBackground(window.Theme.Palette.WindowBackground) ? Theme.Dark : Theme.Light;
-    Theme.Current = window.Theme = nextBase.WithAccent(accent);
+    var nextBase = Palette.IsDarkBackground(Application.Current.Theme.Palette.WindowBackground) ? Theme.Dark : Theme.Light;
+    Application.Current.Theme = nextBase.WithAccent(accent);
     UpdateAccentSwatches();
 }
 

@@ -12,6 +12,8 @@ internal sealed class GraphicsBackendTestView : ContentControl
 
     public GraphicsBackendTestView()
     {
+        Padding = new Thickness(12);
+
         _canvas = new GraphicsBackendTestCanvas();
 
         _scroll = new ScrollViewer
@@ -49,9 +51,6 @@ internal sealed class GraphicsBackendTestCanvas : Control
     private const double CardGap = 12;
     private const double HeaderHeight = 24;
 
-    private Color _border = new Color(30, 30, 30);
-    private Color _background = new Color(230, 230, 230);
-
     public GraphicsBackendTestCanvas()
     {
         BorderThickness = 0;
@@ -60,14 +59,16 @@ internal sealed class GraphicsBackendTestCanvas : Control
         BuildTests();
     }
 
+    Color border = new Color(30, 30, 30);
+    Color background = new Color(230, 230, 230);
     private void BuildTests()
     {
         _tests.Clear();
 
         _tests.Add(new TestCase("Lines (1px / 2px)", (g, r) =>
         {
-            var c1 = Theme.Current.Palette.Accent;
-            var c2 = _border;
+            var c1 = GetTheme().Palette.Accent;
+            var c2 = border;
             g.DrawLine(new Point(r.X + 8, r.Y + 16), new Point(r.Right - 8, r.Y + 16), c1, 1);
             g.DrawLine(new Point(r.X + 8, r.Y + 32), new Point(r.Right - 8, r.Y + 32), c1, 2);
             g.DrawLine(new Point(r.X + 8, r.Y + 48), new Point(r.Right - 8, r.Y + 48), c2.WithAlpha(0xAA), 1);
@@ -76,69 +77,74 @@ internal sealed class GraphicsBackendTestCanvas : Control
 
         _tests.Add(new TestCase("Rects", (g, r) =>
         {
-            g.DrawRectangle(new Rect(r.X + 10, r.Y + 10, 70, 50), _border, 1);
-            g.FillRectangle(new Rect(r.X + 95, r.Y + 10, 70, 50), Theme.Current.Palette.Accent.WithAlpha(0x66));
-            g.DrawRectangle(new Rect(r.X + 95, r.Y + 10, 70, 50), _border, 1);
 
-            g.DrawRectangle(new Rect(r.X + 10, r.Y + 75, 155, 50), _border, 2);
+            g.DrawRectangle(new Rect(r.X + 10, r.Y + 10, 70, 50), border, 1);
+            g.FillRectangle(new Rect(r.X + 95, r.Y + 10, 70, 50), GetTheme().Palette.Accent.WithAlpha(0x66));
+            g.DrawRectangle(new Rect(r.X + 95, r.Y + 10, 70, 50), border, 1);
+
+            g.DrawRectangle(new Rect(r.X + 10, r.Y + 75, 155, 50), border, 2);
         }));
 
         _tests.Add(new TestCase("RoundedRect", (g, r) =>
         {
-            var bg = Theme.Current.Palette.Accent.WithAlpha(0x44);
+
+            var bg = GetTheme().Palette.Accent.WithAlpha(0x44);
             g.FillRoundedRectangle(new Rect(r.X + 10, r.Y + 10, 155, 50), 8, 8, bg);
-            g.DrawRoundedRectangle(new Rect(r.X + 10, r.Y + 10, 155, 50), 8, 8, _border, 1);
+            g.DrawRoundedRectangle(new Rect(r.X + 10, r.Y + 10, 155, 50), 8, 8, border, 1);
 
             g.FillRoundedRectangle(new Rect(r.X + 10, r.Y + 75, 155, 50), 18, 18, bg);
-            g.DrawRoundedRectangle(new Rect(r.X + 10, r.Y + 75, 155, 50), 18, 18, _border, 2);
+            g.DrawRoundedRectangle(new Rect(r.X + 10, r.Y + 75, 155, 50), 18, 18, border, 2);
         }));
 
         _tests.Add(new TestCase("Ellipse / Stroke", (g, r) =>
         {
-            var fill = Theme.Current.Palette.Accent.WithAlpha(0x44);
+
+            var fill = GetTheme().Palette.Accent.WithAlpha(0x44);
             var outer = new Rect(r.X + 12, r.Y + 12, 60, 60);
             g.FillEllipse(outer, fill);
-            g.DrawEllipse(outer, _border, 1);
+            g.DrawEllipse(outer, border, 1);
 
             var outer2 = new Rect(r.X + 96, r.Y + 12, 60, 60);
             g.FillEllipse(outer2, fill);
-            g.DrawEllipse(outer2, _border, 2);
+            g.DrawEllipse(outer2, border, 2);
 
             var thin = new Rect(r.X + 12, r.Y + 90, 144, 40);
             g.FillEllipse(thin, fill);
-            g.DrawEllipse(thin, Theme.Current.Palette.Accent, 1);
+            g.DrawEllipse(thin, GetTheme().Palette.Accent, 1);
         }));
 
         _tests.Add(new TestCase("Clip", (g, r) =>
         {
+
             var clip = new Rect(r.X + 10, r.Y + 12, 80, 80);
-            g.DrawRectangle(clip, _border, 1);
+            g.DrawRectangle(clip, border, 1);
 
             g.Save();
             g.SetClip(clip);
-            g.FillRectangle(new Rect(r.X + 10, r.Y + 12, 160, 160), Theme.Current.Palette.Accent.WithAlpha(0x55));
-            g.DrawLine(new Point(r.X + 10, r.Y + 12), new Point(r.Right - 10, r.Bottom - 10), Theme.Current.Palette.WindowText, 2);
+            g.FillRectangle(new Rect(r.X + 10, r.Y + 12, 160, 160), GetTheme().Palette.Accent.WithAlpha(0x55));
+            g.DrawLine(new Point(r.X + 10, r.Y + 12), new Point(r.Right - 10, r.Bottom - 10), GetTheme().Palette.WindowText, 2);
             g.Restore();
 
-            g.DrawRectangle(new Rect(r.X + 10, r.Y + 100, 160, 30), _border, 1);
+            g.DrawRectangle(new Rect(r.X + 10, r.Y + 100, 160, 30), border, 1);
         }));
 
         _tests.Add(new TestCase("Save/Restore + Translate", (g, r) =>
         {
-            g.DrawRectangle(new Rect(r.X + 10, r.Y + 10, 70, 50), _border, 1);
+
+            g.DrawRectangle(new Rect(r.X + 10, r.Y + 10, 70, 50), border, 1);
 
             g.Save();
             g.Translate(90, 0);
-            g.FillRectangle(new Rect(r.X + 10, r.Y + 10, 70, 50), Theme.Current.Palette.Accent.WithAlpha(0x55));
-            g.DrawRectangle(new Rect(r.X + 10, r.Y + 10, 70, 50), _border, 1);
+            g.FillRectangle(new Rect(r.X + 10, r.Y + 10, 70, 50), GetTheme().Palette.Accent.WithAlpha(0x55));
+            g.DrawRectangle(new Rect(r.X + 10, r.Y + 10, 70, 50), border, 1);
             g.Restore();
 
-            g.DrawRectangle(new Rect(r.X + 10, r.Y + 75, 155, 50), _border, 1);
+            g.DrawRectangle(new Rect(r.X + 10, r.Y + 75, 155, 50), border, 1);
         }));
 
         _tests.Add(new TestCase("Alpha Primitives (A<255)", (g, r) =>
         {
-            var accent = Theme.Current.Palette.Accent;
+            var accent = GetTheme().Palette.Accent;
             var fill = accent.WithAlpha(0x66);
             var stroke = accent.WithAlpha(0x99);
 
@@ -169,16 +175,16 @@ internal sealed class GraphicsBackendTestCanvas : Control
             var font = measure.Font;
 
             var box = new Rect(r.X + 10, r.Y + 10, 155, 40);
-            g.DrawRectangle(box, _border, 1);
-            g.DrawText("Left", box, font, Theme.Current.Palette.WindowText, TextAlignment.Left, TextAlignment.Center, TextWrapping.NoWrap);
+            g.DrawRectangle(box, border, 1);
+            g.DrawText("Left", box, font, GetTheme().Palette.WindowText, TextAlignment.Left, TextAlignment.Center, TextWrapping.NoWrap);
 
             var box2 = new Rect(r.X + 10, r.Y + 55, 155, 40);
-            g.DrawRectangle(box2, _border, 1);
-            g.DrawText("Center", box2, font, Theme.Current.Palette.WindowText, TextAlignment.Center, TextAlignment.Center, TextWrapping.NoWrap);
+            g.DrawRectangle(box2, border, 1);
+            g.DrawText("Center", box2, font, GetTheme().Palette.WindowText, TextAlignment.Center, TextAlignment.Center, TextWrapping.NoWrap);
 
             var box3 = new Rect(r.X + 10, r.Y + 100, 155, 40);
-            g.DrawRectangle(box3, _border, 1);
-            g.DrawText("Right", box3, font, Theme.Current.Palette.WindowText, TextAlignment.Right, TextAlignment.Center, TextWrapping.NoWrap);
+            g.DrawRectangle(box3, border, 1);
+            g.DrawText("Right", box3, font, GetTheme().Palette.WindowText, TextAlignment.Right, TextAlignment.Center, TextWrapping.NoWrap);
         }));
 
         _tests.Add(new TestCase("Text Wrap/Measure", (g, r) =>
@@ -187,13 +193,13 @@ internal sealed class GraphicsBackendTestCanvas : Control
             var font = measure.Font;
 
             var box = new Rect(r.X + 10, r.Y + 10, 155, 75);
-            g.DrawRectangle(box, _border, 1);
-            g.DrawText("Wrap test: The quick brown fox jumps over the lazy dog.", box, font, Theme.Current.Palette.WindowText,
+            g.DrawRectangle(box, border, 1);
+            g.DrawText("Wrap test: The quick brown fox jumps over the lazy dog.", box, font, GetTheme().Palette.WindowText,
                 TextAlignment.Left, TextAlignment.Top, TextWrapping.Wrap);
 
             var m = g.MeasureText("MeasureText()", font);
             g.DrawText($"Measured: {m.Width:0.0}x{m.Height:0.0}", new Rect(r.X + 10, r.Y + 95, 155, 40), font,
-                Theme.Current.Palette.WindowText, TextAlignment.Left, TextAlignment.Center, TextWrapping.NoWrap);
+                GetTheme().Palette.WindowText, TextAlignment.Left, TextAlignment.Center, TextWrapping.NoWrap);
         }));
 
         _tests.Add(new TestCase("Image (dest/source)", (g, r) =>
@@ -204,16 +210,17 @@ internal sealed class GraphicsBackendTestCanvas : Control
                 return;
             }
 
+
             var dest = new Rect(r.X + 10, r.Y + 10, 80, 80);
             g.DrawImage(_image, dest);
-            g.DrawRectangle(dest, _border, 1);
+            g.DrawRectangle(dest, border, 1);
 
             var dest2 = new Rect(r.X + 95, r.Y + 10, 70, 70);
             var src = new Rect(30, 30, 120, 120);
             g.DrawImage(_image, dest2, src);
-            g.DrawRectangle(dest2, _border, 1);
+            g.DrawRectangle(dest2, border, 1);
 
-            g.DrawText("april.jpg", new Rect(r.X + 10, r.Y + 95, 155, 30), GetFont(), Theme.Current.Palette.WindowText,
+            g.DrawText("april.jpg", new Rect(r.X + 10, r.Y + 95, 155, 30), GetFont(), GetTheme().Palette.WindowText,
                 TextAlignment.Left, TextAlignment.Center, TextWrapping.NoWrap);
         }));
     }
@@ -237,7 +244,7 @@ internal sealed class GraphicsBackendTestCanvas : Control
         double cardWidth = Math.Max(CardMinWidth, (width - (columns - 1) * CardGap) / columns);
 
         int rows = (int)Math.Ceiling(_tests.Count / (double)columns);
-        double height = rows * CardHeight + Math.Max(0, rows - 1) * CardGap + HeaderHeight;
+        double height = rows * CardHeight + Math.Max(0, rows - 1) * CardGap;
         return new Size(cardWidth * columns + (columns - 1) * CardGap, height);
     }
 
@@ -269,7 +276,7 @@ internal sealed class GraphicsBackendTestCanvas : Control
             TextAlignment.Left, TextAlignment.Center, TextWrapping.NoWrap);
 
         double x0 = bounds.X;
-        double y0 = bounds.Y + HeaderHeight;
+        double y0 = bounds.Y + HeaderHeight + 8;
 
         for (int i = 0; i < _tests.Count; i++)
         {
@@ -281,8 +288,8 @@ internal sealed class GraphicsBackendTestCanvas : Control
             var card = new Rect(x, y, cardWidth, CardHeight);
 
             // Card chrome
-            context.FillRoundedRectangle(card, 8, 8, _background);
-            context.DrawRoundedRectangle(card, 8, 8, _border, 1);
+            context.FillRoundedRectangle(card, 8, 8, background);
+            context.DrawRoundedRectangle(card, 8, 8, border, 1);
 
             var nameRect = new Rect(card.X + 10, card.Y + 8, card.Width - 20, 22);
             context.DrawText(_tests[i].Name, nameRect, font, theme.Palette.WindowText,

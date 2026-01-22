@@ -12,14 +12,14 @@ public class Button : Control
     private Func<bool>? _canClick;
     private TextMeasureCache _textMeasureCache;
 
-    protected override Color DefaultBackground => Theme.Current.Palette.ButtonFace;
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBackground => GetTheme().Palette.ButtonFace;
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
 
     public Button()
     {
         BorderThickness = 1;
         Padding = new Thickness(8, 4, 8, 4);
-        MinHeight = Theme.Current.BaseControlHeight;
+        MinHeight = GetTheme().BaseControlHeight;
     }
 
     protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)

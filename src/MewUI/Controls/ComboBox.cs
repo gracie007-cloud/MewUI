@@ -89,9 +89,9 @@ public sealed class ComboBox : Control, IPopupOwner
 
     public override bool Focusable => true;
 
-    protected override Color DefaultBackground => Theme.Current.Palette.ControlBackground;
+    protected override Color DefaultBackground => GetTheme().Palette.ControlBackground;
 
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
 
     public ComboBox()
     {
@@ -100,7 +100,7 @@ public sealed class ComboBox : Control, IPopupOwner
         // Do not set explicit Height, otherwise FrameworkElement.MeasureOverride will clamp DesiredSize
         // and the drop-down cannot expand. Use MinHeight as the default header height.
         Height = double.NaN;
-        MinHeight = Theme.Current.BaseControlHeight;
+        MinHeight = GetTheme().BaseControlHeight;
     }
 
     protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)

@@ -37,6 +37,30 @@ public sealed class Application
     /// </summary>
     public static Application Current => _current ?? throw new InvalidOperationException("Application not initialized. Call Application.Run() first.");
 
+    public Theme Theme
+    {
+        get => field ?? Theme.Light;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            if (field == value)
+            {
+                return;
+            }
+
+            var old = Theme;
+            field = value;
+            foreach (var window in AllWindows)
+            {
+                window.BroadcastThemeChanged(old, value);
+            }
+            ThemeChanged?.Invoke(old, value);
+        }
+    }
+
+    public event Action<Theme, Theme>? ThemeChanged;
+
     /// <summary>
     /// Gets whether an application instance is running.
     /// </summary>

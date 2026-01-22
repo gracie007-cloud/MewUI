@@ -16,7 +16,14 @@ public class Window : ContentControl
     private readonly DispatcherMergeKey _layoutMergeKey = new(UiDispatcherPriority.Layout);
     private readonly DispatcherMergeKey _renderMergeKey = new(UiDispatcherPriority.Render);
 
-    private Theme _theme = Theme.Current;
+    private enum WindowLifetimeState
+    {
+        New,
+        Shown,
+        Hidden,
+        Closed,
+    }
+
     private IWindowBackend? _backend;
     private Size _clientSizeDip = Size.Empty;
     private Size _lastLayoutClientSizeDip = Size.Empty;
@@ -28,12 +35,15 @@ public class Window : ContentControl
     private bool _firstFrameRenderedRaised;
     private bool _firstFrameRenderedPending;
     private bool _subscribedToDispatcherChanged;
+    private WindowLifetimeState _lifetimeState;
 
     public Window()
     {
         Padding = new Thickness(16);
     }
-     
+
+    protected override Color DefaultBackground => GetTheme().Palette.WindowBackground;
+
     private sealed class PopupEntry
     {
         public required UIElement Element { get; init; }
@@ -266,44 +276,23 @@ public class Window : ContentControl
 
     internal void RaiseDeactivated() => Deactivated?.Invoke();
 
-    public Theme Theme
-    {
-        get => _theme;
-        set
-        {
-            ArgumentNullException.ThrowIfNull(value);
-
-            if (_theme == value)
-            {
-                return;
-            }
-
-            var old = _theme;
-            _theme = value;
-
-            if (Handle != 0)
-            {
-                BroadcastThemeChanged(old, value);
-                PerformLayout();
-                Invalidate();
-            }
-        }
-    }
-
-    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
-    {
-        if (Background == oldTheme.Palette.WindowBackground)
-        {
-            Background = newTheme.Palette.WindowBackground;
-        }
-
-        base.OnThemeChanged(oldTheme, newTheme);
-    }
-
     public void Show()
     {
+        if (_lifetimeState == WindowLifetimeState.Closed)
+        {
+            throw new InvalidOperationException("Cannot show a closed window.");
+        }
+
         EnsureBackend();
+        Application.Current.RegisterWindow(this);
+
+        if (_lifetimeState == WindowLifetimeState.Shown)
+        {
+            return;
+        }
+
         _backend!.Show();
+        _lifetimeState = WindowLifetimeState.Shown;
 
         // Raise Loaded once, and only after the application's dispatcher is ready.
         // Do not rely on PlatformHost.Run ordering: a first render can happen during Show on some platforms.
@@ -320,12 +309,50 @@ public class Window : ContentControl
         }
     }
 
-    public void Hide() => _backend?.Hide();
+    public void Hide()
+    {
+        if (_lifetimeState == WindowLifetimeState.Closed)
+        {
+            return;
+        }
 
-    public void Close() => _backend?.Close();
+        if (_backend == null)
+        {
+            return;
+        }
+
+        if (_lifetimeState == WindowLifetimeState.Hidden)
+        {
+            return;
+        }
+
+        _backend.Hide();
+        _lifetimeState = WindowLifetimeState.Hidden;
+    }
+
+    public void Close()
+    {
+        if (_lifetimeState == WindowLifetimeState.Closed)
+        {
+            return;
+        }
+
+        if (_backend == null)
+        {
+            RaiseClosed();
+            return;
+        }
+
+        _backend.Close();
+    }
 
     private void EnsureBackend()
     {
+        if (_lifetimeState == WindowLifetimeState.Closed)
+        {
+            throw new InvalidOperationException("The window is closed.");
+        }
+
         if (_backend != null)
         {
             return;
@@ -548,6 +575,12 @@ public class Window : ContentControl
 
     internal void RaiseClosed()
     {
+        if (_lifetimeState == WindowLifetimeState.Closed)
+        {
+            return;
+        }
+
+        _lifetimeState = WindowLifetimeState.Closed;
         UnsubscribeFromDispatcherChanged();
 
         if (Application.IsRunning)
@@ -570,7 +603,7 @@ public class Window : ContentControl
         }
 
         using var context = GraphicsFactory.CreateContext(Handle, hdc, DpiScale);
-        context.Clear(Background.A > 0 ? Background : Theme.Palette.WindowBackground);
+        context.Clear(Background.A > 0 ? Background : GetTheme().Palette.WindowBackground);
 
         // Ensure nothing paints outside the client area.
         var clientSize = _clientSizeDip.IsEmpty ? new Size(Width, Height) : _clientSizeDip;
@@ -676,10 +709,11 @@ public class Window : ContentControl
         _popups.Clear();
     }
 
-    private void BroadcastThemeChanged(Theme oldTheme, Theme newTheme)
+    internal void BroadcastThemeChanged(Theme oldTheme, Theme newTheme)
     {
         OnThemeChanged(oldTheme, newTheme);
-        ThemeChanged?.Invoke(oldTheme, newTheme);
+
+        NotifyThemeChanged(oldTheme, newTheme);
 
         if (Content != null)
         {
@@ -699,6 +733,8 @@ public class Window : ContentControl
                 c.NotifyThemeChanged(oldTheme, newTheme);
             }
         }
+
+        ThemeChanged?.Invoke(oldTheme, newTheme);
     }
 
     private static void VisitVisualTree(Element element, Action<Element> visitor) => VisualTree.Visit(element, visitor);

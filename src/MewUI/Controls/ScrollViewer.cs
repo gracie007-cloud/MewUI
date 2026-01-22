@@ -15,7 +15,7 @@ public sealed class ScrollViewer : ContentControl
     private readonly ScrollBar _vBar;
     private readonly ScrollBar _hBar;
     private readonly ScrollController _scroll = new();
-     
+
     private Size _extent = Size.Empty;
     private Size _viewport = Size.Empty;
 
@@ -61,6 +61,7 @@ public sealed class ScrollViewer : ContentControl
     {
         HorizontalOffset = horizontalOffset;
         VerticalOffset = verticalOffset;
+        SyncBars();
         InvalidateVisual();
     }
 
@@ -216,12 +217,9 @@ public sealed class ScrollViewer : ContentControl
         ArrangeBars(GetChromeBounds(bounds, borderInset));
     }
 
-    public override void Render(IGraphicsContext context)
+    protected override void OnRender(IGraphicsContext context)
     {
-        if (!IsVisible)
-        {
-            return;
-        }
+        base.OnRender(context);
 
         // Optional background/border (thin style defaults to none).
         if (Background.A > 0 || BorderThickness > 0)
@@ -250,6 +248,18 @@ public sealed class ScrollViewer : ContentControl
         {
             _hBar.Render(context);
         }
+    }
+
+    public override void Render(IGraphicsContext context)
+    {
+        // ContentControl.Render() would render Content again after OnRender().
+        // ScrollViewer renders its content inside a clip and with scroll offsets, so we must avoid double-rendering.
+        if (!IsVisible)
+        {
+            return;
+        }
+
+        OnRender(context);
     }
 
     protected override UIElement? OnHitTest(Point point)
@@ -316,8 +326,8 @@ public sealed class ScrollViewer : ContentControl
             e.Handled = true;
         }
     }
-    
-     void IVisualTreeHost.VisitChildren(Action<Element> visitor)
+
+    void IVisualTreeHost.VisitChildren(Action<Element> visitor)
     {
         if (Content != null)
         {

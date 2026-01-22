@@ -9,7 +9,7 @@ public sealed class Slider : RangeBase
 
     public double SmallChange { get; set; } = 1;
 
-    protected override Color DefaultBorderBrush => Theme.Current.Palette.ControlBorder;
+    protected override Color DefaultBorderBrush => GetTheme().Palette.ControlBorder;
 
     public override bool Focusable => true;
 
