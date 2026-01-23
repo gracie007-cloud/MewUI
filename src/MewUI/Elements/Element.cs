@@ -33,9 +33,16 @@ public abstract class Element
         {
             if (field != value)
             {
+                var oldRoot = FindVisualRoot();
                 field = value;
                 ClearDpiCacheDeep();
                 OnParentChanged();
+
+                var newRoot = FindVisualRoot();
+                if (!ReferenceEquals(oldRoot, newRoot))
+                {
+                    NotifyVisualRootChanged(oldRoot, newRoot);
+                }
             }
         }
     }
@@ -128,6 +135,12 @@ public abstract class Element
     protected virtual void OnParentChanged() { }
 
     /// <summary>
+    /// Called when this element's visual root changes (attach/detach from a Window).
+    /// Raised for the entire subtree starting at the element whose Parent changed.
+    /// </summary>
+    protected virtual void OnVisualRootChanged(Element? oldRoot, Element? newRoot) { }
+
+    /// <summary>
     /// Renders the element to the graphics context.
     /// </summary>
     public virtual void Render(IGraphicsContext context)
@@ -146,6 +159,11 @@ public abstract class Element
             current = current.Parent;
         }
         return current;
+    }
+
+    private void NotifyVisualRootChanged(Element? oldRoot, Element? newRoot)
+    {
+        VisualTree.Visit(this, element => element.OnVisualRootChanged(oldRoot, newRoot));
     }
 
     internal uint GetDpiCached()
