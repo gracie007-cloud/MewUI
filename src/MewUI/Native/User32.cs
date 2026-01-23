@@ -199,6 +199,9 @@ internal static partial class User32
     public static partial nint GetFocus();
 
     [LibraryImport(LibraryName)]
+    public static partial nint GetForegroundWindow();
+
+    [LibraryImport(LibraryName)]
     public static partial nint SetCapture(nint hWnd);
 
     [LibraryImport(LibraryName)]

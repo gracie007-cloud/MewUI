@@ -21,6 +21,8 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
     public nint Handle { get; private set; }
 
+    private readonly Win32TitleBarThemeSynchronizer _titleBarThemeSync = new();
+
     internal Win32WindowBackend(Win32PlatformHost host, Window window)
     {
         _host = host;
@@ -282,6 +284,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
         _host.RegisterWindow(Handle, this);
         Window.AttachBackend(this);
         ApplyResizeMode();
+        _titleBarThemeSync.Initialize(Handle);
 
         uint actualDpi = User32.GetDpiForWindow(Handle);
         if (actualDpi != initialDpi)
@@ -411,6 +414,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
     private void HandleDestroy()
     {
+        _titleBarThemeSync.Dispose();
         DestroyIcons();
         if (Window.GraphicsFactory is Aprillz.MewUI.Rendering.IWindowResourceReleaser releaser)
         {
@@ -764,6 +768,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
     public void Dispose()
     {
+        _titleBarThemeSync.Dispose();
         DestroyIcons();
         if (Handle != 0)
         {
