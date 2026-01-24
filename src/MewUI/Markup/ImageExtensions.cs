@@ -38,7 +38,7 @@ public static class ImageExtensions
 
     public static Image ImageScaleQuality(this Image image, ImageScaleQuality mode)
     {
-        image.InterpolationMode = mode;
+        image.ImageScaleQuality = mode;
         return image;
     }
 

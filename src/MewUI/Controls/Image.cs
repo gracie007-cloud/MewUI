@@ -7,7 +7,7 @@ public sealed class Image : Control
     private readonly Dictionary<GraphicsBackend, IImage> _cache = new();
     private INotifyImageChanged? _notifySource;
 
-    public ImageScaleQuality InterpolationMode
+    public ImageScaleQuality ImageScaleQuality
     {
         get;
         set { field = value; InvalidateVisual(); }
@@ -95,8 +95,8 @@ public sealed class Image : Control
             return;
         }
 
-        var prevInterpolationMode = context.ImageInterpolationMode;
-        context.ImageInterpolationMode = InterpolationMode;
+        var prevScaleQuality = context.ImageScaleQuality;
+        context.ImageScaleQuality = ImageScaleQuality;
 
         // Always clip to the control bounds to avoid overflowing when the image's natural size
         // is larger than the arranged size.
@@ -122,7 +122,7 @@ public sealed class Image : Control
         finally
         {
             context.Restore();
-            context.ImageInterpolationMode = prevInterpolationMode;
+            context.ImageScaleQuality = prevScaleQuality;
         }
     }
 

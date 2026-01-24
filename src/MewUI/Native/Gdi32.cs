@@ -61,6 +61,20 @@ internal static partial class Gdi32
 
     #endregion
 
+    #region Bitmap
+
+    [LibraryImport(LibraryName)]
+    public static partial int GetDIBits(
+        nint hdc,
+        nint hbm,
+        uint start,
+        uint cLines,
+        nint lpvBits,
+        ref BITMAPINFO lpbmi,
+        uint usage);
+
+    #endregion
+
     #region Brush
 
     [LibraryImport(LibraryName)]

@@ -170,6 +170,50 @@ internal static class GdiSimdDispatcher
         }
     }
 
+    /// <summary>
+    /// Downsamples a premultiplied BGRA image by 2x using a 2x2 box filter.
+    /// Supports odd sizes by duplicating the last row/column.
+    /// </summary>
+    public static unsafe void Downsample2xBoxPremultipliedBgra(
+        byte* srcBgra,
+        int srcStrideBytes,
+        int srcWidth,
+        int srcHeight,
+        byte* dstBgra,
+        int dstStrideBytes,
+        int dstWidth,
+        int dstHeight)
+    {
+        if (srcBgra == null || dstBgra == null || srcWidth <= 0 || srcHeight <= 0 || dstWidth <= 0 || dstHeight <= 0)
+        {
+            return;
+        }
+
+        if (SimdCapabilities.HasSse2)
+        {
+            Sse2Processor.Downsample2xBoxPremultipliedBgra(
+                srcBgra,
+                srcStrideBytes,
+                srcWidth,
+                srcHeight,
+                dstBgra,
+                dstStrideBytes,
+                dstWidth,
+                dstHeight);
+            return;
+        }
+
+        Downsample2xBoxPremultipliedBgraScalar(
+            srcBgra,
+            srcStrideBytes,
+            srcWidth,
+            srcHeight,
+            dstBgra,
+            dstStrideBytes,
+            dstWidth,
+            dstHeight);
+    }
+
     #region Scalar Fallbacks
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -217,6 +261,48 @@ internal static class GdiSimdDispatcher
         for (int i = 0; i < count; i++)
         {
             *p++ = pixel;
+        }
+    }
+
+    private static unsafe void Downsample2xBoxPremultipliedBgraScalar(
+        byte* srcBgra,
+        int srcStrideBytes,
+        int srcWidth,
+        int srcHeight,
+        byte* dstBgra,
+        int dstStrideBytes,
+        int dstWidth,
+        int dstHeight)
+    {
+        for (int y = 0; y < dstHeight; y++)
+        {
+            int sy0 = y * 2;
+            int sy1 = Math.Min(srcHeight - 1, sy0 + 1);
+
+            byte* row0 = srcBgra + sy0 * srcStrideBytes;
+            byte* row1 = srcBgra + sy1 * srcStrideBytes;
+            byte* dstRow = dstBgra + y * dstStrideBytes;
+
+            for (int x = 0; x < dstWidth; x++)
+            {
+                int sx0 = x * 2;
+                int sx1 = Math.Min(srcWidth - 1, sx0 + 1);
+
+                byte* p00 = row0 + sx0 * 4;
+                byte* p10 = row0 + sx1 * 4;
+                byte* p01 = row1 + sx0 * 4;
+                byte* p11 = row1 + sx1 * 4;
+
+                int b = p00[0] + p10[0] + p01[0] + p11[0];
+                int g = p00[1] + p10[1] + p01[1] + p11[1];
+                int r = p00[2] + p10[2] + p01[2] + p11[2];
+                int a = p00[3] + p10[3] + p01[3] + p11[3];
+
+                dstRow[x * 4 + 0] = (byte)((b + 2) >> 2);
+                dstRow[x * 4 + 1] = (byte)((g + 2) >> 2);
+                dstRow[x * 4 + 2] = (byte)((r + 2) >> 2);
+                dstRow[x * 4 + 3] = (byte)((a + 2) >> 2);
+            }
         }
     }
 

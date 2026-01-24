@@ -25,7 +25,7 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
     private int _clipDepth;
     private bool _disposed;
 
-    public ImageScaleQuality ImageInterpolationMode { get; set; } = ImageScaleQuality.Default;
+    public ImageScaleQuality ImageScaleQuality { get; set; } = ImageScaleQuality.Default;
     
     public double DpiScale { get; }
 
@@ -381,7 +381,7 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
         }
 
         int mipLevel = 0;
-        if (ImageInterpolationMode == ImageScaleQuality.HighQuality)
+        if (ImageScaleQuality == ImageScaleQuality.HighQuality)
         {
             mipLevel = SelectHighQualityMipLevel(sourceRect, destRect, DpiScale);
         }
@@ -414,7 +414,7 @@ internal sealed unsafe class Direct2DGraphicsContext : IGraphicsContext
                 bottom: (float)sourceRect.Bottom)
             : CreateMipSourceRect(sourceRect, mipLevel);
 
-        var interpolation = ImageInterpolationMode switch
+        var interpolation = ImageScaleQuality switch
         {
             ImageScaleQuality.NearestNeighbor => D2D1_BITMAP_INTERPOLATION_MODE.NEAREST_NEIGHBOR,
             _ => D2D1_BITMAP_INTERPOLATION_MODE.LINEAR,

@@ -31,7 +31,7 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
 
     public double DpiScale => _stateManager.DpiScale;
 
-    public ImageScaleQuality ImageInterpolationMode { get; set; } = ImageScaleQuality.Default;
+    public ImageScaleQuality ImageScaleQuality { get; set; } = ImageScaleQuality.Default;
 
     internal nint Hdc { get; }
 
@@ -705,22 +705,17 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
             return;
         }
 
+        // Resolve backend default:
+        // - Default => factory default (which is Linear by default to match other backends)
+        // - NearestNeighbor => GDI stretch with COLORONCOLOR (fast, pixelated)
+        // - Linear => cached bilinear resample
+        // - HighQuality => cached prefiltered downscale + bilinear
+        var effective = ImageScaleQuality == ImageScaleQuality.Default
+            ? (_imageScaleQuality == ImageScaleQuality.Default ? ImageScaleQuality.Linear : _imageScaleQuality)
+            : ImageScaleQuality;
+
         var memDc = Gdi32.CreateCompatibleDC(Hdc);
         var oldBitmap = Gdi32.SelectObject(memDc, gdiImage.Handle);
-
-        var effective = _imageScaleQuality == ImageScaleQuality.Default ? ImageScaleQuality.HighQuality : _imageScaleQuality;
-        int mode = effective is ImageScaleQuality.HighQuality or ImageScaleQuality.Linear
-            ? GdiConstants.HALFTONE
-            : GdiConstants.COLORONCOLOR;
-
-        int oldStretchMode = Gdi32.SetStretchBltMode(Hdc, mode);
-        bool hasBrushOrg = mode == GdiConstants.HALFTONE;
-        var oldBrushOrg = default(POINT);
-
-        if (hasBrushOrg)
-        {
-            Gdi32.SetBrushOrgEx(Hdc, 0, 0, out oldBrushOrg);
-        }
 
         try
         {
@@ -729,15 +724,38 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
             int srcW = (int)sourceRect.Width;
             int srcH = (int)sourceRect.Height;
 
-            // Try to use cached scaled bitmap for high-quality downscaling
-            if (effective == ImageScaleQuality.HighQuality &&
-                IsNearInt(sourceRect.X) && IsNearInt(sourceRect.Y) &&
+            if (effective == ImageScaleQuality.NearestNeighbor)
+            {
+                // Nearest: rely on GDI stretch + alpha blend (COLORONCOLOR).
+                int oldStretchMode = Gdi32.SetStretchBltMode(Hdc, GdiConstants.COLORONCOLOR);
+                try
+                {
+                    var blend = BLENDFUNCTION.SourceOver(255);
+                    Gdi32.AlphaBlend(
+                        Hdc, destPx.left, destPx.top, destPx.Width, destPx.Height,
+                        memDc, srcX, srcY, srcW, srcH,
+                        blend);
+                }
+                finally
+                {
+                    if (oldStretchMode != 0)
+                    {
+                        Gdi32.SetStretchBltMode(Hdc, oldStretchMode);
+                    }
+                }
+
+                return;
+            }
+
+            // Linear/HighQuality: try cached scaled bitmap for deterministic, backend-independent resampling.
+            // This trades memory for speed when the same image is drawn repeatedly at the same scaled size
+            // (common in UI). Only used when sourceRect is pixel-aligned.
+            if (IsNearInt(sourceRect.X) && IsNearInt(sourceRect.Y) &&
                 IsNearInt(sourceRect.Width) && IsNearInt(sourceRect.Height) &&
-                gdiImage.TryGetOrCreateScaledBitmap(srcX, srcY, srcW, srcH, destPx.Width, destPx.Height, out var scaledBmp))
+                gdiImage.TryGetOrCreateScaledBitmap(srcX, srcY, srcW, srcH, destPx.Width, destPx.Height, effective, out var scaledBmp))
             {
                 var scaledDc = Gdi32.CreateCompatibleDC(Hdc);
                 var oldScaled = Gdi32.SelectObject(scaledDc, scaledBmp);
-
                 try
                 {
                     var blendScaled = BLENDFUNCTION.SourceOver(255);
@@ -755,25 +773,41 @@ internal sealed class GdiGraphicsContext : IGraphicsContext
                 return;
             }
 
-            // Standard alpha blend
-            var blend = BLENDFUNCTION.SourceOver(255);
-            Gdi32.AlphaBlend(
-                Hdc, destPx.left, destPx.top, destPx.Width, destPx.Height,
-                memDc, srcX, srcY, srcW, srcH,
-                blend);
+            // Fallback: if we can't use the cache (e.g. fractional sourceRect), use GDI stretch + alpha blend.
+            // Prefer linear as the "Default" behavior to match other backends.
+            // NOTE: GDI has no true "linear" filter; HALFTONE is the best available built-in option.
+            int stretch = GdiConstants.HALFTONE;
+            int oldMode = Gdi32.SetStretchBltMode(Hdc, stretch);
+            var oldBrushOrg = default(POINT);
+            bool hasBrushOrg = stretch == GdiConstants.HALFTONE;
+            if (hasBrushOrg)
+            {
+                Gdi32.SetBrushOrgEx(Hdc, 0, 0, out oldBrushOrg);
+            }
+
+            try
+            {
+                var blend = BLENDFUNCTION.SourceOver(255);
+                Gdi32.AlphaBlend(
+                    Hdc, destPx.left, destPx.top, destPx.Width, destPx.Height,
+                    memDc, srcX, srcY, srcW, srcH,
+                    blend);
+            }
+            finally
+            {
+                if (oldMode != 0)
+                {
+                    Gdi32.SetStretchBltMode(Hdc, oldMode);
+                }
+
+                if (hasBrushOrg)
+                {
+                    Gdi32.SetBrushOrgEx(Hdc, oldBrushOrg.x, oldBrushOrg.y, out _);
+                }
+            }
         }
         finally
         {
-            if (oldStretchMode != 0)
-            {
-                Gdi32.SetStretchBltMode(Hdc, oldStretchMode);
-            }
-
-            if (hasBrushOrg)
-            {
-                Gdi32.SetBrushOrgEx(Hdc, oldBrushOrg.x, oldBrushOrg.y, out _);
-            }
-
             Gdi32.SelectObject(memDc, oldBitmap);
             Gdi32.DeleteDC(memDc);
         }

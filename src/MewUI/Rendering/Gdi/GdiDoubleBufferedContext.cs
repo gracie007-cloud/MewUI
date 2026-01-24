@@ -19,10 +19,10 @@ internal sealed class GdiDoubleBufferedContext : IGraphicsContext
 
     public double DpiScale => _context.DpiScale;
 
-    public ImageScaleQuality ImageInterpolationMode
+    public ImageScaleQuality ImageScaleQuality
     {
-        get => _context.ImageInterpolationMode;
-        set => _context.ImageInterpolationMode = value;
+        get => _context.ImageScaleQuality;
+        set => _context.ImageScaleQuality = value;
     }
 
     private sealed class BackBuffer : IDisposable

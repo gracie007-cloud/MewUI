@@ -209,4 +209,119 @@ internal static class Sse2Processor
             dst[i] = 0;
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static unsafe void Downsample2xBoxPremultipliedBgra(
+        byte* srcBgra,
+        int srcStrideBytes,
+        int srcWidth,
+        int srcHeight,
+        byte* dstBgra,
+        int dstStrideBytes,
+        int dstWidth,
+        int dstHeight)
+    {
+        if (srcBgra == null || dstBgra == null || srcWidth <= 0 || srcHeight <= 0 || dstWidth <= 0 || dstHeight <= 0)
+        {
+            return;
+        }
+
+        // Mask to keep only the first 4 ushort lanes (BGRA) after pair summing.
+        var keepFirst4 = Vector128.Create(
+            (ushort)0xFFFF, (ushort)0xFFFF, (ushort)0xFFFF, (ushort)0xFFFF,
+            (ushort)0, (ushort)0, (ushort)0, (ushort)0);
+
+        var zeroBytes = Vector128<byte>.Zero;
+        var zeroShorts = Vector128<short>.Zero;
+
+        for (int y = 0; y < dstHeight; y++)
+        {
+            int sy0 = y * 2;
+            int sy1 = sy0 + 1;
+            if (sy1 >= srcHeight)
+            {
+                sy1 = sy0; // duplicate last row
+            }
+
+            byte* row0 = srcBgra + sy0 * srcStrideBytes;
+            byte* row1 = srcBgra + sy1 * srcStrideBytes;
+            byte* dstRow = dstBgra + y * dstStrideBytes;
+
+            int x = 0;
+            // Each iteration produces 2 destination pixels from 4 source pixels per row (16 bytes).
+            int maxVecDst = dstWidth - 2;
+
+            for (; x <= maxVecDst; x += 2)
+            {
+                int sx0 = x * 2;
+                int srcOffset = sx0 * 4;
+
+                if (sx0 + 3 >= srcWidth)
+                {
+                    break; // handle tail/edge with scalar
+                }
+
+                var top = Sse2.LoadVector128(row0 + srcOffset);
+                var bottom = Sse2.LoadVector128(row1 + srcOffset);
+
+                // Low half: pixels 0 and 1, High half: pixels 2 and 3
+                var topLo = Sse2.UnpackLow(top, zeroBytes).AsUInt16();
+                var topHi = Sse2.UnpackHigh(top, zeroBytes).AsUInt16();
+                var botLo = Sse2.UnpackLow(bottom, zeroBytes).AsUInt16();
+                var botHi = Sse2.UnpackHigh(bottom, zeroBytes).AsUInt16();
+
+                // Horizontal pair sums (pixel0+pixel1, pixel2+pixel3) for each row.
+                var topSum0 = PairSumFirstPixel(topLo, keepFirst4);
+                var topSum1 = PairSumFirstPixel(topHi, keepFirst4);
+                var botSum0 = PairSumFirstPixel(botLo, keepFirst4);
+                var botSum1 = PairSumFirstPixel(botHi, keepFirst4);
+
+                // Vertical sum then average (/4).
+                var sum0 = Sse2.Add(topSum0, botSum0);
+                var sum1 = Sse2.Add(topSum1, botSum1);
+
+                sum0 = Sse2.ShiftRightLogical(sum0, 2);
+                sum1 = Sse2.ShiftRightLogical(sum1, 2);
+
+                // Pack to BGRA bytes (first 4 bytes contain the pixel).
+                var packed0 = Sse2.PackUnsignedSaturate(sum0.AsInt16(), zeroShorts).AsUInt32();
+                var packed1 = Sse2.PackUnsignedSaturate(sum1.AsInt16(), zeroShorts).AsUInt32();
+
+                ((uint*)dstRow)[x + 0] = packed0.GetElement(0);
+                ((uint*)dstRow)[x + 1] = packed1.GetElement(0);
+            }
+
+            // Scalar tail for remaining pixels and right-edge duplication.
+            for (; x < dstWidth; x++)
+            {
+                int sx0 = x * 2;
+                int sx1 = Math.Min(srcWidth - 1, sx0 + 1);
+
+                byte* p00 = row0 + sx0 * 4;
+                byte* p10 = row0 + sx1 * 4;
+                byte* p01 = row1 + sx0 * 4;
+                byte* p11 = row1 + sx1 * 4;
+
+                int b = p00[0] + p10[0] + p01[0] + p11[0];
+                int g = p00[1] + p10[1] + p01[1] + p11[1];
+                int r = p00[2] + p10[2] + p01[2] + p11[2];
+                int a = p00[3] + p10[3] + p01[3] + p11[3];
+
+                dstRow[x * 4 + 0] = (byte)((b + 2) >> 2);
+                dstRow[x * 4 + 1] = (byte)((g + 2) >> 2);
+                dstRow[x * 4 + 2] = (byte)((r + 2) >> 2);
+                dstRow[x * 4 + 3] = (byte)((a + 2) >> 2);
+            }
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Vector128<ushort> PairSumFirstPixel(Vector128<ushort> twoPixelsBytesAsU16, Vector128<ushort> keepFirst4)
+    {
+        // Input lanes represent: b0,g0,r0,a0,b1,g1,r1,a1 (as ushort).
+        // Add shifted-by-8-bytes (pixel1) into pixel0, and keep only the first 4 lanes.
+        var shifted = Sse2.ShiftRightLogical128BitLane(twoPixelsBytesAsU16.AsByte(), 8).AsUInt16();
+        var sum = Sse2.Add(twoPixelsBytesAsU16, shifted);
+        return Sse2.And(sum, keepFirst4);
+    }
 }

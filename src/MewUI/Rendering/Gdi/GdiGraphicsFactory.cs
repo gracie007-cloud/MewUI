@@ -22,7 +22,8 @@ public sealed class GdiGraphicsFactory : IGraphicsFactory, IWindowResourceReleas
 
     public GdiCurveQuality CurveQuality { get; set; } = GdiCurveQuality.Supersample2x;
 
-    public ImageScaleQuality ImageScaleQuality { get; set; } = ImageScaleQuality.HighQuality;
+    // Keep backend default aligned with other backends: Default => Linear unless the app explicitly overrides.
+    public ImageScaleQuality ImageScaleQuality { get; set; } = ImageScaleQuality.Linear;
 
     public IFont CreateFont(string family, double size, FontWeight weight = FontWeight.Normal,
         bool italic = false, bool underline = false, bool strikethrough = false)

@@ -10,7 +10,7 @@ internal sealed class OpenGLMeasurementContext : IGraphicsContext
 {
     public double DpiScale { get; }
 
-    public ImageScaleQuality ImageInterpolationMode { get; set; } = ImageScaleQuality.Default;
+    public ImageScaleQuality ImageScaleQuality { get; set; } = ImageScaleQuality.Default;
 
     public OpenGLMeasurementContext(uint dpi) => DpiScale = dpi <= 0 ? 1.0 : dpi / 96.0;
 

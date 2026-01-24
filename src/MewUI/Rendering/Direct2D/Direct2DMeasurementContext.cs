@@ -9,7 +9,7 @@ internal sealed unsafe class Direct2DMeasurementContext : IGraphicsContext
 
     public double DpiScale => 1.0;
 
-    public ImageScaleQuality ImageInterpolationMode { get; set; } = ImageScaleQuality.Default;
+    public ImageScaleQuality ImageScaleQuality { get; set; } = ImageScaleQuality.Default;
 
     public Direct2DMeasurementContext(nint dwriteFactory) => _dwriteFactory = dwriteFactory;
 
