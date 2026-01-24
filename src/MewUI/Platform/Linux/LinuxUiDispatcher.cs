@@ -10,6 +10,8 @@ internal sealed class LinuxUiDispatcher : SynchronizationContext, IUiDispatcher
     private readonly object _timersGate = new();
     private readonly List<ScheduledTimer> _timers = new();
     private long _nextTimerId;
+    private Action? _wake;
+    private int _wakeRequested;
 
     public bool IsOnUIThread => Environment.CurrentManagedThreadId == _uiThreadId;
 
@@ -25,11 +27,17 @@ internal sealed class LinuxUiDispatcher : SynchronizationContext, IUiDispatcher
     {
         ArgumentNullException.ThrowIfNull(action);
         _queue.Enqueue(priority, action);
+        RequestWake();
     }
 
     public bool PostMerged(DispatcherMergeKey mergeKey, Action action, UiDispatcherPriority priority)
     {
-        return _queue.EnqueueMerged(priority, mergeKey, action);
+        var enqueued = _queue.EnqueueMerged(priority, mergeKey, action);
+        if (enqueued)
+        {
+            RequestWake();
+        }
+        return enqueued;
     }
 
     public void Send(Action action)
@@ -83,6 +91,7 @@ internal sealed class LinuxUiDispatcher : SynchronizationContext, IUiDispatcher
             _timers.Add(new ScheduledTimer(id, dueAt, action));
         }
 
+        RequestWake();
         return handle;
     }
 
@@ -91,6 +100,87 @@ internal sealed class LinuxUiDispatcher : SynchronizationContext, IUiDispatcher
         _queue.Process();
 
         ProcessTimers();
+    }
+
+    internal void SetWake(Action? wake)
+    {
+        _wake = wake;
+    }
+
+    internal void ClearWakeRequest()
+    {
+        Interlocked.Exchange(ref _wakeRequested, 0);
+    }
+
+    internal bool HasPendingWork
+    {
+        get
+        {
+            if (_queue.HasWork)
+            {
+                return true;
+            }
+
+            lock (_timersGate)
+            {
+                for (int i = 0; i < _timers.Count; i++)
+                {
+                    if (!_timers[i].Canceled)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+
+    internal int GetPollTimeoutMs(int maxMs)
+    {
+        if (maxMs <= 0)
+        {
+            return 0;
+        }
+
+        long now = Stopwatch.GetTimestamp();
+        long? nextDue = null;
+
+        lock (_timersGate)
+        {
+            for (int i = 0; i < _timers.Count; i++)
+            {
+                var timer = _timers[i];
+                if (timer.Canceled)
+                {
+                    continue;
+                }
+
+                if (nextDue == null || timer.DueAtTicks < nextDue.Value)
+                {
+                    nextDue = timer.DueAtTicks;
+                }
+            }
+        }
+
+        if (nextDue == null)
+        {
+            return maxMs;
+        }
+
+        long deltaTicks = nextDue.Value - now;
+        if (deltaTicks <= 0)
+        {
+            return 0;
+        }
+
+        double ms = (double)deltaTicks * 1000.0 / Stopwatch.Frequency;
+        if (double.IsNaN(ms) || double.IsInfinity(ms) || ms <= 0)
+        {
+            return 0;
+        }
+
+        return (int)Math.Min(maxMs, Math.Max(0, Math.Ceiling(ms)));
     }
 
     private void ProcessTimers()
@@ -141,6 +231,20 @@ internal sealed class LinuxUiDispatcher : SynchronizationContext, IUiDispatcher
                     return;
                 }
             }
+        }
+    }
+
+    private void RequestWake()
+    {
+        var wake = _wake;
+        if (wake == null)
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _wakeRequested, 1) == 0)
+        {
+            wake();
         }
     }
 

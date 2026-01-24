@@ -28,6 +28,11 @@ public sealed class X11PlatformHost : IPlatformHost
     private nint _xsettingsOwnerWindow;
     private nint _rootWindow;
 
+    private int _xConnectionFd = -1;
+    private int _wakeReadFd = -1;
+    private int _wakeWriteFd = -1;
+    private bool _usePollWait;
+
     public IMessageBoxService MessageBox => _messageBox;
 
     public IFileDialogService FileDialog => _fileDialog;
@@ -72,6 +77,7 @@ public sealed class X11PlatformHost : IPlatformHost
         _dispatcher = dispatcher as LinuxUiDispatcher;
         app.Dispatcher = dispatcher;
         SynchronizationContext.SetSynchronizationContext(dispatcher as SynchronizationContext);
+        _dispatcher?.SetWake(SignalWake);
 
         // Show after dispatcher is ready so timers/postbacks work immediately (WPF-style dispatcher lifetime).
         mainWindow.Show();
@@ -124,7 +130,8 @@ public sealed class X11PlatformHost : IPlatformHost
                 _running = false;
                 break;
             }
-            Thread.Sleep(1);
+
+            WaitForWorkOrEvents();
         }
 
         if (_display != 0)
@@ -132,6 +139,8 @@ public sealed class X11PlatformHost : IPlatformHost
             try { NativeX11.XCloseDisplay(_display); } catch { }
             _display = 0;
         }
+
+        CloseWakePipe();
         _dispatcher = null;
         app.Dispatcher = null;
         SynchronizationContext.SetSynchronizationContext(previousContext);
@@ -213,6 +222,8 @@ public sealed class X11PlatformHost : IPlatformHost
             try { NativeX11.XCloseDisplay(_display); } catch { }
             _display = 0;
         }
+
+        CloseWakePipe();
     }
 
     internal nint Display => _display;
@@ -248,6 +259,167 @@ public sealed class X11PlatformHost : IPlatformHost
             ?? TryGetXftDpi(_display)
             ?? 96u;
         _lastDpiPollTick = Environment.TickCount64;
+
+        SetupWakePipe();
+    }
+
+    private void SetupWakePipe()
+    {
+        CloseWakePipe();
+
+        if (_display == 0)
+        {
+            return;
+        }
+
+        int xfd;
+        try
+        {
+            xfd = NativeX11.XConnectionNumber(_display);
+        }
+        catch
+        {
+            xfd = -1;
+        }
+
+        if (xfd <= 0)
+        {
+            _usePollWait = false;
+            _xConnectionFd = -1;
+            return;
+        }
+
+        unsafe
+        {
+            int* fds = stackalloc int[2];
+            if (LibC.Pipe(fds) != 0)
+            {
+                _usePollWait = false;
+                _xConnectionFd = -1;
+                return;
+            }
+
+            _wakeReadFd = fds[0];
+            _wakeWriteFd = fds[1];
+        }
+
+        _xConnectionFd = xfd;
+        _usePollWait = true;
+    }
+
+    private void CloseWakePipe()
+    {
+        var readFd = Interlocked.Exchange(ref _wakeReadFd, -1);
+        if (readFd >= 0)
+        {
+            try { LibC.Close(readFd); } catch { }
+        }
+
+        var writeFd = Interlocked.Exchange(ref _wakeWriteFd, -1);
+        if (writeFd >= 0)
+        {
+            try { LibC.Close(writeFd); } catch { }
+        }
+
+        _xConnectionFd = -1;
+        _usePollWait = false;
+    }
+
+    private void SignalWake()
+    {
+        int fd = _wakeWriteFd;
+        if (fd < 0)
+        {
+            return;
+        }
+
+        unsafe
+        {
+            byte b = 1;
+            _ = LibC.Write(fd, &b, 1);
+        }
+    }
+
+    private void DrainWakePipe()
+    {
+        int fd = _wakeReadFd;
+        if (fd < 0)
+        {
+            return;
+        }
+
+        unsafe
+        {
+            byte* buf = stackalloc byte[64];
+            _ = LibC.Read(fd, buf, 64);
+        }
+
+        _dispatcher?.ClearWakeRequest();
+    }
+
+    private bool AnyWindowNeedsRender()
+    {
+        foreach (var backend in _windows.Values)
+        {
+            if (backend.NeedsRender)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void WaitForWorkOrEvents()
+    {
+        if (_display == 0)
+        {
+            Thread.Sleep(1);
+            return;
+        }
+
+        if (NativeX11.XPending(_display) != 0)
+        {
+            return;
+        }
+
+        if (AnyWindowNeedsRender())
+        {
+            return;
+        }
+
+        var dispatcher = _dispatcher;
+        if (dispatcher != null && dispatcher.HasPendingWork)
+        {
+            return;
+        }
+
+        // If poll-based waiting isn't available, fall back to a modest sleep to avoid a busy loop.
+        if (!_usePollWait || _xConnectionFd < 0 || _wakeReadFd < 0)
+        {
+            Thread.Sleep(8);
+            return;
+        }
+
+        // Keep a finite timeout so DPI polling can still occur even if the DE doesn't notify (best-effort).
+        const int MaxWaitMs = 500;
+        int timeoutMs = dispatcher?.GetPollTimeoutMs(MaxWaitMs) ?? MaxWaitMs;
+
+        bool wakeSignaled = false;
+        unsafe
+        {
+            PollFd* fds = stackalloc PollFd[2];
+            fds[0] = new PollFd { fd = _xConnectionFd, events = PollEvents.POLLIN };
+            fds[1] = new PollFd { fd = _wakeReadFd, events = PollEvents.POLLIN };
+
+            _ = LibC.Poll(fds, 2, timeoutMs);
+            wakeSignaled = (fds[1].revents & PollEvents.POLLIN) != 0;
+        }
+
+        if (wakeSignaled)
+        {
+            DrainWakePipe();
+        }
     }
 
     private static uint? TryGetXftDpi(nint display)

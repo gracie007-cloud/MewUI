@@ -55,6 +55,11 @@ internal static partial class X11
     [LibraryImport(LibraryName)]
     public static partial int XNextEvent(nint display, out XEvent ev);
 
+    // NOTE: In Xlib headers this is a macro (ConnectionNumber), but on most libX11 builds
+    // there's also an exported symbol XConnectionNumber that bindings can P/Invoke.
+    [LibraryImport(LibraryName)]
+    public static partial int XConnectionNumber(nint display);
+
     [LibraryImport(LibraryName)]
     public static partial int XSelectInput(nint display, nint window, nint eventMask);
 

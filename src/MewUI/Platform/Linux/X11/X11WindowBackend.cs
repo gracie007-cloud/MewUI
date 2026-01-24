@@ -11,6 +11,7 @@ namespace Aprillz.MewUI.Platform.Linux.X11;
 internal sealed class X11WindowBackend : IWindowBackend
 {
     private readonly X11PlatformHost _host;
+
     internal Window Window { get; }
 
     private bool _shown;
@@ -21,11 +22,15 @@ internal sealed class X11WindowBackend : IWindowBackend
     private nint _wmProtocolsAtom;
     private bool _needsRender;
     private long _lastRenderTick;
+
     private UIElement? _mouseOverElement;
     private UIElement? _capturedElement;
     private IconSource? _icon;
 
+    internal bool NeedsRender => _needsRender;
+
     public nint Handle { get; private set; }
+
     public nint Display { get; private set; }
 
     internal X11WindowBackend(X11PlatformHost host, Window window)
@@ -636,8 +641,7 @@ internal sealed class X11WindowBackend : IWindowBackend
 
         if (element != _mouseOverElement)
         {
-            _mouseOverElement?.SetMouseOver(false);
-            element.SetMouseOver(true);
+            Window.UpdateMouseOverChain(_mouseOverElement, element);
             _mouseOverElement = element;
         }
 
@@ -709,8 +713,7 @@ internal sealed class X11WindowBackend : IWindowBackend
 
         if (element != _mouseOverElement)
         {
-            _mouseOverElement?.SetMouseOver(false);
-            element?.SetMouseOver(true);
+            Window.UpdateMouseOverChain(_mouseOverElement, element);
             _mouseOverElement = element;
         }
 

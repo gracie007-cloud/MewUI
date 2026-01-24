@@ -14,6 +14,22 @@ internal sealed class UiDispatcherQueue
     private readonly ConcurrentQueue<WorkItem>[] _queues;
     private readonly ConcurrentDictionary<DispatcherMergeKey, byte> _mergeKeys = new();
 
+    public bool HasWork
+    {
+        get
+        {
+            for (int i = 0; i < _queues.Length; i++)
+            {
+                if (!_queues[i].IsEmpty)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
     public UiDispatcherQueue()
     {
         _queues = new ConcurrentQueue<WorkItem>[Enum.GetValues<UiDispatcherPriority>().Length];
@@ -86,4 +102,3 @@ internal sealed class UiDispatcherQueue
         _queues[idx].Enqueue(item);
     }
 }
-
