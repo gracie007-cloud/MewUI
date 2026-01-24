@@ -163,7 +163,7 @@ public sealed class Palette
     private static Color GetDefaultAccentText(Color accent)
     {
         var luma = (0.2126 * accent.R + 0.7152 * accent.G + 0.0722 * accent.B) / 255.0;
-        return luma >= 0.6 ? Color.FromRgb(28, 28, 32) : Color.FromRgb(248, 246, 255);
+        return luma >= 0.61 ? Color.FromRgb(28, 28, 32) : Color.FromRgb(248, 246, 255);
     }
 
     private static (Color thumb, Color hover, Color active) ComputeScrollBarThumbs(Color baseColor)

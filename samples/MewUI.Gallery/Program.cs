@@ -212,23 +212,23 @@ FrameworkElement ButtonsPage()
                             new Button().Content("Default"),
                             new Button()
                                 .Content("Accent")
-                                .WithTheme((t, c) => c.Background(t.Palette.Accent).Foreground(t.Palette.WindowBackground)),
+                                .WithTheme((t, c) => c.Background(t.Palette.Accent).Foreground(t.Palette.AccentText)),
                             new Button().Content("Disabled").Disable(),
                             new Button().Content("With icon").Content("Clock")
                         )
         ),
 
-        //Card("Toggle / Switch",
-        //    new StackPanel()
-        //        .Vertical()
-        //        .Spacing(8)
-        //        .Children(
-        //            new ToggleSwitch().IsChecked(true),
-        //            new ToggleSwitch().IsChecked(false),
-        //            new ToggleSwitch().IsChecked(true).Disable(),
-        //            new ToggleSwitch().IsChecked(false).Disable()
-        //        )
-        //),
+        Card("Toggle / Switch",
+            new StackPanel()
+                .Vertical()
+                .Spacing(8)
+                .Children(
+                    new ToggleSwitch().IsChecked(true),
+                    new ToggleSwitch().IsChecked(false),
+                    new ToggleSwitch().IsChecked(true).Disable(),
+                    new ToggleSwitch().IsChecked(false).Disable()
+                )
+        ),
 
         Card("Progress",
             new StackPanel()
