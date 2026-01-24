@@ -508,8 +508,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
         if (element != _mouseOverElement)
         {
-            _mouseOverElement?.SetMouseOver(false);
-            element?.SetMouseOver(true);
+            Window.UpdateMouseOverChain(_mouseOverElement, element);
             _mouseOverElement = element;
         }
 
@@ -583,7 +582,7 @@ internal sealed class Win32WindowBackend : IWindowBackend
     {
         if (_mouseOverElement != null)
         {
-            _mouseOverElement.SetMouseOver(false);
+            Window.UpdateMouseOverChain(_mouseOverElement, null);
             _mouseOverElement = null;
         }
         return 0;

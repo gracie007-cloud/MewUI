@@ -31,11 +31,58 @@ public class Window : ContentControl
     private Element? _lastLayoutContent;
     private readonly List<PopupEntry> _popups = new();
     private readonly RadioGroupManager _radioGroups = new();
+    private readonly List<UIElement> _mouseOverOldPath = new(capacity: 16);
+    private readonly List<UIElement> _mouseOverNewPath = new(capacity: 16);
     private bool _loadedRaised;
     private bool _firstFrameRenderedRaised;
     private bool _firstFrameRenderedPending;
     private bool _subscribedToDispatcherChanged;
     private WindowLifetimeState _lifetimeState;
+
+    internal void UpdateMouseOverChain(UIElement? oldLeaf, UIElement? newLeaf)
+    {
+        if (ReferenceEquals(oldLeaf, newLeaf))
+        {
+            return;
+        }
+
+        _mouseOverOldPath.Clear();
+        for (var current = oldLeaf; current != null; current = current.Parent as UIElement)
+        {
+            _mouseOverOldPath.Add(current);
+        }
+
+        _mouseOverNewPath.Clear();
+        for (var current = newLeaf; current != null; current = current.Parent as UIElement)
+        {
+            _mouseOverNewPath.Add(current);
+        }
+
+        int commonFromRoot = 0;
+        while (commonFromRoot < _mouseOverOldPath.Count && commonFromRoot < _mouseOverNewPath.Count)
+        {
+            var oldAt = _mouseOverOldPath[_mouseOverOldPath.Count - 1 - commonFromRoot];
+            var newAt = _mouseOverNewPath[_mouseOverNewPath.Count - 1 - commonFromRoot];
+            if (!ReferenceEquals(oldAt, newAt))
+            {
+                break;
+            }
+
+            commonFromRoot++;
+        }
+
+        int oldUniqueCount = _mouseOverOldPath.Count - commonFromRoot;
+        for (int i = 0; i < oldUniqueCount; i++)
+        {
+            _mouseOverOldPath[i].SetMouseOver(false);
+        }
+
+        int newUniqueCount = _mouseOverNewPath.Count - commonFromRoot;
+        for (int i = newUniqueCount - 1; i >= 0; i--)
+        {
+            _mouseOverNewPath[i].SetMouseOver(true);
+        }
+    }
 
     public Window()
     {
