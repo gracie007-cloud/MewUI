@@ -188,7 +188,7 @@ Element ThemeControls() => new StackPanel()
             {
                 l.Text($"Theme: {t.Name}");
                 UpdateAccentSwatches();
-            })
+            }, false)
             .CenterVertical()
     );
 
@@ -442,7 +442,7 @@ Element NormalControls()
                 ),
 
             new Grid()
-                .Rows("*,*")
+                .Rows("Auto,Auto")
                 .Columns("*,*")
                 .Spacing(16)
                 .Children(
@@ -531,7 +531,6 @@ Element NormalControls()
                                         .OnWrapChanged(x => wrapCheck?.IsChecked = x)
                                         .Wrap(true)
                                         .FontFamily("Consolas")
-                                        .Height(240)
                                         .Placeholder("Type multi-line text (wheel scroll + thin scrollbar).")
                                         .Text("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7")
                                 )
@@ -548,7 +547,7 @@ Element NormalControls()
                             new ListBox()
                                 .Items("First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth")
                                 .SelectedIndex(1)
-                                .Height(76)
+                                .Height(96)
                         )
                 )
         );
