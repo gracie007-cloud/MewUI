@@ -30,7 +30,7 @@ public sealed class Application
     /// Raised when an exception escapes from the UI dispatcher work queue.
     /// Set <see cref="DispatcherUnhandledExceptionEventArgs.Handled"/> to true to continue.
     /// </summary>
-    public event Action<DispatcherUnhandledExceptionEventArgs>? DispatcherUnhandledException;
+    public static event Action<DispatcherUnhandledExceptionEventArgs>? DispatcherUnhandledException;
 
     /// <summary>
     /// Gets the current application instance.

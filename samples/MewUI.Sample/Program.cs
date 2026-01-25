@@ -934,7 +934,7 @@ static void Startup(string[] args, out bool isBench, out bool isSmoke)
         useOpenGl ? GraphicsBackend.OpenGL :
         OperatingSystem.IsWindows() ? GraphicsBackend.Direct2D : GraphicsBackend.OpenGL;
 
-    Application.Current.DispatcherUnhandledException += e =>
+    Application.DispatcherUnhandledException += e =>
     {
         Log($"UI exception: {e.Exception.GetType().Name}: {e.Exception.Message}");
         Log(e.Exception.ToString());
