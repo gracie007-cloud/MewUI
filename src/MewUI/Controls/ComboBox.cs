@@ -400,17 +400,12 @@ public sealed class ComboBox : Control, IPopupOwner
         double centerX = headerRect.Right - ArrowAreaWidth / 2;
         double centerY = headerRect.Y + headerRect.Height / 2;
 
-        double size = 4;
-        var p1 = isUp
-            ? new Point(centerX - size, centerY + size / 2)
-            : new Point(centerX - size, centerY - size / 2);
-        var p2 = new Point(centerX, isUp ? centerY - size / 2 : centerY + size / 2);
-        var p3 = isUp
-            ? new Point(centerX + size, centerY + size / 2)
-            : new Point(centerX + size, centerY - size / 2);
-
-        context.DrawLine(p1, p2, color, 1);
-        context.DrawLine(p2, p3, color, 1);
+        ChevronGlyph.Draw(
+            context,
+            new Point(centerX, centerY),
+            size: 4,
+            color,
+            isUp ? ChevronDirection.Up : ChevronDirection.Down);
     }
 
     private const double ArrowAreaWidth = 22;

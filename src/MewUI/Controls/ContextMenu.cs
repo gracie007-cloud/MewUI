@@ -772,11 +772,9 @@ public sealed class ContextMenu : Control, IPopupOwner
 
                 if (item.SubMenu != null)
                 {
-                    // Simple submenu chevron indicator.
-                    var cx = paddedRow.Right + 3;
-                    var cy = paddedRow.Y + paddedRow.Height / 2;
-                    context.DrawLine(new Point(cx - 1.5, cy - 3), new Point(cx + 1.5, cy), fg, 1);
-                    context.DrawLine(new Point(cx + 1.5, cy), new Point(cx - 1.5, cy + 3), fg, 1);
+                    // Submenu chevron indicator (matches ComboBox/TreeView chevron style).
+                    var center = new Point(paddedRow.Right - (SubMenuGlyphAreaWidth / 2), paddedRow.Y + paddedRow.Height / 2);
+                    ChevronGlyph.Draw(context, center, size: 3, fg, ChevronDirection.Right);
                 }
             }
 
