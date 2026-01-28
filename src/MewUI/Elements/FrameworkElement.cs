@@ -130,9 +130,17 @@ public abstract class FrameworkElement : UIElement, IDisposable
 
     internal Theme ThemeInternal
     {
-        get => field ??= Application.IsRunning
-            ? Application.Current.Theme
-            : ThemeManager.GetDefaultTheme(ThemeManager.ResolveVariantForStartup(ThemeManager.Default));
+        get
+        {
+            if (Application.IsRunning)
+            {
+                return field ??= Application.Current.Theme;
+            }
+            else
+            {
+                return ThemeManager.GetDefaultTheme(ThemeManager.ResolveVariantForStartup(ThemeManager.Default));
+            }
+        }
         set;
     }
 
