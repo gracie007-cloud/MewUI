@@ -45,9 +45,7 @@ public class jpeg_error_mgr
     /// </value>
     /// <seealso cref="emit_message"/>
     public int Trace_level
-    {
-        get { return m_trace_level; }
-        set { m_trace_level = value; }
+    { get => m_trace_level; set => m_trace_level = value;
     }
 
     /// <summary>

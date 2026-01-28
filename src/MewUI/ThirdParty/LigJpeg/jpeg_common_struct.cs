@@ -76,14 +76,7 @@ public abstract class jpeg_common_struct
     /// <remarks>Default value: <c>null</c>.</remarks>
     public jpeg_progress_mgr? Progress
     {
-        get
-        {
-            return m_progress;
-        }
-        set
-        {
-            m_progress = value;
-        }
+        get => m_progress; set => m_progress = value;
     }
 
     /// <summary>
@@ -93,10 +86,7 @@ public abstract class jpeg_common_struct
     /// <seealso href="41dc1a3b-0dea-4594-87d2-c213ab1049e1.htm" target="_self">Error handling</seealso>
     public jpeg_error_mgr Err
     {
-        get
-        {
-            return m_err;
-        }
+        get => m_err;
         set
         {
             ArgumentNullException.ThrowIfNull(value);

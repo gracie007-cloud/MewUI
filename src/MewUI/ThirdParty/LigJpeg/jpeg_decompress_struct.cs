@@ -211,9 +211,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// </summary>
     /// <value>The source for decompression.</value>
     public jpeg_source_mgr Src
-    {
-        get { return m_src; }
-        internal set { m_src = value; }
+    { get => m_src; internal set => m_src = value;
     }
 
     /* Basic description of image --- filled in by jpeg_read_header(). */
@@ -255,9 +253,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <value>The colorspace of JPEG image.</value>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public J_COLOR_SPACE Jpeg_color_space
-    {
-        get { return m_jpeg_color_space; }
-        set { m_jpeg_color_space = value; }
+    { get => m_jpeg_color_space; set => m_jpeg_color_space = value;
     }
 
     /* Decompression processing parameters --- these fields must be set before
@@ -271,9 +267,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <value>The output color space.</value>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public J_COLOR_SPACE Out_color_space
-    {
-        get { return m_out_color_space; }
-        set { m_out_color_space = value; }
+    { get => m_out_color_space; set => m_out_color_space = value;
     }
 
     /// <summary>
@@ -288,9 +282,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <seealso cref="Scale_denom"/>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public int Scale_num
-    {
-        get { return m_scale_num; }
-        set { m_scale_num = value; }
+    { get => m_scale_num; set => m_scale_num = value;
     }
 
     /// <summary>
@@ -305,9 +297,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <seealso cref="Scale_num"/>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public int Scale_denom
-    {
-        get { return m_scale_denom; }
-        set { m_scale_denom = value; }
+    { get => m_scale_denom; set => m_scale_denom = value;
     }
 
     /// <summary>
@@ -316,9 +306,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <value><c>true</c> if buffered-image mode is turned on; otherwise, <c>false</c>.</value>
     /// <seealso href="../articles/KB/buffered-image-mode.html">Buffered-image mode</seealso>
     public bool Buffered_image
-    {
-        get { return m_buffered_image; }
-        set { m_buffered_image = value; }
+    { get => m_buffered_image; set => m_buffered_image = value;
     }
 
     /// <summary>
@@ -331,9 +319,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// </remarks>
     /// <seealso cref="jpeg_read_raw_data"/>
     public bool Raw_data_out
-    {
-        get { return m_raw_data_out; }
-        set { m_raw_data_out = value; }
+    { get => m_raw_data_out; set => m_raw_data_out = value;
     }
 
     /// <summary>
@@ -342,9 +328,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <value>The algorithm used for the DCT step.</value>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public J_DCT_METHOD Dct_method
-    {
-        get { return m_dct_method; }
-        set { m_dct_method = value; }
+    { get => m_dct_method; set => m_dct_method = value;
     }
 
     /// <summary>
@@ -357,9 +341,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <remarks>Default value: <c>true</c></remarks>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public bool Do_fancy_upsampling
-    {
-        get { return m_do_fancy_upsampling; }
-        set { m_do_fancy_upsampling = value; }
+    { get => m_do_fancy_upsampling; set => m_do_fancy_upsampling = value;
     }
 
     /// <summary>
@@ -374,9 +356,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// </remarks>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public bool Do_block_smoothing
-    {
-        get { return m_do_block_smoothing; }
-        set { m_do_block_smoothing = value; }
+    { get => m_do_block_smoothing; set => m_do_block_smoothing = value;
     }
 
     /// <summary>
@@ -387,9 +367,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// </value>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public bool Quantize_colors
-    {
-        get { return m_quantize_colors; }
-        set { m_quantize_colors = value; }
+    { get => m_quantize_colors; set => m_quantize_colors = value;
     }
 
     /* the following are ignored if not quantize_colors: */
@@ -406,9 +384,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <seealso cref="Quantize_colors"/>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public J_DITHER_MODE Dither_mode
-    {
-        get { return m_dither_mode; }
-        set { m_dither_mode = value; }
+    { get => m_dither_mode; set => m_dither_mode = value;
     }
 
     /// <summary>
@@ -425,9 +401,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <seealso cref="Quantize_colors"/>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public bool Two_pass_quantize
-    {
-        get { return m_two_pass_quantize; }
-        set { m_two_pass_quantize = value; }
+    { get => m_two_pass_quantize; set => m_two_pass_quantize = value;
     }
 
     /// <summary>
@@ -440,9 +414,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <seealso cref="Quantize_colors"/>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public int Desired_number_of_colors
-    {
-        get { return m_desired_number_of_colors; }
-        set { m_desired_number_of_colors = value; }
+    { get => m_desired_number_of_colors; set => m_desired_number_of_colors = value;
     }
 
     /* these are significant only in buffered-image mode: */
@@ -454,9 +426,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <remarks>Significant only in buffered-image mode.</remarks>
     /// <seealso href="../articles/KB/buffered-image-mode.html">Buffered-image mode</seealso>
     public bool Enable_1pass_quant
-    {
-        get { return m_enable_1pass_quant; }
-        set { m_enable_1pass_quant = value; }
+    { get => m_enable_1pass_quant; set => m_enable_1pass_quant = value;
     }
 
     /// <summary>
@@ -466,9 +436,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <remarks>Significant only in buffered-image mode.</remarks>
     /// <seealso href="../articles/KB/buffered-image-mode.html">Buffered-image mode</seealso>
     public bool Enable_external_quant
-    {
-        get { return m_enable_external_quant; }
-        set { m_enable_external_quant = value; }
+    { get => m_enable_external_quant; set => m_enable_external_quant = value;
     }
 
     /// <summary>
@@ -478,9 +446,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <remarks>Significant only in buffered-image mode.</remarks>
     /// <seealso href="../articles/KB/buffered-image-mode.html">Buffered-image mode</seealso>
     public bool Enable_2pass_quant
-    {
-        get { return m_enable_2pass_quant; }
-        set { m_enable_2pass_quant = value; }
+    { get => m_enable_2pass_quant; set => m_enable_2pass_quant = value;
     }
 
     /* Description of actual output image that will be returned to application.
@@ -583,9 +549,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <seealso cref="Colormap"/>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public int Actual_number_of_colors
-    {
-        get { return m_actual_number_of_colors; }
-        set { m_actual_number_of_colors = value; }
+    { get => m_actual_number_of_colors; set => m_actual_number_of_colors = value;
     }
 
     /// <summary>
@@ -604,9 +568,7 @@ public class jpeg_decompress_struct : jpeg_common_struct
     /// <seealso cref="Quantize_colors"/>
     /// <seealso href="../articles/KB/decompression-parameter-selection.html">Decompression parameter selection</seealso>
     public byte[][]? Colormap
-    {
-        get { return m_colormap; }
-        set { m_colormap = value; }
+    { get => m_colormap; set => m_colormap = value;
     }
 
     /* State variables: these variables indicate the progress of decompression.
