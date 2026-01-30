@@ -3,30 +3,20 @@ using System.Diagnostics;
 using Aprillz.MewUI;
 using Aprillz.MewUI.Controls;
 
-
 var stopwatch = Stopwatch.StartNew();
 Startup();
 
 Window window = null!;
 Label backendText = null!;
 Label themeText = null!;
+Image peekImage = null!;
 var fpsText = new ObservableValue<string>("FPS: -");
+var imagePeekText = new ObservableValue<string>("Color: -");
 var fpsStopwatch = new Stopwatch();
 var fpsFrames = 0;
 var maxFpsEnabled = new ObservableValue<bool>(false);
 
 var currentAccent = ThemeManager.DefaultAccent;
-
-var app = Application
-    .Create()
-    .UseMetrics(ThemeMetrics.Default with
-    {
-        FontFamily = "Noto Sans KR",
-        ControlCornerRadius = 6,
-        BaseControlHeight = 32,
-        FontSize = 13
-    });
-
 
 var logo = ImageSource.FromFile("logo_h-1280.png");
 var april = ImageSource.FromFile("april.jpg");
@@ -77,7 +67,7 @@ using (var rs = typeof(Program).Assembly.GetManifestResourceStream("Aprillz.MewU
     root.Icon = IconSource.FromStream(rs);
 }
 
-app.Run(root);
+Application.Run(root);
 
 FrameworkElement TopBar()
 {
@@ -128,7 +118,6 @@ FrameworkElement TopBar()
                                     new Label()
                                         .Ref(out themeText)
                                         .CenterVertical(),
-
 
                                     AccentPicker()
 
@@ -702,17 +691,17 @@ FrameworkElement PanelsPage()
     );
 }
 
-FrameworkElement MediaPage()
-{
-    return CardGrid(
-        Card("Image",
+FrameworkElement MediaPage() =>
+    CardGrid(
+        Card(
+            "Image",
             new StackPanel()
                 .Vertical()
                 .Spacing(8)
                 .Children(
                     new Image()
                         .Source(april)
-                        .Width(220)
+                        .Width(120)
                         .Height(120)
                         .StretchMode(ImageStretch.Uniform)
                         .Center(),
@@ -722,7 +711,33 @@ FrameworkElement MediaPage()
                 )
         ),
 
-        Card("Image ViewBox",
+        Card(
+            "Peek Color",
+            new StackPanel()
+                .Vertical()
+                .Spacing(8)
+                .Children(
+                    new Image()
+                        .Ref(out peekImage)
+                        .OnMouseMove(e => imagePeekText.Value = peekImage.TryPeekColor(e.Position, out var c)
+                            ? $"Color: #{c.ToArgb():X8}"
+                            : "Color: #--------")
+                        .Source(logo)
+                        .ImageScaleQuality(ImageScaleQuality.HighQuality)
+                        .Width(200)
+                        .Height(120)
+                        .StretchMode(ImageStretch.Uniform)
+                        .Center(),
+                    new Label()
+                        .BindText(imagePeekText)
+                        .FontFamily("Consolas")
+                        .FontSize(11)
+                        .Center()
+                )
+        ),
+
+        Card(
+            "Image ViewBox",
             new StackPanel()
                 .Vertical()
                 .Spacing(8)
@@ -746,12 +761,11 @@ FrameworkElement MediaPage()
                         ),
 
                     new Label()
-                        .Text("Left: full image (Uniform). Right: ViewBox (center 50%) + UniformToFill.")
+                        .Text("Full image (Uniform) / ViewBox (center 50%) + UniformToFill")
                         .FontSize(11)
                 )
         )
     );
-}
 
 void UpdateTopBar()
 {
