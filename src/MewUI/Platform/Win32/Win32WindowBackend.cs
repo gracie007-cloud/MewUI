@@ -16,6 +16,8 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
     private UIElement? _mouseOverElement;
     private UIElement? _capturedElement;
+    private readonly ClickCountTracker _clickCountTracker = new();
+    private readonly int[] _lastPressClickCounts = new int[5];
     private nint _hIconSmall;
     private nint _hIconBig;
     private bool _initialEraseDone;
@@ -196,23 +198,23 @@ internal sealed class Win32WindowBackend : IWindowBackend
                 return HandleActivate(wParam);
 
             case WindowMessages.WM_LBUTTONDOWN:
-                return HandleMouseButton(lParam, MouseButton.Left, isDown: true);
+                return HandleMouseButton(lParam, MouseButton.Left, isDown: true, isDoubleClickMessage: false);
             case WindowMessages.WM_LBUTTONDBLCLK:
-                return HandleMouseButton(lParam, MouseButton.Left, isDown: true);
+                return HandleMouseButton(lParam, MouseButton.Left, isDown: true, isDoubleClickMessage: true);
             case WindowMessages.WM_LBUTTONUP:
-                return HandleMouseButton(lParam, MouseButton.Left, isDown: false);
+                return HandleMouseButton(lParam, MouseButton.Left, isDown: false, isDoubleClickMessage: false);
             case WindowMessages.WM_RBUTTONDOWN:
-                return HandleMouseButton(lParam, MouseButton.Right, isDown: true);
+                return HandleMouseButton(lParam, MouseButton.Right, isDown: true, isDoubleClickMessage: false);
             case WindowMessages.WM_RBUTTONDBLCLK:
-                return HandleMouseButton(lParam, MouseButton.Right, isDown: true);
+                return HandleMouseButton(lParam, MouseButton.Right, isDown: true, isDoubleClickMessage: true);
             case WindowMessages.WM_RBUTTONUP:
-                return HandleMouseButton(lParam, MouseButton.Right, isDown: false);
+                return HandleMouseButton(lParam, MouseButton.Right, isDown: false, isDoubleClickMessage: false);
             case WindowMessages.WM_MBUTTONDOWN:
-                return HandleMouseButton(lParam, MouseButton.Middle, isDown: true);
+                return HandleMouseButton(lParam, MouseButton.Middle, isDown: true, isDoubleClickMessage: false);
             case WindowMessages.WM_MBUTTONDBLCLK:
-                return HandleMouseButton(lParam, MouseButton.Middle, isDown: true);
+                return HandleMouseButton(lParam, MouseButton.Middle, isDown: true, isDoubleClickMessage: true);
             case WindowMessages.WM_MBUTTONUP:
-                return HandleMouseButton(lParam, MouseButton.Middle, isDown: false);
+                return HandleMouseButton(lParam, MouseButton.Middle, isDown: false, isDoubleClickMessage: false);
 
             case WindowMessages.WM_MOUSEMOVE:
                 return HandleMouseMove(lParam);
@@ -610,9 +612,11 @@ internal sealed class Win32WindowBackend : IWindowBackend
         return 0;
     }
 
-    private nint HandleMouseButton(nint lParam, MouseButton button, bool isDown)
+    private nint HandleMouseButton(nint lParam, MouseButton button, bool isDown, bool isDoubleClickMessage)
     {
-        var pos = GetMousePosition(lParam);
+        int xPx = (short)(lParam.ToInt64() & 0xFFFF);
+        int yPx = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
+        var pos = new Point(xPx / Window.DpiScale, yPx / Window.DpiScale);
         var screenPos = ClientToScreen(pos);
 
         if (isDown)
@@ -622,10 +626,42 @@ internal sealed class Win32WindowBackend : IWindowBackend
 
         var element = _capturedElement ?? Window.HitTest(pos);
 
+        int clickCount = 1;
+        int buttonIndex = (int)button;
+        if ((uint)buttonIndex < (uint)_lastPressClickCounts.Length)
+        {
+            if (isDown)
+            {
+                const int SM_CXDOUBLECLK = 36;
+                const int SM_CYDOUBLECLK = 37;
+                uint timeMs = unchecked((uint)User32.GetMessageTime());
+                uint maxDelayMs = User32.GetDoubleClickTime();
+                int maxDistX = User32.GetSystemMetrics(SM_CXDOUBLECLK);
+                int maxDistY = User32.GetSystemMetrics(SM_CYDOUBLECLK);
+
+                clickCount = _clickCountTracker.Update(button, xPx, yPx, timeMs, maxDelayMs, maxDistX, maxDistY);
+                if (isDoubleClickMessage && clickCount < 2)
+                {
+                    clickCount = 2;
+                }
+
+                _lastPressClickCounts[buttonIndex] = clickCount;
+            }
+            else
+            {
+                clickCount = _lastPressClickCounts[buttonIndex];
+                if (clickCount <= 0)
+                {
+                    clickCount = 1;
+                }
+            }
+        }
+
         var args = new MouseEventArgs(pos, screenPos, button,
             button == MouseButton.Left && isDown,
             button == MouseButton.Right && isDown,
-            button == MouseButton.Middle && isDown);
+            button == MouseButton.Middle && isDown,
+            clickCount: clickCount);
 
         if (isDown)
         {
@@ -635,6 +671,15 @@ internal sealed class Win32WindowBackend : IWindowBackend
             }
 
             element?.RaiseMouseDown(args);
+            if (clickCount == 2)
+            {
+                var dblArgs = new MouseEventArgs(pos, screenPos, button,
+                    button == MouseButton.Left && isDown,
+                    button == MouseButton.Right && isDown,
+                    button == MouseButton.Middle && isDown,
+                    clickCount: 2);
+                element?.RaiseMouseDoubleClick(dblArgs);
+            }
         }
         else
         {

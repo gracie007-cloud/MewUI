@@ -344,6 +344,16 @@ internal static partial class User32
 
     #endregion
 
+    #region Mouse
+
+    [LibraryImport(LibraryName)]
+    public static partial uint GetDoubleClickTime();
+
+    [LibraryImport(LibraryName)]
+    public static partial int GetMessageTime();
+
+    #endregion
+
     #region Window hierarchy
 
     [LibraryImport(LibraryName)]

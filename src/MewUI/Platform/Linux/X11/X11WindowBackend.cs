@@ -24,6 +24,8 @@ internal sealed class X11WindowBackend : IWindowBackend
 
     private UIElement? _mouseOverElement;
     private UIElement? _capturedElement;
+    private readonly ClickCountTracker _clickCountTracker = new();
+    private readonly int[] _lastPressClickCounts = new int[5];
     private IconSource? _icon;
 
     internal bool NeedsRender { get; private set; }
@@ -642,7 +644,9 @@ internal sealed class X11WindowBackend : IWindowBackend
 
     private void HandleButton(XButtonEvent e, bool isDown)
     {
-        var pos = new Point(e.x / Window.DpiScale, e.y / Window.DpiScale);
+        int xPx = e.x;
+        int yPx = e.y;
+        var pos = new Point(xPx / Window.DpiScale, yPx / Window.DpiScale);
 
         if (isDown)
         {
@@ -709,11 +713,37 @@ internal sealed class X11WindowBackend : IWindowBackend
             right = isDown;
         }
 
-        var args = new MouseEventArgs(pos, pos, btn, leftButton: left, rightButton: right, middleButton: middle);
+        int clickCount = 1;
+        int buttonIndex = (int)btn;
+        if ((uint)buttonIndex < (uint)_lastPressClickCounts.Length)
+        {
+            if (isDown)
+            {
+                const uint defaultMaxDelayMs = 500;
+                int maxDist = (int)System.Math.Round(4 * Window.DpiScale);
+                clickCount = _clickCountTracker.Update(btn, xPx, yPx, unchecked((uint)e.time), defaultMaxDelayMs, maxDist, maxDist);
+                _lastPressClickCounts[buttonIndex] = clickCount;
+            }
+            else
+            {
+                clickCount = _lastPressClickCounts[buttonIndex];
+                if (clickCount <= 0)
+                {
+                    clickCount = 1;
+                }
+            }
+        }
+
+        var args = new MouseEventArgs(pos, pos, btn, leftButton: left, rightButton: right, middleButton: middle, clickCount: clickCount);
 
         if (isDown)
         {
             element.RaiseMouseDown(args);
+            if (clickCount == 2)
+            {
+                var dblArgs = new MouseEventArgs(pos, pos, btn, leftButton: left, rightButton: right, middleButton: middle, clickCount: 2);
+                element.RaiseMouseDoubleClick(dblArgs);
+            }
         }
         else
         {

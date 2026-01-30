@@ -93,6 +93,8 @@ public abstract class UIElement : Element
 
     public event Action<MouseEventArgs>? MouseDown;
 
+    public event Action<MouseEventArgs>? MouseDoubleClick;
+
     public event Action<MouseEventArgs>? MouseUp;
 
     public event Action<MouseEventArgs>? MouseMove;
@@ -391,6 +393,8 @@ public abstract class UIElement : Element
 
     internal void RaiseMouseDown(MouseEventArgs e) => OnMouseDown(e);
 
+    internal void RaiseMouseDoubleClick(MouseEventArgs e) => OnMouseDoubleClick(e);
+
     internal void RaiseMouseUp(MouseEventArgs e) => OnMouseUp(e);
 
     internal void RaiseMouseMove(MouseEventArgs e) => OnMouseMove(e);
@@ -406,6 +410,7 @@ public abstract class UIElement : Element
     // Protected virtual hooks for derived controls (public API surface stays small).
     protected virtual void OnMouseDown(MouseEventArgs e) => MouseDown?.Invoke(e);
 
+    protected virtual void OnMouseDoubleClick(MouseEventArgs e) => MouseDoubleClick?.Invoke(e);
     protected virtual void OnMouseUp(MouseEventArgs e) => MouseUp?.Invoke(e);
 
     protected virtual void OnMouseMove(MouseEventArgs e) => MouseMove?.Invoke(e);

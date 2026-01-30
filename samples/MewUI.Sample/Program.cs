@@ -16,7 +16,7 @@ metricsTimer.Tick += () => UpdateMetrics(appendLog: false);
 var maxFpsEnabled = new ObservableValue<bool>(false);
 var fpsStopwatch = new Stopwatch();
 var fpsFrames = 0;
-
+ThemeManager.DefaultMetrics = ThemeMetrics.Default with { FontFamily = "Noto Sans KR" };
 Window window;
 var accentSwatches = new List<(Accent accent, Button button)>();
 var currentAccent = ThemeManager.DefaultAccent;
@@ -238,8 +238,8 @@ Element ThemeControls()
                 .BindIsChecked(maxFpsEnabled)
                 .OnCheckedChanged(_ => EnsureMaxFpsLoop())
                 .CenterVertical(),
-	        new Label()
-	            .Text("Theme: Light")
+            new Label()
+                .Text("Theme: Light")
                 .WithTheme((t, c) =>
                 {
                     c.Text($"Theme: {t.Name}");

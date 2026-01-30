@@ -214,23 +214,22 @@ FrameworkElement GalleryRoot()
                 .Content(BuildGalleryContent());
 }
 
-FrameworkElement Card(string title, FrameworkElement content, double minWidth = 320)
-{
-    var header = new Label()
-        .WithTheme((t, c) => c.Foreground(t.Palette.Accent))
-        .Text(title)
-        .Bold();
-
-    return new Border()
+FrameworkElement Card(string title, FrameworkElement content, double minWidth = 320) => new Border()
         .MinWidth(minWidth)
         .Padding(14)
         .BorderThickness(1)
         .CornerRadius(10)
-        .Child(new StackPanel()
+        .Child(
+            new StackPanel()
                 .Vertical()
                 .Spacing(8)
-                .Children(header, content));
-}
+                .Children(
+                    new Label()
+                        .WithTheme((t, c) => c.Foreground(t.Palette.Accent))
+                        .Text(title)
+                        .Bold(),
+                    content
+                ));
 
 FrameworkElement CardGrid(params FrameworkElement[] cards) =>
     new WrapPanel()
@@ -267,26 +266,27 @@ FrameworkElement BuildGalleryContent()
         );
 }
 
-FrameworkElement ButtonsPage()
-{
-    var vm = new ObservableValue<bool>(true);
-
-    return CardGrid(
-        Card("Buttons",
-                    new StackPanel()
-                        .Vertical()
-                        .Spacing(8)
-                        .Children(
-                            new Button().Content("Default"),
-                            new Button()
-                                .Content("Accent")
-                                .WithTheme((t, c) => c.Background(t.Palette.Accent).Foreground(t.Palette.AccentText)),
-                            new Button().Content("Disabled").Disable(),
-                            new Button().Content("With icon").Content("Clock")
-                        )
+FrameworkElement ButtonsPage() =>
+    CardGrid(
+        Card(
+            "Buttons",
+            new StackPanel()
+                .Vertical()
+                .Spacing(8)
+                .Children(
+                    new Button().Content("Default"),
+                    new Button()
+                        .Content("Accent")
+                        .WithTheme((t, c) => c.Background(t.Palette.Accent).Foreground(t.Palette.AccentText)),
+                    new Button().Content("Disabled").Disable(),
+                    new Button()
+                        .Content("Double Click")
+                        .OnDoubleClick(() => MessageBox.Show("Double Click"))
+                )
         ),
 
-        Card("Toggle / Switch",
+        Card(
+            "Toggle / Switch",
             new StackPanel()
                 .Vertical()
                 .Spacing(8)
@@ -298,7 +298,8 @@ FrameworkElement ButtonsPage()
                 )
         ),
 
-        Card("Progress",
+        Card(
+            "Progress",
             new StackPanel()
                 .Vertical()
                 .Spacing(8)
@@ -311,7 +312,6 @@ FrameworkElement ButtonsPage()
                 )
         )
     );
-}
 
 FrameworkElement InputsPage()
 {

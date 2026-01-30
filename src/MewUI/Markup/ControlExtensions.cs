@@ -324,6 +324,24 @@ public static class ControlExtensions
         return button;
     }
 
+    public static Button OnDoubleClick(this Button button, Action handler)
+    {
+        ArgumentNullException.ThrowIfNull(button);
+        ArgumentNullException.ThrowIfNull(handler);
+
+        button.MouseDoubleClick += e =>
+        {
+            if (e.Button != MouseButton.Left)
+            {
+                return;
+            }
+
+            handler();
+            e.Handled = true;
+        };
+        return button;
+    }
+
     public static Button OnCanClick(this Button button, Func<bool> canClick)
     {
         ArgumentNullException.ThrowIfNull(button);
