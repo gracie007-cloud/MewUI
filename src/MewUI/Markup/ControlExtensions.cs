@@ -173,6 +173,12 @@ public static class ControlExtensions
         return element;
     }
 
+    public static T OnMouseDoubleClick<T>(this T element, Action<MouseEventArgs> handler) where T : UIElement
+    {
+        element.MouseDoubleClick += handler;
+        return element;
+    }
+
     public static T OnMouseUp<T>(this T element, Action<MouseEventArgs> handler) where T : UIElement
     {
         element.MouseUp += handler;
