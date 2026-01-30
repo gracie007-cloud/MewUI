@@ -10,27 +10,21 @@
 #:property DebugType=none
 #:property StripSymbols=true
 
-#:package Aprillz.MewUI@0.4.0
+#:package Aprillz.MewUI@0.9.0
 
 using System.Globalization;
 using System.Text;
 
-using Aprillz.MewUI.Binding;
+using Aprillz.MewUI;
 using Aprillz.MewUI.Controls;
-using Aprillz.MewUI.Core;
-using Aprillz.MewUI.Input;
-using Aprillz.MewUI.Markup;
-using Aprillz.MewUI.Panels;
-using Aprillz.MewUI.Primitives;
-using Aprillz.MewUI.Rendering;
 
 // GDI is Windows-only; fall back to OpenGL on Linux.
 Application.DefaultGraphicsBackend = OperatingSystem.IsWindows()
     ? GraphicsBackend.Gdi
     : GraphicsBackend.OpenGL;
 
-var goldAccent = Color.FromRgb(214, 176, 82);
-Theme.Current = Theme.Dark.WithAccent(goldAccent);
+ThemeManager.Default = ThemeVariant.Dark;
+ThemeManager.DefaultAccent = Accent.Pink;
 
 var expression = new ObservableValue<string>(string.Empty);
 var result = new ObservableValue<string>("0");
@@ -61,13 +55,43 @@ UniformGrid Keypad() => new UniformGrid()
         KeyButton("3", () => Append("3")),
         KeyButton("-", () => Append("-")),
 
-        KeyButton("0", () => Append("0")),
         KeyButton(".", () => Append(".")),
-        KeyButton("=", CommitEquals, isPrimary: true),
+        KeyButton("0", () => Append("0")),
+        KeyButton("=", CommitEquals, true),
         KeyButton("+", () => Append("+"))
     );
 
 var window = new Window()
+    .Padding(8)
+    .Title("MewUI FBA Calculator")
+    .Size(360, 520)
+    .Content(
+        new DockPanel()
+            .Children(
+                new StackPanel()
+                    .DockTop()
+                    .Spacing(6)
+                    .Children(
+                        new Label()
+                            .BindText(expression, s => string.IsNullOrEmpty(s) ? " " : s)
+                            .TextWrapping(TextWrapping.Wrap)
+                            .FontSize(16),
+
+                        new Label()
+                            .BindText(result)
+                            .FontSize(28)
+                            .Bold()
+                            .TextAlignment(TextAlignment.Right),
+
+                        new Label()
+                            .BindText(error, s => string.IsNullOrEmpty(s) ? " " : s)
+                            .WithTheme((t, c) => c.Foreground(t.Palette.DisabledText))
+                            .TextWrapping(TextWrapping.Wrap)
+                    ),
+
+                Keypad()
+            )
+    )
     .OnPreviewKeyDown(e =>
     {
         if (e.Key == Key.Backspace)
@@ -94,37 +118,7 @@ var window = new Window()
     {
         if (TryAppendFromText(e.Text))
             e.Handled = true;
-    })
-    .Title("MewUI FBA Calculator")
-    .Size(360, 520)
-    .Content(
-        new DockPanel()
-            .Margin(8)
-            .Children(
-                new StackPanel()
-                    .DockTop()
-                    .Spacing(6)
-                    .Children(
-                        new Label()
-                            .BindText(expression, s => string.IsNullOrEmpty(s) ? " " : s)
-                            .TextWrapping(TextWrapping.Wrap)
-                            .FontSize(16),
-
-                        new Label()
-                            .BindText(result)
-                            .FontSize(28)
-                            .Bold()
-                            .TextAlignment(TextAlignment.Right),
-
-                        new Label()
-                            .BindText(error, s => string.IsNullOrEmpty(s) ? " " : s)
-                            .Foreground(Theme.Current.DisabledText)
-                            .TextWrapping(TextWrapping.Wrap)
-                    ),
-
-                Keypad()
-            )
-    );
+    });
 
 Recompute();
 
@@ -217,7 +211,7 @@ Button KeyButton(string text, Action onClick, bool isPrimary = false)
         .MinHeight(44);
 
     if (isPrimary)
-        b.BorderBrush(Theme.Current.Accent);
+        b.WithTheme((t, c) => c.BorderBrush(t.Palette.Accent));
 
     return b;
 }
