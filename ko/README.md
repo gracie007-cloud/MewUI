@@ -4,6 +4,7 @@
 ![.NET](https://img.shields.io/badge/.NET-8%2B-512BD4?logo=dotnet&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-10%2B-0078D4?logo=windows&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-X11-FCC624?logo=linux&logoColor=black)
+![macOS](https://img.shields.io/badge/macOS-12%2B-901DBA?logo=Apple&logoColor=white)
 ![NativeAOT](https://img.shields.io/badge/NativeAOT-Ready-2E7D32)
 ![License: MIT](https://img.shields.io/badge/License-MIT-000000)
 [![NuGet](https://img.shields.io/nuget/v/Aprillz.MewUI.svg?label=NuGet)](https://www.nuget.org/packages/Aprillz.MewUI/)
@@ -56,17 +57,6 @@ https://github.com/user-attachments/assets/2e0c1e0e-3dcd-4b5a-8480-fa060475249a
 - 🧩 Fluent **C# 마크업**
 
 ---
-## 🪶 경량(Lightweight)
-
-- **실행 파일 크기:** NativeAOT + Trim 중심(샘플 `win-x64-trimmed` 약 `2.2 MB`)
-- **샘플 런타임 벤치마크** (NativeAOT + Trimmed, 50회 실행):
-
-| 백엔드 | Loaded avg/p95 (ms) | FirstFrame avg/p95 (ms) | WS avg/p95 (MB) | PS avg/p95 (MB) |
-|---|---:|---:|---:|---:|
-| Direct2D | 10 / 11 | 178 / 190 | 40.0 / 40.1 | 54.8 / 55.8 |
-| GDI | 15 / 21 | 54 / 67 | 15.2 / 15.3 | 4.6 / 4.8 |
-
----
 
 ## 🚀 빠른 시작
 
@@ -82,7 +72,7 @@ https://github.com/user-attachments/assets/2e0c1e0e-3dcd-4b5a-8480-fa060475249a
     #:property OutputType=Exe
     #:property TargetFramework=net10.0
 
-    #:package Aprillz.MewUI@0.2.0
+    #:package Aprillz.MewUI@0.9.0
    
     //...
     ```
@@ -139,12 +129,13 @@ https://github.com/user-attachments/assets/2e0c1e0e-3dcd-4b5a-8480-fa060475249a
 - interop/dynamic 기능을 추가했다면, 위 publish 설정으로 반드시 검증하는 것을 권장합니다.
 
 로컬에서 확인:
-- Publish: `dotnet publish .\samples\MewUI.Sample\MewUI.Sample.csproj -c Release -p:PublishProfile=win-x64-trimmed`
-- 출력 확인: `.artifacts\publish\MewUI.Sample\win-x64-trimmed\`
+- Publish: `dotnet publish .\samples\MewUI.Gallery\MewUI.Gallery.csproj -c Release -p:PublishProfile=win-x64-trimmed`
+- 출력 확인: `.artifacts\publish\MewUI.Gallery\win-x64-trimmed\`
 
-참고(샘플, `win-x64-trimmed`):
-- `Aprillz.MewUI.Sample.exe` 약 `2,257 KB`
-
+참고 (`Aprillz.MewUI.Gallery.exe` @v0.10.0)
+- win-x64:  ~3,545 KB
+- osx-arm64: ~2,664 KB
+- linux-arm64: ~3939 KB
 ---
 ## 🔗 상태/바인딩(AOT 친화)
 
@@ -178,63 +169,72 @@ var label  = new Label()
 - `MenuBar`, `ContextMenu`, `ToolTip`
 - `Window`, `DispatcherTimer`
 
-패널:
-- `Grid` (row/column: `Auto`, `*`, pixel)
-- `StackPanel` (가로/세로 + Spacing)
-- `DockPanel` (도킹 + 마지막 자식 채우기)
+패널: (`Spaging` 지원)
+- `Grid` (row/column: `Auto`, `*`, 픽셀)
+- `StackPanel` (가로/세로)
+- `DockPanel` (도킹 + 마지막 채우기)
 - `UniformGrid` (균등 셀)
-- `WrapPanel` (줄바꿈 + Item size + Spacing)
+- `WrapPanel` (줄바꿈 + Item size)
 ---
 ## 🎨 테마(Theme)
+MewUI는 `Theme` 객체(색상 + 메트릭)와 `ThemeManager`를 사용하여 기본값 설정과 런타임 변경을 제어합니다.
 
-테마는 두 부분으로 구성됩니다:
-- `Palette` - 색상(배경/Accent 기반 파생 색 포함)
-- `Theme` - 색 이외의 파라미터(코너 라디우스, 기본 폰트 등 + `Palette`)
+- `ThemeManager.Default*`를 통해 `Application.Run(...)` 이전에 기본값을 설정합니다.
+- `Application.Current.SetTheme(...)` /
+  `Application.Current.SetAccent(...)`를 통해 런타임에 변경할 수 있습니다.
 
-Accent 변경:
-
-```csharp
-Theme.Current = Theme.Current.WithAccent(Color.FromRgb(214, 176, 82));
-```
+참고: `docs/Theme.md`
 
 ---
 ## 🖌️ 렌더링 백엔드
+다음은 **의미를 유지한 정확한 번역**입니다.
 
-렌더링은 아래 추상화로 분리됩니다:
+렌더링은 다음 인터페이스를 통해 추상화되어 있습니다.
 - `IGraphicsFactory` / `IGraphicsContext`
 
-백엔드
-- `Direct2D` (Windows)
-- `GDI` (Windows)
-- `OpenGL` (Windows / Linux)
+백엔드:
+- `Direct2D` (Windows): `Aprillz.MewUI.Backend.Direct2D`
+- `GDI` (Windows): `Aprillz.MewUI.Backend.Gdi`
+- `OpenGL` (Windows): `Aprillz.MewUI.Backend.OpenGL.Win32`
+- `OpenGL` (Linux/X11): `Aprillz.MewUI.Backend.OpenGL.X11`
+- `OpenGL` (macOS): `Aprillz.MewUI.Backend.OpenGL.MacOS`
 
-샘플은 Windows에서는 `Direct2D`, Linux에서는 `OpenGL`을 기본으로 사용합니다.
-- `Direct2D`: 초기엔 느리고 상주 메모리가 크지만, 복잡한 레이아웃/효과에 더 적합
-- `GDI`: 가볍고 빠르게 시작되지만, CPU 사용이 커서 고해상도/큰 창/복잡한 UI에는 부적합
-- `OpenGL`: Linux/X11 플랫폼 호스트에서 동작하며, 크로스플랫폼을 목표로 하지만 아직은 실험 단계입니다
+백엔드는 참조된 백엔드 패키지에 의해 등록됩니다
+(Trim/AOT 친화적 구조).
+
+애플리케이션 코드에서는 일반적으로 다음 중 하나를 사용합니다.
+- `Application.Run(...)` 이전에 `*Backend.Register()`를 호출하거나
+- 빌더 체인 방식인  
+  `Application.Create().Use...().Run(...)`을 사용합니다.
 
 ---
 ## 🪟 플랫폼 추상화
+다음은 **의미를 유지한 정확한 번역**입니다.
 
-윈도우/메시지 루프는 플랫폼 계층으로 추상화되어 있습니다.
+윈도우 관리와 메시지 루프는 플랫폼 계층 뒤에서 추상화되어 있습니다.
 
-현재 구현
-- Windows (`Win32PlatformHost`)
-- Linux/X11 (experimental)
+현재 구현된 플랫폼:
+- Windows (`Aprillz.MewUI.Platform.Win32`)
+- Linux/X11 (`Aprillz.MewUI.Platform.X11`)
+- macOS (`Aprillz.MewUI.Platform.MacOS`)
 
-### Linux Dialog 의존성
-Linux에서 `MessageBox` 및 파일 다이얼로그는 현재 외부 도구를 통해 구현되어 있습니다:
+### Linux 대화상자 의존성
+Linux에서는 `MessageBox`와 파일 대화상자가 현재 외부 도구를 통해 구현되어 있습니다.
 - `zenity` (GNOME/GTK)
 - `kdialog` (KDE)
 
-두 도구가 모두 `PATH`에서 발견되지 않으면 아래 예외가 발생합니다:
+`PATH`에 어느 것도 존재하지 않으면, MewUI는 다음 예외를 발생시킵니다.
 `PlatformNotSupportedException: No supported Linux dialog tool found (zenity/kdialog).`
 
 ---
 ## 📄 문서
 
-- [C# Markup](ko/docs/CSharpMarkup.md)
-- [Binding](ko/docs/Binding.md)
+- [C# Markup](docs/CSharpMarkup.md)
+- [Binding](docs/Binding.md)
+- [Theme](docs/Theme.md)
+- [Application Lifecycle](docs/ApplicationLifecycle.md)
+- [Layout](docs/Layout.md)
+- [RenderLoop (internal)](docs/RenderLoop.md)
 
 
 ---

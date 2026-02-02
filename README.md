@@ -55,19 +55,6 @@ https://github.com/user-attachments/assets/2e0c1e0e-3dcd-4b5a-8480-fa060475249a
 - 🪶 **Lightweight** by design (small EXE, low memory footprint, fast first frame — see benchmark below)
 - 🧩 Fluent **C# markup** (no XAML)
 
----
-## 🪶 Lightweight
-
-- **Executable size:** NativeAOT + Trim focused (2.6 MB ~ 3.9 MB)
-- **Sample runtime benchmark** (NativeAOT + Trimmed, 50 launches):
-
-| Backend | Loaded avg/p95 (ms) | FirstFrame avg/p95 (ms) | WS avg/p95 (MB) | PS avg/p95 (MB) |
-|---|---:|---:|---:|---:|
-| Direct2D | 10 / 11 | 178 / 190 | 40.0 / 40.1 | 54.8 / 55.8 |
-| GDI | 15 / 21 | 54 / 67 | 15.2 / 15.3 | 4.6 / 4.8 |
-
----
-
 ## 🚀 Quickstart
 
 - NuGet: https://www.nuget.org/packages/Aprillz.MewUI/
@@ -159,8 +146,10 @@ var percent = new ObservableValue<double>(
     initialValue: 0.25,
     coerce: v => Math.Clamp(v, 0, 1));
 
-var slider = new Slider().BindValue(percent);
-var label  = new Label().BindText(percent, v => $"Percent ({v:P0})");
+var slider = new Slider()
+            .BindValue(percent);
+var label  = new Label()
+            .BindText(percent, v => $"Percent ({v:P0})");
 ```
 
 ---
