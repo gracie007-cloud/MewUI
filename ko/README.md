@@ -40,7 +40,7 @@ curl -sL https://raw.githubusercontent.com/aprillz/MewUI/refs/heads/main/samples
 
 
 ### 비디오
-https://github.com/user-attachments/assets/40f4da93-6176-4b2c-9799-09751ca27009
+https://github.com/user-attachments/assets/2e0c1e0e-3dcd-4b5a-8480-fa060475249a
 
 ### 스크린샷
 
@@ -171,13 +171,12 @@ var label  = new Label()
 - `Button`
 - `Label`, `Image`
 - `TextBox`, `MultiLineTextBox`
-- `CheckBox`, `RadioButton`
-- `ComboBox`, `ListBox`
+- `CheckBox`, `RadioButton`, `ToggleSwitch`
+- `ComboBox`, `ListBox`, `TreeView`, `GridView`
 - `Slider`, `ProgressBar`
 - `TabControl`, `GroupBox`
-- `MenuBar`, `ContextMenu`, `ToolTip` (창 내부 팝업)
-- `Window`
-- `DispatcherTimer`
+- `MenuBar`, `ContextMenu`, `ToolTip`
+- `Window`, `DispatcherTimer`
 
 패널:
 - `Grid` (row/column: `Auto`, `*`, pixel)
@@ -240,10 +239,6 @@ Linux에서 `MessageBox` 및 파일 다이얼로그는 현재 외부 도구를 �
 
 ---
 ## 🧭 로드맵 (TODO)
-
-**컨트롤**
-- [ ] `ToggleSwitch`
-- [ ] `GridView`
 
 **기능**
 - [ ] 간단한 템플릿 지원 (델리게이트 기반)
