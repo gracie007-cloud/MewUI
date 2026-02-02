@@ -6,6 +6,7 @@
 ![.NET](https://img.shields.io/badge/.NET-8%2B-512BD4?logo=dotnet&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-10%2B-0078D4?logo=windows&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-X11-FCC624?logo=linux&logoColor=black)
+![macOS](https://img.shields.io/badge/macOS-12%2B-901DBA?logo=Apple&logoColor=white)
 ![NativeAOT](https://img.shields.io/badge/NativeAOT-Ready-2E7D32)
 ![License: MIT](https://img.shields.io/badge/License-MIT-000000)
 [![NuGet](https://img.shields.io/nuget/v/Aprillz.MewUI.svg?label=NuGet)](https://www.nuget.org/packages/Aprillz.MewUI/)
@@ -57,7 +58,7 @@ https://github.com/user-attachments/assets/2e0c1e0e-3dcd-4b5a-8480-fa060475249a
 ---
 ## 🪶 Lightweight
 
-- **Executable size:** NativeAOT + Trim focused (sample `win-x64-trimmed` is ~ `2.2 MB`)
+- **Executable size:** NativeAOT + Trim focused (2.6 MB ~ 3.9 MB)
 - **Sample runtime benchmark** (NativeAOT + Trimmed, 50 launches):
 
 | Backend | Loaded avg/p95 (ms) | FirstFrame avg/p95 (ms) | WS avg/p95 (MB) | PS avg/p95 (MB) |
@@ -81,7 +82,7 @@ https://github.com/user-attachments/assets/2e0c1e0e-3dcd-4b5a-8480-fa060475249a
     #:property OutputType=Exe
     #:property TargetFramework=net10.0
 
-    #:package Aprillz.MewUI@0.8.3
+    #:package Aprillz.MewUI@0.9.0
 
     // ...
     ```
@@ -138,12 +139,13 @@ https://github.com/user-attachments/assets/2e0c1e0e-3dcd-4b5a-8480-fa060475249a
 - If you introduce new interop or dynamic features, verify with the trimmed publish profile above.
 
 To check output size locally:
-- Publish: `dotnet publish .\samples\MewUI.Sample\MewUI.Sample.csproj -c Release -p:PublishProfile=win-x64-trimmed`
-- Inspect: `.artifacts\publish\MewUI.Sample\win-x64-trimmed\`
+- Publish: `dotnet publish .\samples\MewUI.Gallery\MewUI.Gallery.csproj -c Release -p:PublishProfile=win-x64-trimmed`
+- Inspect: `.artifacts\publish\MewUI.Gallery\win-x64-trimmed\`
 
-Reference (sample, `win-x64-trimmed`):
-- `Aprillz.MewUI.Sample.exe` ~ `2,257 KB`
-
+Reference (`Aprillz.MewUI.Gallery.exe` @v0.10.0)
+- win-x64:  ~3,545 KB
+- osx-arm64: ~2,664 KB
+- linux-arm64: ~3939 KB
 ---
 ## 🔗 State & Binding (AOT-friendly)
 
@@ -164,24 +166,23 @@ var label  = new Label().BindText(percent, v => $"Percent ({v:P0})");
 ---
 ## 🧱 Controls / Panels
 
-Controls (implemented):
+Controls (Implemented):
 - `Button`
 - `Label`, `Image`
 - `TextBox`, `MultiLineTextBox`
-- `CheckBox`, `RadioButton`
-- `ComboBox`, `ListBox`
+- `CheckBox`, `RadioButton`, `ToggleSwitch`
+- `ComboBox`, `ListBox`, `TreeView`, `GridView`
 - `Slider`, `ProgressBar`
 - `TabControl`, `GroupBox`
 - `MenuBar`, `ContextMenu`, `ToolTip` (in-window popups)
-- `Window`
-- `DispatcherTimer`
+- `Window`, `DispatcherTimer`
 
-Panels:
+Panels: (Spacing supported)
 - `Grid` (rows/columns with `Auto`, `*`, pixel)
-- `StackPanel` (horizontal/vertical + spacing)
+- `StackPanel` (horizontal/vertical)
 - `DockPanel` (dock edges + last-child fill)
 - `UniformGrid` (equal cells)
-- `WrapPanel` (wrap + item size + spacing)
+- `WrapPanel` (wrap + item size)
 ---
 ## 🎨 Theme
 
@@ -203,7 +204,7 @@ Backends:
 - `GDI` (Windows): `Aprillz.MewUI.Backend.Gdi`
 - `OpenGL` (Windows): `Aprillz.MewUI.Backend.OpenGL.Win32`
 - `OpenGL` (Linux/X11): `Aprillz.MewUI.Backend.OpenGL.X11`
-- `Vulkan` (Linux/X11, experimental): `Aprillz.MewUI.Backend.Vulkan.X11`
+- `OpenGL` (macOS): `Aprillz.MewUI.Backend.OpenGL.MacOS`
 
 Backends are registered by the referenced backend packages (Trim/AOT-friendly). In app code you typically either:
 - call `*Backend.Register()` before `Application.Run(...)`, or
@@ -215,7 +216,8 @@ Windowing and the message loop are abstracted behind a platform layer.
 
 Currently implemented:
 - Windows (`Aprillz.MewUI.Platform.Win32`)
-- Linux/X11 (`Aprillz.MewUI.Platform.X11`, experimental)
+- Linux/X11 (`Aprillz.MewUI.Platform.X11`)
+- macOS (`Aprillz.MewUI.Platform.MacOS`)
 
 ### Linux dialogs dependency
 On Linux, `MessageBox` and file dialogs are currently implemented via external tools:
@@ -237,11 +239,7 @@ If neither is available in `PATH`, MewUI throws:
 
 ---
 ## 🧭 Roadmap (TODO)
-
-**Controls**
-- [ ] `ToggleSwitch`
-- [ ] `GridView`
-
+ 
 **Features**
 - [ ] Simple template support (Delegate-based)
 
