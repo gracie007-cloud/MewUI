@@ -63,8 +63,15 @@ internal static class Avx2Processor
             var outLo = Premultiply16(vLo, aLo, bias128);
             var outHi = Premultiply16(vHi, aHi, bias128);
 
+            // NOTE:
+            // AVX2 unpack/pack operate independently on each 128-bit lane.
+            // vLo/vHi are already arranged as:
+            // - lane0: pixels 0-1 (low) and pixels 2-3 (high)
+            // - lane1: pixels 4-5 (low) and pixels 6-7 (high)
+            // Therefore PackUnsignedSaturate produces correct pixel order:
+            //   lane0: p0 p1 p2 p3, lane1: p4 p5 p6 p7
+            // Do NOT permute 64-bit lanes here (it would scramble pixels).
             var packed = Avx2.PackUnsignedSaturate(outLo.AsInt16(), outHi.AsInt16());
-            packed = Avx2.Permute4x64(packed.AsInt64(), 0b11_01_10_00).AsByte();
 
             Avx.Store(dstBgra + i * 4, packed);
         }
