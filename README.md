@@ -221,17 +221,15 @@ If neither is available in `PATH`, MewUI throws:
 
 - [C# Markup](docs/CSharpMarkup.md)
 - [Binding](docs/Binding.md)
+- [Items and Templates](docs/ItemsAndTemplates.md)
 - [Theme](docs/Theme.md)
 - [Application Lifecycle](docs/ApplicationLifecycle.md)
 - [Layout](docs/Layout.md)
-- [RenderLoop (internal)](docs/RenderLoop.md)
+- [RenderLoop](docs/RenderLoop.md)
 
 ---
 ## 🧭 Roadmap (TODO)
  
-**Features**
-- [ ] Simple template support (Delegate-based)
-
 **Platforms**
 - [ ] Linux/Wayland
 - [ ] macOS

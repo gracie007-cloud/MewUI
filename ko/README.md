@@ -231,18 +231,15 @@ Linux에서는 `MessageBox`와 파일 대화상자가 현재 외부 도구를 �
 
 - [C# Markup](docs/CSharpMarkup.md)
 - [Binding](docs/Binding.md)
+- [Items and Templates](docs/ItemsAndTemplates.md)
 - [Theme](docs/Theme.md)
 - [Application Lifecycle](docs/ApplicationLifecycle.md)
 - [Layout](docs/Layout.md)
-- [RenderLoop (internal)](docs/RenderLoop.md)
-
+- [RenderLoop](docs/RenderLoop.md)
 
 ---
 ## 🧭 로드맵 (TODO)
-
-**기능**
-- [ ] 간단한 템플릿 지원 (델리게이트 기반)
-
++
 **플랫폼**
 - [ ] Linux/Wayland
 - [ ] macOS
