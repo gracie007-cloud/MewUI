@@ -1,6 +1,7 @@
 using Aprillz.MewUI.Native.Com;
 using Aprillz.MewUI.Native.Direct2D;
 using Aprillz.MewUI.Resources;
+using Aprillz.MewUI.Rendering.Gdi.Simd;
 
 namespace Aprillz.MewUI.Rendering.Direct2D;
 
@@ -198,61 +199,22 @@ internal sealed class Direct2DImage : IImage
 
         var dst = new byte[dstWidth * dstHeight * 4];
 
-        for (int y = 0; y < dstHeight; y++)
+        unsafe
         {
-            int sy = y * 2;
-            int sy1 = sy + 1;
-            bool hasY1 = sy1 < srcHeight;
-
-            for (int x = 0; x < dstWidth; x++)
+            fixed (byte* srcPtr = src)
+            fixed (byte* dstPtr = dst)
             {
-                int sx = x * 2;
-                int sx1 = sx + 1;
-                bool hasX1 = sx1 < srcWidth;
-
-                int count = 1;
-                int idx00 = (sy * srcWidth + sx) * 4;
-
-                int b = src[idx00 + 0];
-                int g = src[idx00 + 1];
-                int r = src[idx00 + 2];
-                int a = src[idx00 + 3];
-
-                if (hasX1)
-                {
-                    count++;
-                    int idx10 = (sy * srcWidth + sx1) * 4;
-                    b += src[idx10 + 0];
-                    g += src[idx10 + 1];
-                    r += src[idx10 + 2];
-                    a += src[idx10 + 3];
-                }
-
-                if (hasY1)
-                {
-                    count++;
-                    int idx01 = (sy1 * srcWidth + sx) * 4;
-                    b += src[idx01 + 0];
-                    g += src[idx01 + 1];
-                    r += src[idx01 + 2];
-                    a += src[idx01 + 3];
-
-                    if (hasX1)
-                    {
-                        count++;
-                        int idx11 = (sy1 * srcWidth + sx1) * 4;
-                        b += src[idx11 + 0];
-                        g += src[idx11 + 1];
-                        r += src[idx11 + 2];
-                        a += src[idx11 + 3];
-                    }
-                }
-
-                int di = (y * dstWidth + x) * 4;
-                dst[di + 0] = (byte)((b + (count / 2)) / count);
-                dst[di + 1] = (byte)((g + (count / 2)) / count);
-                dst[di + 2] = (byte)((r + (count / 2)) / count);
-                dst[di + 3] = (byte)((a + (count / 2)) / count);
+                int srcStride = srcWidth * 4;
+                int dstStride = dstWidth * 4;
+                GdiSimdDispatcher.Downsample2xBoxPremultipliedBgra(
+                    srcPtr,
+                    srcStride,
+                    srcWidth,
+                    srcHeight,
+                    dstPtr,
+                    dstStride,
+                    dstWidth,
+                    dstHeight);
             }
         }
 
@@ -299,19 +261,7 @@ internal sealed class Direct2DImage : IImage
     private static byte[] Premultiply(ReadOnlySpan<byte> bgra)
     {
         var dst = new byte[bgra.Length];
-        for (int i = 0; i < bgra.Length; i += 4)
-        {
-            byte b = bgra[i + 0];
-            byte g = bgra[i + 1];
-            byte r = bgra[i + 2];
-            byte a = bgra[i + 3];
-
-            uint alpha = a;
-            dst[i + 3] = a;
-            dst[i + 0] = (byte)((b * alpha + 127) / 255);
-            dst[i + 1] = (byte)((g * alpha + 127) / 255);
-            dst[i + 2] = (byte)((r * alpha + 127) / 255);
-        }
+        GdiSimdDispatcher.PremultiplyBgra(bgra, dst);
         return dst;
     }
 
