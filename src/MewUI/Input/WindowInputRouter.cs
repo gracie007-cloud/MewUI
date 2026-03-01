@@ -90,6 +90,11 @@ internal static class WindowInputRouter
         };
         if (isDown)
         {
+            // Close transient popups before routing the click.
+            // This prevents a popup opened by the click (e.g. ContextMenu) from being immediately closed
+            // by the post-bubbling close policy pass.
+            window.RequestClosePopups(PopupCloseRequest.PointerDown(element));
+
             if (element?.Focusable == true)
             {
                 window.FocusManager.SetFocus(element);
@@ -133,9 +138,6 @@ internal static class WindowInputRouter
                     current.RaiseMouseDoubleClick(args);
                 }
             }
-
-            // After routing the click, close transient popups that are not related to the click target.
-            window.RequestClosePopups(PopupCloseRequest.PointerDown(element));
         }
         else
         {

@@ -148,20 +148,11 @@ internal sealed class PopupManager
 
     internal void CloseAllPopups()
     {
-        for (int i = 0; i < _popups.Count; i++)
+        for (int i = _popups.Count - 1; i >= 0; i--)
         {
-            var entry = _popups[i];
-            DetachEntry(entry);
-            if (entry.Owner is IPopupOwner owner)
-            {
-                owner.OnPopupClosed(entry.Element, PopupCloseKind.Lifecycle);
-            }
-
-            EnsureFocusNotInClosedPopup(entry.Element, entry.Owner);
+            CloseAndDetachEntry(i, PopupCloseKind.Lifecycle);
         }
 
-        _popups.Clear();
-        _toolTipOwner = null;
         _window.Invalidate();
     }
 
@@ -201,6 +192,7 @@ internal sealed class PopupManager
         var entry = new PopupEntry { Owner = owner, Element = popup, Chrome = chrome, Bounds = bounds, StaysOpen = staysOpen };
         _popups.Add(entry);
         LayoutPopup(entry);
+        
         _window.Invalidate();
     }
 
@@ -234,220 +226,66 @@ internal sealed class PopupManager
                 continue;
             }
 
-            var entry = _popups[i];
-            DetachEntry(entry);
-            _popups.RemoveAt(i);
-            if (entry.Owner is IPopupOwner owner)
-            {
-                owner.OnPopupClosed(entry.Element, kind);
-            }
-
-            EnsureFocusNotInClosedPopup(entry.Element, entry.Owner);
-
+            CloseAndDetachEntry(i, kind);
             _window.Invalidate();
-            if (ReferenceEquals(popup, _toolTip))
-            {
-                _toolTipOwner = null;
-            }
             return;
-        }
-    }
-
-    internal void CloseNonStaysOpenPopups()
-    {
-        if (_popups.Count == 0)
-        {
-            return;
-        }
-
-        if (_isClosingPopups)
-        {
-            return;
-        }
-
-        _isClosingPopups = true;
-        try
-        {
-            var focused = _window.FocusManager.FocusedElement;
-            UIElement? restoreFocusTo = null;
-
-            bool removedAny = false;
-            for (int i = _popups.Count - 1; i >= 0; i--)
-            {
-                if (_popups[i].StaysOpen)
-                {
-                    continue;
-                }
-
-                var entry = _popups[i];
-
-                if (focused != null && (focused == entry.Element || VisualTree.IsInSubtreeOf(focused, entry.Element)))
-                {
-                    restoreFocusTo = entry.Owner;
-                }
-
-                DetachEntry(entry);
-                if (entry.Owner is IPopupOwner owner)
-                {
-                    owner.OnPopupClosed(entry.Element, PopupCloseKind.Policy);
-                }
-
-                _popups.RemoveAt(i);
-                removedAny = true;
-            }
-
-            if (restoreFocusTo != null)
-            {
-                _window.FocusManager.SetFocus(restoreFocusTo);
-            }
-
-            if (removedAny)
-            {
-                _window.Invalidate();
-            }
-        }
-        finally
-        {
-            _isClosingPopups = false;
         }
     }
 
     internal void RequestClosePopups(PopupCloseRequest request)
     {
-        // Keep the method as the single entry point so policy evolves without changing call sites.
-        if (_popups.Count == 0)
+        if (_popups.Count == 0 || _isClosingPopups)
         {
             return;
         }
 
-        if (_isClosingPopups)
+        switch (request.TriggerKind)
         {
-            return;
-        }
-
-        if (request.TriggerKind == PopupCloseRequest.Trigger.PointerDown)
-        {
-            CloseTransientPopupsExceptPointerRelated(request.PointerLeaf);
-            return;
-        }
-
-        if (request.TriggerKind == PopupCloseRequest.Trigger.FocusChanged)
-        {
-            CloseTransientPopupsIfFocusMovedOutside(request.NewFocusedElement);
-            return;
-        }
-
-        if (request.TriggerKind == PopupCloseRequest.Trigger.Explicit)
-        {
-            CloseNonStaysOpenPopups();
-            return;
-        }
-
-        if (request.TriggerKind == PopupCloseRequest.Trigger.Lifecycle)
-        {
-            CloseAllPopups();
-            return;
+            case PopupCloseRequest.Trigger.PointerDown:
+            {
+                var leaf = request.PointerLeaf;
+                // Hit-test-invisible popups (e.g. ToolTip) are never "related" — always close on any click.
+                CloseTransientPopups(leaf == null
+                    ? null
+                    : entry => entry.Element.IsHitTestVisible && IsRelated(leaf, entry, applyContextMenuOwnerPolicy: true));
+                break;
+            }
+            case PopupCloseRequest.Trigger.FocusChanged:
+            {
+                var focused = request.NewFocusedElement;
+                CloseTransientPopups(focused == null
+                    ? null
+                    : entry => IsRelated(focused, entry, applyContextMenuOwnerPolicy: false));
+                break;
+            }
+            case PopupCloseRequest.Trigger.Explicit:
+                CloseTransientPopups(shouldKeep: null);
+                break;
+            case PopupCloseRequest.Trigger.Lifecycle:
+                CloseAllPopups();
+                break;
         }
     }
 
-    private void CloseTransientPopupsExceptPointerRelated(UIElement? pointerLeaf)
+    /// <summary>
+    /// Walks the popup owner chain (via <see cref="WindowInputRouter.GetInputBubbleParent"/>)
+    /// to determine whether <paramref name="leaf"/> is logically related to <paramref name="entry"/>.
+    /// </summary>
+    /// <param name="leaf">The element to start walking the popup owner chain from.</param>
+    /// <param name="entry">The popup entry to check against.</param>
+    /// <param name="applyContextMenuOwnerPolicy">
+    /// When true (pointer-triggered close), context menus close when clicking their non-ContextMenu owner
+    /// (common desktop UX: click to toggle). When false (focus-triggered close), the owner always counts as related.
+    /// </param>
+    private bool IsRelated(UIElement leaf, PopupEntry entry, bool applyContextMenuOwnerPolicy)
     {
-        // Click on empty area (or unknown target) => close all transient popups.
-        if (pointerLeaf == null)
+        bool ownerCounts = !applyContextMenuOwnerPolicy
+            || entry.Element is not ContextMenu
+            || entry.Owner is ContextMenu;
+
+        for (var current = leaf; current != null; current = WindowInputRouter.GetInputBubbleParent(_window, current))
         {
-            CloseNonStaysOpenPopups();
-            return;
-        }
-
-        _isClosingPopups = true;
-        try
-        {
-            var focused = _window.FocusManager.FocusedElement;
-            UIElement? restoreFocusTo = null;
-
-            bool removedAny = false;
-            for (int i = _popups.Count - 1; i >= 0; i--)
-            {
-                var entry = _popups[i];
-
-                if (entry.StaysOpen)
-                {
-                    continue;
-                }
-
-                // Close hit-test-invisible popups unconditionally (e.g. ToolTip).
-                // They are not user-interactive and should not block normal click behavior.
-                if (!entry.Element.IsHitTestVisible)
-                {
-                    if (focused != null && (focused == entry.Element || VisualTree.IsInSubtreeOf(focused, entry.Element)))
-                    {
-                        restoreFocusTo = entry.Owner;
-                    }
-
-                    DetachEntry(entry);
-                    _popups.RemoveAt(i);
-                    if (entry.Owner is IPopupOwner popupOwner)
-                    {
-                        popupOwner.OnPopupClosed(entry.Element, PopupCloseKind.Policy);
-                    }
-
-                    EnsureFocusNotInClosedPopup(entry.Element, entry.Owner);
-
-                    if (ReferenceEquals(entry.Element, _toolTip))
-                    {
-                        _toolTipOwner = null;
-                    }
-
-                    removedAny = true;
-                    continue;
-                }
-
-                // If the click is related to this popup, keep it.
-                // "Related" means the click happened on the owner or inside the popup (bubble chain crosses popup->owner).
-                if (IsPointerRelated(pointerLeaf, entry))
-                {
-                    continue;
-                }
-
-                // Close any non-related popup.
-                if (focused != null && (focused == entry.Element || VisualTree.IsInSubtreeOf(focused, entry.Element)))
-                {
-                    restoreFocusTo = entry.Owner;
-                }
-
-                DetachEntry(entry);
-                _popups.RemoveAt(i);
-                if (entry.Owner is IPopupOwner popupOwner2)
-                {
-                    popupOwner2.OnPopupClosed(entry.Element, PopupCloseKind.Policy);
-                }
-
-                removedAny = true;
-
-                EnsureFocusNotInClosedPopup(entry.Element, entry.Owner);
-            }
-
-            if (restoreFocusTo != null)
-            {
-                _window.FocusManager.SetFocus(restoreFocusTo);
-            }
-
-            if (removedAny)
-            {
-                _window.Invalidate();
-            }
-        }
-        finally
-        {
-            _isClosingPopups = false;
-        }
-    }
-
-    private bool IsPointerRelated(UIElement clickLeaf, PopupEntry entry)
-    {
-        for (var current = clickLeaf; current != null; current = WindowInputRouter.GetInputBubbleParent(_window, current))
-        {
-            if (ReferenceEquals(current, entry.Owner) || ReferenceEquals(current, entry.Element))
+            if (ReferenceEquals(current, entry.Element) || (ownerCounts && ReferenceEquals(current, entry.Owner)))
             {
                 return true;
             }
@@ -456,14 +294,9 @@ internal sealed class PopupManager
         return false;
     }
 
-    private void CloseTransientPopupsIfFocusMovedOutside(UIElement? newFocusedElement)
+    private void CloseTransientPopups(Func<PopupEntry, bool>? shouldKeep)
     {
-        if (_popups.Count == 0)
-        {
-            return;
-        }
-
-        if (_isClosingPopups)
+        if (_popups.Count == 0 || _isClosingPopups)
         {
             return;
         }
@@ -471,9 +304,6 @@ internal sealed class PopupManager
         _isClosingPopups = true;
         try
         {
-            var focused = _window.FocusManager.FocusedElement;
-            UIElement? restoreFocusTo = null;
-
             bool removedAny = false;
             for (int i = _popups.Count - 1; i >= 0; i--)
             {
@@ -483,37 +313,13 @@ internal sealed class PopupManager
                     continue;
                 }
 
-                if (newFocusedElement != null)
+                if (shouldKeep != null && shouldKeep(entry))
                 {
-                    if (ReferenceEquals(newFocusedElement, entry.Element) || VisualTree.IsInSubtreeOf(newFocusedElement, entry.Element))
-                    {
-                        continue;
-                    }
-
-                    if (ReferenceEquals(newFocusedElement, entry.Owner) || VisualTree.IsInSubtreeOf(newFocusedElement, entry.Owner))
-                    {
-                        continue;
-                    }
+                    continue;
                 }
 
-                if (focused != null && (focused == entry.Element || VisualTree.IsInSubtreeOf(focused, entry.Element)))
-                {
-                    restoreFocusTo = entry.Owner;
-                }
-
-                DetachEntry(entry);
-                if (entry.Owner is IPopupOwner owner)
-                {
-                    owner.OnPopupClosed(entry.Element, PopupCloseKind.Policy);
-                }
-
-                _popups.RemoveAt(i);
+                CloseAndDetachEntry(i, PopupCloseKind.Policy);
                 removedAny = true;
-            }
-
-            if (restoreFocusTo != null)
-            {
-                _window.FocusManager.SetFocus(restoreFocusTo);
             }
 
             if (removedAny)
@@ -524,6 +330,25 @@ internal sealed class PopupManager
         finally
         {
             _isClosingPopups = false;
+        }
+    }
+
+    private void CloseAndDetachEntry(int index, PopupCloseKind kind)
+    {
+        var entry = _popups[index];
+        DetachEntry(entry);
+        _popups.RemoveAt(index);
+
+        if (entry.Owner is IPopupOwner owner)
+        {
+            owner.OnPopupClosed(entry.Element, kind);
+        }
+
+        EnsureFocusNotInClosedPopup(entry.Element, entry.Owner);
+
+        if (ReferenceEquals(entry.Element, _toolTip))
+        {
+            _toolTipOwner = null;
         }
     }
 
