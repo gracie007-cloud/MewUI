@@ -3,17 +3,13 @@
     "Direct2D": {
       "commandName": "Project"
     },
-    "OpenGL": {
+    "NanoVG": {
       "commandName": "Project",
-      "commandLineArgs": "--gl"
+      "commandLineArgs": "--vg"
     },
     "GDI": {
       "commandName": "Project",
       "commandLineArgs": "--gdi"
-    },
-    "WSL": {
-      "commandName": "WSL2",
-      "distributionName": ""
     }
   }
 }
