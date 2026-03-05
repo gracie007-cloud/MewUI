@@ -6,7 +6,7 @@ namespace Aprillz.MewUI.Controls;
 /// Manages deferred keyboard-Tab focus movement inside virtualized item hosts.
 /// When an item is scrolled into view it may not yet be realized; this helper
 /// posts repeated render-priority callbacks until the target container appears,
-/// then calls <see cref="FocusManager.FindFirstFocusable"/> and sets focus.
+/// then sets focus to the first (Tab) or last (Shift+Tab) focusable element.
 /// </summary>
 internal sealed class PendingTabFocusHelper
 {
@@ -17,6 +17,7 @@ internal sealed class PendingTabFocusHelper
 
     private int _index = -1;
     private int _attempts;
+    private bool _forward = true;
 
     /// <param name="getWindow">Returns the host's current visual-root window, or null if not in a window.</param>
     /// <param name="getContainer">Returns the realized container for the given item index, or null if not yet realized.</param>
@@ -29,9 +30,10 @@ internal sealed class PendingTabFocusHelper
     /// <summary>
     /// Schedules focus to be moved to the container at <paramref name="index"/> once it is realized.
     /// </summary>
-    public void Schedule(int index)
+    public void Schedule(int index, bool forward = true)
     {
         _index = index;
+        _forward = forward;
         _attempts = 0;
         PostApply();
     }
@@ -80,7 +82,9 @@ internal sealed class PendingTabFocusHelper
             return;
         }
 
-        var target = FocusManager.FindFirstFocusable(container);
+        var target = _forward
+            ? FocusManager.FindFirstFocusable(container)
+            : FocusManager.FindLastFocusable(container);
         if (target != null)
         {
             window.FocusManager.SetFocus(target);

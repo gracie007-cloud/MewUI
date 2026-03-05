@@ -354,6 +354,7 @@ public sealed class GridView : VirtualizedItemsBase, IFocusIntoViewHost, IVirtua
         }
 
         int found = -1;
+        FrameworkElement? foundContainer = null;
         _presenter.VisitRealized((i, element) =>
         {
             if (found != -1)
@@ -364,10 +365,21 @@ public sealed class GridView : VirtualizedItemsBase, IFocusIntoViewHost, IVirtua
             if (VisualTree.IsInSubtreeOf(focusedElement, element))
             {
                 found = i;
+                foundContainer = element;
             }
         });
 
-        if (found < 0)
+        if (found < 0 || foundContainer == null)
+        {
+            return false;
+        }
+
+        // If there are more focusable elements in this item's container,
+        // let normal Tab navigation handle intra-item focus movement.
+        var edge = moveForward
+            ? FocusManager.FindLastFocusable(foundContainer)
+            : FocusManager.FindFirstFocusable(foundContainer);
+        if (edge != null && !ReferenceEquals(edge, focusedElement))
         {
             return false;
         }
@@ -380,7 +392,7 @@ public sealed class GridView : VirtualizedItemsBase, IFocusIntoViewHost, IVirtua
 
         SelectedIndex = targetIndex;
         ScrollIntoView(targetIndex);
-        _tabFocusHelper.Schedule(targetIndex);
+        _tabFocusHelper.Schedule(targetIndex, moveForward);
         return true;
     }
 
@@ -1479,7 +1491,9 @@ public sealed class GridView : VirtualizedItemsBase, IFocusIntoViewHost, IVirtua
         public object? SelectedItem => _itemsView.SelectedItem;
 
         public event Action<ItemsChange>? ItemsChanged;
+
         public event Action<object?>? SelectionChanged;
+
         public event Action? ColumnsChanged;
 
         public void SetItems(ISelectableItemsView itemsView)

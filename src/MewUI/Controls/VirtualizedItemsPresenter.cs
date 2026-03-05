@@ -216,7 +216,10 @@ internal sealed class VirtualizedItemsPresenter
         {
             if (key < first || key >= lastExclusive)
             {
-                Recycle(key);
+                if (!IsFocusedSubtree(key))
+                {
+                    Recycle(key);
+                }
             }
         }
 
@@ -380,4 +383,19 @@ internal sealed class VirtualizedItemsPresenter
         _deferredFocusedIndex = null;
     }
 
+    private bool IsFocusedSubtree(int index)
+    {
+        if (!_realized.TryGetValue(index, out var element) || element is not UIElement uiElement)
+        {
+            return false;
+        }
+
+        if (_owner.FindVisualRoot() is not Window window)
+        {
+            return false;
+        }
+
+        var focused = window.FocusManager.FocusedElement;
+        return focused != null && VisualTree.IsInSubtreeOf(focused, uiElement);
+    }
 }

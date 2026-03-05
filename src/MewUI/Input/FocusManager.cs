@@ -134,6 +134,35 @@ public sealed class FocusManager
         return null;
     }
 
+    internal static UIElement? FindLastFocusable(Element? root)
+    {
+        if (root == null)
+        {
+            return null;
+        }
+
+        var result = new UIElement?[1];
+        CollectLastFocusable(root, result);
+        return result[0];
+    }
+
+    private static void CollectLastFocusable(Element element, UIElement?[] result)
+    {
+        if (element is UIElement uiElement && IsFocusable(uiElement))
+        {
+            result[0] = uiElement;
+        }
+
+        if (element is IVisualTreeHost host)
+        {
+            host.VisitChildren(child =>
+            {
+                CollectLastFocusable(child, result);
+                return true;
+            });
+        }
+    }
+
     private static bool IsFocusable(UIElement element) =>
         element.Focusable && element.IsEffectivelyEnabled && element.IsVisible;
 
@@ -147,6 +176,13 @@ public sealed class FocusManager
     /// </summary>
     public bool MoveFocusNext()
     {
+        // Always try virtualized navigation first so that off-screen items
+        // are scrolled into view and focused before falling back to the flat list.
+        if (FocusedElement != null && TryMoveVirtualizedFocus(FocusedElement, moveForward: true))
+        {
+            return true;
+        }
+
         var focusable = CollectFocusableElements(_window.Content);
         if (focusable.Count == 0)
         {
@@ -157,14 +193,6 @@ public sealed class FocusManager
         int currentIndex = anchor != null ? focusable.IndexOf(anchor) : -1;
         int nextIndex = (currentIndex + 1) % focusable.Count;
 
-        if (currentIndex == focusable.Count - 1 && FocusedElement != null)
-        {
-            if (TryMoveVirtualizedFocus(FocusedElement, moveForward: true))
-            {
-                return true;
-            }
-        }
-
         return SetFocus(focusable[nextIndex]);
     }
 
@@ -173,6 +201,11 @@ public sealed class FocusManager
     /// </summary>
     public bool MoveFocusPrevious()
     {
+        if (FocusedElement != null && TryMoveVirtualizedFocus(FocusedElement, moveForward: false))
+        {
+            return true;
+        }
+
         var focusable = CollectFocusableElements(_window.Content);
         if (focusable.Count == 0)
         {
@@ -182,14 +215,6 @@ public sealed class FocusManager
         var anchor = ResolveFocusNavigationAnchor(FocusedElement, focusable);
         int currentIndex = anchor != null ? focusable.IndexOf(anchor) : focusable.Count;
         int prevIndex = (currentIndex - 1 + focusable.Count) % focusable.Count;
-
-        if (currentIndex == 0 && FocusedElement != null)
-        {
-            if (TryMoveVirtualizedFocus(FocusedElement, moveForward: false))
-            {
-                return true;
-            }
-        }
 
         return SetFocus(focusable[prevIndex]);
     }
