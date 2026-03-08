@@ -99,6 +99,18 @@ public static class ControlExtensions
     }
 
     /// <summary>
+    /// Sets the font weight to semi-bold.
+    /// </summary>
+    /// <typeparam name="T">Control type.</typeparam>
+    /// <param name="control">Target control.</param>
+    /// <returns>The control for chaining.</returns>
+    public static T SemiBold<T>(this T control) where T : Control
+    {
+        control.FontWeight = MewUI.FontWeight.SemiBold;
+        return control;
+    }
+
+    /// <summary>
     /// Sets the font weight to bold.
     /// </summary>
     /// <typeparam name="T">Control type.</typeparam>
@@ -407,9 +419,27 @@ public static class ControlExtensions
     /// <param name="element">Target element.</param>
     /// <param name="handler">Event handler.</param>
     /// <returns>The element for chaining.</returns>
-    public static T OnTextInput<T>(this T element, Action<TextInputEventArgs> handler) where T : UIElement
+    public static T OnTextInput<T>(this T element, Action<TextInputEventArgs> handler) where T : TextBase
     {
         element.TextInput += handler;
+        return element;
+    }
+
+    public static T OnTextCompositionStart<T>(this T element, Action<TextCompositionEventArgs> handler) where T : TextBase
+    {
+        element.TextCompositionStart += handler;
+        return element;
+    }
+
+    public static T OnTextCompositionUpdate<T>(this T element, Action<TextCompositionEventArgs> handler) where T : TextBase
+    {
+        element.TextCompositionUpdate += handler;
+        return element;
+    }
+
+    public static T OnTextCompositionEnd<T>(this T element, Action<TextCompositionEventArgs> handler) where T : TextBase
+    {
+        element.TextCompositionEnd += handler;
         return element;
     }
 
@@ -1081,6 +1111,65 @@ public static class ControlExtensions
 
     #endregion
 
+    #region ToggleButton
+
+    /// <summary>
+    /// Sets the content text.
+    /// </summary>
+    /// <param name="toggleButton">Target toggle button.</param>
+    /// <param name="content">Text content.</param>
+    /// <returns>The toggle button for chaining.</returns>
+    public static ToggleButton Content(this ToggleButton toggleButton, string content)
+    {
+        toggleButton.Content = content;
+        return toggleButton;
+    }
+
+    /// <summary>
+    /// Sets the checked state.
+    /// </summary>
+    /// <param name="toggleButton">Target toggle button.</param>
+    /// <param name="isChecked">Checked state.</param>
+    /// <returns>The toggle button for chaining.</returns>
+    public static ToggleButton IsChecked(this ToggleButton toggleButton, bool isChecked = true)
+    {
+        toggleButton.IsChecked = isChecked;
+        return toggleButton;
+    }
+
+    /// <summary>
+    /// Adds a checked changed event handler.
+    /// </summary>
+    /// <param name="toggleButton">Target toggle button.</param>
+    /// <param name="handler">Event handler.</param>
+    /// <returns>The toggle button for chaining.</returns>
+    public static ToggleButton OnCheckedChanged(this ToggleButton toggleButton, Action<bool> handler)
+    {
+        toggleButton.CheckedChanged += handler;
+        return toggleButton;
+    }
+
+    /// <summary>
+    /// Binds the checked state to an observable value.
+    /// </summary>
+    /// <param name="toggleButton">Target toggle button.</param>
+    /// <param name="source">Observable source.</param>
+    /// <returns>The toggle button for chaining.</returns>
+    public static ToggleButton BindIsChecked(this ToggleButton toggleButton, ObservableValue<bool> source)
+    {
+        ArgumentNullException.ThrowIfNull(toggleButton);
+        ArgumentNullException.ThrowIfNull(source);
+
+        toggleButton.SetIsCheckedBinding(
+            () => source.Value,
+            v => source.Value = v,
+            h => source.Changed += h,
+            h => source.Changed -= h);
+        return toggleButton;
+    }
+
+    #endregion
+
     #region ToggleSwitch
 
     /// <summary>
@@ -1148,13 +1237,19 @@ public static class ControlExtensions
     /// <param name="listBox">Target list box.</param>
     /// <param name="itemsSource">Items source.</param>
     /// <returns>The list box for chaining.</returns>
-    public static ListBox ItemsSource(this ListBox listBox, IItemsView itemsSource)
+    public static ListBox ItemsSource(this ListBox listBox, ISelectableItemsView itemsSource)
     {
         ArgumentNullException.ThrowIfNull(listBox);
-        listBox.ItemsSource = itemsSource ?? ItemsView.Empty;
+        listBox.ItemsSource = itemsSource ?? ItemsView.EmptySelectable;
         return listBox;
     }
 
+    /// <summary>
+    /// Sets the items source from a legacy <see cref="MewUI.ItemsSource"/>.
+    /// </summary>
+    /// <param name="listBox">Target list box.</param>
+    /// <param name="itemsSource">Legacy items source.</param>
+    /// <returns>The list box for chaining.</returns>
     public static ListBox ItemsSource(this ListBox listBox, ItemsSource itemsSource)
     {
         ArgumentNullException.ThrowIfNull(listBox);
@@ -1182,11 +1277,12 @@ public static class ControlExtensions
     /// <param name="listBox">Target list box.</param>
     /// <param name="items">Items collection.</param>
     /// <param name="textSelector">Text selector function.</param>
+    /// <param name="keySelector">Optional key selector to stabilize selection when items change.</param>
     /// <returns>The list box for chaining.</returns>
     public static ListBox Items<T>(this ListBox listBox, IReadOnlyList<T> items, Func<T, string> textSelector, Func<T, object?>? keySelector = null)
     {
         ArgumentNullException.ThrowIfNull(listBox);
-        listBox.ItemsSource = items == null ? ItemsView.Empty : ItemsView.Create(items, textSelector, keySelector);
+        listBox.ItemsSource = items == null ? ItemsView.EmptySelectable : ItemsView.Create(items, textSelector, keySelector);
         return listBox;
     }
 
@@ -1229,11 +1325,44 @@ public static class ControlExtensions
         return listBox;
     }
 
+    /// <summary>
+    /// Sets the item template using delegate-based templating.
+    /// </summary>
+    /// <typeparam name="TItem">Item type.</typeparam>
+    /// <param name="listBox">Target list box.</param>
+    /// <param name="build">Template build callback.</param>
+    /// <param name="bind">Template bind callback.</param>
+    /// <returns>The list box for chaining.</returns>
     public static ListBox ItemTemplate<TItem>(
         this ListBox listBox,
         Func<TemplateContext, FrameworkElement> build,
         Action<FrameworkElement, TItem, int, TemplateContext> bind)
         => ItemTemplate(listBox, new DelegateTemplate<TItem>(build, bind));
+
+    /// <summary>
+    /// Sets the items presenter mode.
+    /// </summary>
+    /// <param name="listBox">Target list box.</param>
+    /// <param name="mode">Presenter mode.</param>
+    /// <returns>The list box for chaining.</returns>
+    public static ListBox PresenterMode(this ListBox listBox, ItemsPresenterMode mode)
+    {
+        ArgumentNullException.ThrowIfNull(listBox);
+        listBox.PresenterMode = mode;
+        return listBox;
+    }
+
+    /// <summary>
+    /// Uses fixed-size row virtualization.
+    /// </summary>
+    public static ListBox FixedPresenter(this ListBox listBox)
+        => listBox.PresenterMode(ItemsPresenterMode.Fixed);
+
+    /// <summary>
+    /// Uses variable-height virtualization (items are measured individually).
+    /// </summary>
+    public static ListBox VariablePresenter(this ListBox listBox)
+        => listBox.PresenterMode(ItemsPresenterMode.Variable);
 
     /// <summary>
     /// Sets the selected index.
@@ -1280,6 +1409,130 @@ public static class ControlExtensions
 
     #endregion
 
+    #region ItemsControl
+
+    /// <summary>
+    /// Sets the items source.
+    /// </summary>
+    /// <param name="itemsControl">Target items control.</param>
+    /// <param name="itemsSource">Items source.</param>
+    /// <returns>The items control for chaining.</returns>
+    public static ItemsControl ItemsSource(this ItemsControl itemsControl, IItemsView itemsSource)
+    {
+        ArgumentNullException.ThrowIfNull(itemsControl);
+        itemsControl.ItemsSource = itemsSource ?? ItemsView.Empty;
+        return itemsControl;
+    }
+
+    /// <summary>
+    /// Sets the items source from a legacy <see cref="MewUI.ItemsSource"/>.
+    /// </summary>
+    /// <param name="itemsControl">Target items control.</param>
+    /// <param name="itemsSource">Legacy items source.</param>
+    /// <returns>The items control for chaining.</returns>
+    public static ItemsControl ItemsSource(this ItemsControl itemsControl, ItemsSource itemsSource)
+    {
+        ArgumentNullException.ThrowIfNull(itemsControl);
+        itemsControl.ItemsSource = ItemsView.From(itemsSource);
+        return itemsControl;
+    }
+
+    /// <summary>
+    /// Sets the items from string array.
+    /// </summary>
+    /// <param name="itemsControl">Target items control.</param>
+    /// <param name="items">Items array.</param>
+    /// <returns>The items control for chaining.</returns>
+    public static ItemsControl Items(this ItemsControl itemsControl, params string[] items)
+    {
+        ArgumentNullException.ThrowIfNull(itemsControl);
+        itemsControl.ItemsSource = ItemsView.Create(items ?? Array.Empty<string>());
+        return itemsControl;
+    }
+
+    /// <summary>
+    /// Sets the items with text selector.
+    /// </summary>
+    /// <typeparam name="T">Item type.</typeparam>
+    /// <param name="itemsControl">Target items control.</param>
+    /// <param name="items">Items collection.</param>
+    /// <param name="textSelector">Text selector function.</param>
+    /// <returns>The items control for chaining.</returns>
+    public static ItemsControl Items<T>(this ItemsControl itemsControl, IReadOnlyList<T> items, Func<T, string> textSelector)
+    {
+        ArgumentNullException.ThrowIfNull(itemsControl);
+        itemsControl.ItemsSource = items == null ? ItemsView.Empty : ItemsView.Create(items, textSelector);
+        return itemsControl;
+    }
+
+    /// <summary>
+    /// Sets the item template.
+    /// </summary>
+    /// <param name="itemsControl">Target items control.</param>
+    /// <param name="itemTemplate">Item template.</param>
+    /// <returns>The items control for chaining.</returns>
+    public static ItemsControl ItemTemplate(this ItemsControl itemsControl, IDataTemplate itemTemplate)
+    {
+        ArgumentNullException.ThrowIfNull(itemsControl);
+        itemsControl.ItemTemplate = itemTemplate;
+        return itemsControl;
+    }
+
+    /// <summary>
+    /// Sets the item height.
+    /// </summary>
+    /// <param name="itemsControl">Target items control.</param>
+    /// <param name="itemHeight">Item height.</param>
+    /// <returns>The items control for chaining.</returns>
+    public static ItemsControl ItemHeight(this ItemsControl itemsControl, double itemHeight)
+    {
+        itemsControl.ItemHeight = itemHeight;
+        return itemsControl;
+    }
+
+    /// <summary>
+    /// Sets the item padding.
+    /// </summary>
+    /// <param name="itemsControl">Target items control.</param>
+    /// <param name="padding">Item padding.</param>
+    /// <returns>The items control for chaining.</returns>
+    public static ItemsControl ItemPadding(this ItemsControl itemsControl, Thickness padding)
+    {
+        itemsControl.ItemPadding = padding;
+        return itemsControl;
+    }
+
+    /// <summary>
+    /// Sets the items presenter mode.
+    /// </summary>
+    /// <param name="itemsControl">Target items control.</param>
+    /// <param name="mode">Presenter mode.</param>
+    /// <returns>The items control for chaining.</returns>
+    public static ItemsControl PresenterMode(this ItemsControl itemsControl, ItemsPresenterMode mode)
+    {
+        ArgumentNullException.ThrowIfNull(itemsControl);
+        itemsControl.PresenterMode = mode;
+        return itemsControl;
+    }
+
+    /// <summary>
+    /// Uses fixed-size row virtualization.
+    /// </summary>
+    /// <param name="itemsControl">Target items control.</param>
+    /// <returns>The items control for chaining.</returns>
+    public static ItemsControl FixedPresenter(this ItemsControl itemsControl)
+        => itemsControl.PresenterMode(ItemsPresenterMode.Fixed);
+
+    /// <summary>
+    /// Uses variable-height virtualization (items are measured individually).
+    /// </summary>
+    /// <param name="itemsControl">Target items control.</param>
+    /// <returns>The items control for chaining.</returns>
+    public static ItemsControl VariablePresenter(this ItemsControl itemsControl)
+        => itemsControl.PresenterMode(ItemsPresenterMode.Variable);
+
+    #endregion
+
     #region TreeView
 
     /// <summary>
@@ -1292,8 +1545,21 @@ public static class ControlExtensions
     {
         ArgumentNullException.ThrowIfNull(treeView);
         treeView.ItemsSource = items == null
-            ? ItemsView.Empty
+            ? TreeItemsView.Empty
             : TreeItemsView.Create(items, n => n.Children, textSelector: n => n.Text, keySelector: n => n);
+        return treeView;
+    }
+
+    /// <summary>
+    /// Sets the items source directly from an <see cref="ITreeItemsView"/>.
+    /// </summary>
+    /// <param name="treeView">Target tree view.</param>
+    /// <param name="itemsView">The tree items view.</param>
+    /// <returns>The tree view for chaining.</returns>
+    public static TreeView ItemsSource(this TreeView treeView, ITreeItemsView itemsView)
+    {
+        ArgumentNullException.ThrowIfNull(treeView);
+        treeView.ItemsSource = itemsView ?? TreeItemsView.Empty;
         return treeView;
     }
 
@@ -1316,7 +1582,7 @@ public static class ControlExtensions
         ArgumentNullException.ThrowIfNull(treeView);
 
         treeView.ItemsSource = roots == null
-            ? ItemsView.Empty
+            ? TreeItemsView.Empty
             : TreeItemsView.Create(roots, childrenSelector, textSelector, keySelector);
 
         return treeView;
@@ -1376,6 +1642,14 @@ public static class ControlExtensions
         return treeView;
     }
 
+    /// <summary>
+    /// Sets the item template using delegate-based templating.
+    /// </summary>
+    /// <typeparam name="TItem">Item type.</typeparam>
+    /// <param name="treeView">Target tree view.</param>
+    /// <param name="build">Template build callback.</param>
+    /// <param name="bind">Template bind callback.</param>
+    /// <returns>The tree view for chaining.</returns>
     public static TreeView ItemTemplate<TItem>(
         this TreeView treeView,
         Func<TemplateContext, FrameworkElement> build,
@@ -1392,6 +1666,19 @@ public static class ControlExtensions
     {
         ArgumentNullException.ThrowIfNull(treeView);
         treeView.Indent = indent;
+        return treeView;
+    }
+
+    /// <summary>
+    /// Sets which user interaction toggles node expansion.
+    /// </summary>
+    /// <param name="treeView">Target tree view.</param>
+    /// <param name="expandTrigger">Expansion trigger mode.</param>
+    /// <returns>The tree view for chaining.</returns>
+    public static TreeView ExpandTrigger(this TreeView treeView, TreeViewExpandTrigger expandTrigger)
+    {
+        ArgumentNullException.ThrowIfNull(treeView);
+        treeView.ExpandTrigger = expandTrigger;
         return treeView;
     }
 
@@ -1717,13 +2004,19 @@ public static class ControlExtensions
     /// <param name="comboBox">Target combo box.</param>
     /// <param name="itemsSource">Items source.</param>
     /// <returns>The combo box for chaining.</returns>
-    public static ComboBox ItemsSource(this ComboBox comboBox, IItemsView itemsSource)
+    public static ComboBox ItemsSource(this ComboBox comboBox, ISelectableItemsView itemsSource)
     {
         ArgumentNullException.ThrowIfNull(comboBox);
-        comboBox.ItemsSource = itemsSource ?? ItemsView.Empty;
+        comboBox.ItemsSource = itemsSource ?? ItemsView.EmptySelectable;
         return comboBox;
     }
 
+    /// <summary>
+    /// Sets the items source from a legacy <see cref="MewUI.ItemsSource"/>.
+    /// </summary>
+    /// <param name="comboBox">Target combo box.</param>
+    /// <param name="itemsSource">Legacy items source.</param>
+    /// <returns>The combo box for chaining.</returns>
     public static ComboBox ItemsSource(this ComboBox comboBox, ItemsSource itemsSource)
     {
         ArgumentNullException.ThrowIfNull(comboBox);
@@ -1751,11 +2044,12 @@ public static class ControlExtensions
     /// <param name="comboBox">Target combo box.</param>
     /// <param name="items">Items collection.</param>
     /// <param name="textSelector">Text selector function.</param>
+    /// <param name="keySelector">Optional key selector to stabilize selection when items change.</param>
     /// <returns>The combo box for chaining.</returns>
     public static ComboBox Items<T>(this ComboBox comboBox, IReadOnlyList<T> items, Func<T, string> textSelector, Func<T, object?>? keySelector = null)
     {
         ArgumentNullException.ThrowIfNull(comboBox);
-        comboBox.ItemsSource = items == null ? ItemsView.Empty : ItemsView.Create(items, textSelector, keySelector);
+        comboBox.ItemsSource = items == null ? ItemsView.EmptySelectable : ItemsView.Create(items, textSelector, keySelector);
         return comboBox;
     }
 
@@ -1774,6 +2068,14 @@ public static class ControlExtensions
         return comboBox;
     }
 
+    /// <summary>
+    /// Sets the item template using delegate-based templating.
+    /// </summary>
+    /// <typeparam name="TItem">Item type.</typeparam>
+    /// <param name="comboBox">Target combo box.</param>
+    /// <param name="build">Template build callback.</param>
+    /// <param name="bind">Template bind callback.</param>
+    /// <returns>The combo box for chaining.</returns>
     public static ComboBox ItemTemplate<TItem>(
         this ComboBox comboBox,
         Func<TemplateContext, FrameworkElement> build,
@@ -1832,6 +2134,18 @@ public static class ControlExtensions
             v => source.Value = v,
             h => source.Changed += h,
             h => source.Changed -= h);
+        return comboBox;
+    }
+
+    /// <summary>
+    /// Sets whether mouse wheel input changes the selected item.
+    /// </summary>
+    /// <param name="comboBox">Target combo box.</param>
+    /// <param name="value">Whether mouse wheel changes the selection.</param>
+    /// <returns>The combo box for chaining.</returns>
+    public static ComboBox ChangeOnWheel(this ComboBox comboBox, bool value = true)
+    {
+        comboBox.ChangeOnWheel = value;
         return comboBox;
     }
 
@@ -2019,43 +2333,50 @@ public static class ControlExtensions
 
     #endregion
 
-    #region ProgressBar
+    #region RangeBase
 
     /// <summary>
     /// Sets the minimum value.
     /// </summary>
-    /// <param name="progressBar">Target progress bar.</param>
+    /// <typeparam name="T">RangeBase type.</typeparam>
+    /// <param name="rangeBase">Target range-based control.</param>
     /// <param name="minimum">Minimum value.</param>
-    /// <returns>The progress bar for chaining.</returns>
-    public static ProgressBar Minimum(this ProgressBar progressBar, double minimum)
+    /// <returns>The control for chaining.</returns>
+    public static T Minimum<T>(this T rangeBase, double minimum) where T : RangeBase
     {
-        progressBar.Minimum = minimum;
-        return progressBar;
+        rangeBase.Minimum = minimum;
+        return rangeBase;
     }
 
     /// <summary>
     /// Sets the maximum value.
     /// </summary>
-    /// <param name="progressBar">Target progress bar.</param>
+    /// <typeparam name="T">RangeBase type.</typeparam>
+    /// <param name="rangeBase">Target range-based control.</param>
     /// <param name="maximum">Maximum value.</param>
-    /// <returns>The progress bar for chaining.</returns>
-    public static ProgressBar Maximum(this ProgressBar progressBar, double maximum)
+    /// <returns>The control for chaining.</returns>
+    public static T Maximum<T>(this T rangeBase, double maximum) where T : RangeBase
     {
-        progressBar.Maximum = maximum;
-        return progressBar;
+        rangeBase.Maximum = maximum;
+        return rangeBase;
     }
 
     /// <summary>
     /// Sets the value.
     /// </summary>
-    /// <param name="progressBar">Target progress bar.</param>
+    /// <typeparam name="T">RangeBase type.</typeparam>
+    /// <param name="rangeBase">Target range-based control.</param>
     /// <param name="value">Value.</param>
-    /// <returns>The progress bar for chaining.</returns>
-    public static ProgressBar Value(this ProgressBar progressBar, double value)
+    /// <returns>The control for chaining.</returns>
+    public static T Value<T>(this T rangeBase, double value) where T : RangeBase
     {
-        progressBar.Value = value;
-        return progressBar;
+        rangeBase.Value = value;
+        return rangeBase;
     }
+
+    #endregion
+
+    #region ProgressBar
 
     /// <summary>
     /// Binds the value to an observable value.
@@ -2078,42 +2399,6 @@ public static class ControlExtensions
     #endregion
 
     #region Slider
-
-    /// <summary>
-    /// Sets the minimum value.
-    /// </summary>
-    /// <param name="slider">Target slider.</param>
-    /// <param name="minimum">Minimum value.</param>
-    /// <returns>The slider for chaining.</returns>
-    public static Slider Minimum(this Slider slider, double minimum)
-    {
-        slider.Minimum = minimum;
-        return slider;
-    }
-
-    /// <summary>
-    /// Sets the maximum value.
-    /// </summary>
-    /// <param name="slider">Target slider.</param>
-    /// <param name="maximum">Maximum value.</param>
-    /// <returns>The slider for chaining.</returns>
-    public static Slider Maximum(this Slider slider, double maximum)
-    {
-        slider.Maximum = maximum;
-        return slider;
-    }
-
-    /// <summary>
-    /// Sets the value.
-    /// </summary>
-    /// <param name="slider">Target slider.</param>
-    /// <param name="value">Value.</param>
-    /// <returns>The slider for chaining.</returns>
-    public static Slider Value(this Slider slider, double value)
-    {
-        slider.Value = value;
-        return slider;
-    }
 
     /// <summary>
     /// Sets the small change value.
@@ -2156,6 +2441,120 @@ public static class ControlExtensions
             h => source.Changed += h,
             h => source.Changed -= h);
         return slider;
+    }
+
+    /// <summary>
+    /// Sets whether mouse wheel input changes the value.
+    /// </summary>
+    /// <param name="slider">Target slider.</param>
+    /// <param name="value">Whether mouse wheel changes the value.</param>
+    /// <returns>The slider for chaining.</returns>
+    public static Slider ChangeOnWheel(this Slider slider, bool value = true)
+    {
+        slider.ChangeOnWheel = value;
+        return slider;
+    }
+
+    #endregion
+
+    #region NumericUpDown
+
+    /// <summary>
+    /// Sets the step value.
+    /// </summary>
+    /// <param name="numericUpDown">Target numeric up-down.</param>
+    /// <param name="step">Step value.</param>
+    /// <returns>The numeric up-down for chaining.</returns>
+    public static NumericUpDown Step(this NumericUpDown numericUpDown, double step)
+    {
+        numericUpDown.Step = step;
+        return numericUpDown;
+    }
+
+    /// <summary>
+    /// Sets the format string.
+    /// </summary>
+    /// <param name="numericUpDown">Target numeric up-down.</param>
+    /// <param name="format">Format string.</param>
+    /// <returns>The numeric up-down for chaining.</returns>
+    public static NumericUpDown Format(this NumericUpDown numericUpDown, string format)
+    {
+        numericUpDown.Format = format;
+        return numericUpDown;
+    }
+
+    /// <summary>
+    /// Sets edit mode.
+    /// </summary>
+    /// <param name="numericUpDown">Target numeric up-down.</param>
+    /// <param name="editMode">Edit mode state.</param>
+    /// <returns>The numeric up-down for chaining.</returns>
+    public static NumericUpDown EditMode(this NumericUpDown numericUpDown, bool editMode = true)
+    {
+        numericUpDown.EditMode = editMode;
+        return numericUpDown;
+    }
+
+    /// <summary>
+    /// Adds a value changed event handler.
+    /// </summary>
+    /// <param name="numericUpDown">Target numeric up-down.</param>
+    /// <param name="handler">Event handler.</param>
+    /// <returns>The numeric up-down for chaining.</returns>
+    public static NumericUpDown OnValueChanged(this NumericUpDown numericUpDown, Action<double> handler)
+    {
+        numericUpDown.ValueChanged += handler;
+        return numericUpDown;
+    }
+
+    /// <summary>
+    /// Binds the value to an observable value.
+    /// </summary>
+    /// <param name="numericUpDown">Target numeric up-down.</param>
+    /// <param name="source">Observable source.</param>
+    /// <returns>The numeric up-down for chaining.</returns>
+    public static NumericUpDown BindValue(this NumericUpDown numericUpDown, ObservableValue<double> source)
+    {
+        ArgumentNullException.ThrowIfNull(numericUpDown);
+        ArgumentNullException.ThrowIfNull(source);
+
+        numericUpDown.SetValueBinding(
+            () => source.Value,
+            v => source.Value = v,
+            h => source.Changed += h,
+            h => source.Changed -= h);
+        return numericUpDown;
+    }
+
+    /// <summary>
+    /// Binds the value to an observable integer value.
+    /// </summary>
+    /// <param name="numericUpDown">Target numeric up-down.</param>
+    /// <param name="source">Observable source.</param>
+    /// <returns>The numeric up-down for chaining.</returns>
+    public static NumericUpDown BindValue(this NumericUpDown numericUpDown, ObservableValue<int> source)
+    {
+        ArgumentNullException.ThrowIfNull(numericUpDown);
+        ArgumentNullException.ThrowIfNull(source);
+
+        numericUpDown.SetValueBinding(
+            () => source.Value,
+            v => source.Value = (int)Math.Round(v),
+            h => source.Changed += h,
+            h => source.Changed -= h);
+        return numericUpDown;
+    }
+
+    /// <summary>
+    /// Sets whether mouse wheel input changes the value.
+    /// </summary>
+    /// <param name="numericUpDown">Target numeric up-down.</param>
+    /// <param name="value">Whether mouse wheel changes the value.</param>
+    /// <returns>The numeric up-down for chaining.</returns>
+    public static NumericUpDown ChangeOnWheel(this NumericUpDown numericUpDown, bool value = true)
+    {
+        numericUpDown.ChangeOnWheel = value;
+        return numericUpDown;
     }
 
     #endregion
@@ -2333,6 +2732,24 @@ public static class ControlExtensions
     public static Window OnPreviewTextInput(this Window window, Action<TextInputEventArgs> handler)
     {
         window.PreviewTextInput += handler;
+        return window;
+    }
+
+    public static Window OnPreviewTextCompositionStart(this Window window, Action<TextCompositionEventArgs> handler)
+    {
+        window.PreviewTextCompositionStart += handler;
+        return window;
+    }
+
+    public static Window OnPreviewTextCompositionUpdate(this Window window, Action<TextCompositionEventArgs> handler)
+    {
+        window.PreviewTextCompositionUpdate += handler;
+        return window;
+    }
+
+    public static Window OnPreviewTextCompositionEnd(this Window window, Action<TextCompositionEventArgs> handler)
+    {
+        window.PreviewTextCompositionEnd += handler;
         return window;
     }
 

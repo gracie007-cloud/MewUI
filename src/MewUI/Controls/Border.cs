@@ -67,6 +67,18 @@ public sealed class Border : Control, IVisualTreeHost
         }
     }
 
+    public bool ClipToBounds
+    {
+        get;
+        set
+        {
+            if (Set(ref field, value))
+            {
+                InvalidateVisual();
+            }
+        }
+    }
+
     protected override Size MeasureContent(Size availableSize)
     {
         var border = BorderThickness > 0 ? new Thickness(BorderThickness) : Thickness.Zero;
@@ -83,28 +95,43 @@ public sealed class Border : Control, IVisualTreeHost
 
     protected override void ArrangeContent(Rect bounds)
     {
+        var snapped = GetSnappedBorderBounds(bounds);
         var border = BorderThickness > 0 ? new Thickness(BorderThickness) : Thickness.Zero;
-        var inner = bounds.Deflate(border).Deflate(Padding);
+        var inner = snapped.Deflate(border).Deflate(Padding);
         Child?.Arrange(inner);
     }
 
     protected override void OnRender(IGraphicsContext context)
     {
-        
         var radius = Math.Max(0, CornerRadius);
+
         DrawBackgroundAndBorder(context, Bounds, Background, BorderBrush, radius);
 
         if (Child != null)
         {
+            var border = BorderThickness > 0 ? new Thickness(BorderThickness) : Thickness.Zero;
+            var inner = GetSnappedBorderBounds(Bounds).Deflate(border).Deflate(Padding);
+            var dpiScale = GetDpi() / 96.0;
+            if (dpiScale <= 0)
+            {
+                dpiScale = 1.0;
+            }
+
+            if (ClipToBounds)
+            {
+                context.Save();
+                context.SetClip(LayoutRounding.MakeClipRect(inner, dpiScale));
+            }
+
             Child.Render(context);
+
+            if (ClipToBounds)
+            {
+                context.Restore();
+            }
         }
     }
 
-    void IVisualTreeHost.VisitChildren(Action<Element> visitor)
-    {
-        if (Child != null)
-        {
-            visitor(Child);
-        }
-    }
+    bool IVisualTreeHost.VisitChildren(Func<Element, bool> visitor)
+        => Child == null || visitor(Child);
 }

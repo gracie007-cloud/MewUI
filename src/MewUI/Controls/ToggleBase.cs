@@ -59,8 +59,6 @@ public abstract partial class ToggleBase : Control
     /// </summary>
     protected ToggleBase()
     {
-        Background = Color.Transparent;
-        BorderThickness = 1;
     }
 
     /// <summary>
@@ -117,7 +115,7 @@ public abstract partial class ToggleBase : Control
     {
         base.OnKeyUp(e);
 
-        if (!IsEnabled)
+        if (!IsEffectivelyEnabled)
         {
             return;
         }

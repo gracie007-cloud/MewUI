@@ -27,6 +27,29 @@ public sealed class ScrollViewer : ContentControl
 
     private Size _extent = Size.Empty;
     private Size _viewport = Size.Empty;
+    private Size _lastNotifiedExtent = Size.Empty;
+    private Size _lastNotifiedViewport = Size.Empty;
+    private Point _lastNotifiedOffset = new(double.NaN, double.NaN);
+
+    /// <summary>
+    /// Raised when scroll metrics or offsets change.
+    /// </summary>
+    public event Action? ScrollChanged;
+
+    /// <summary>
+    /// Optional corner radius applied to the content viewport clip.
+    /// </summary>
+    public double ViewportCornerRadius
+    {
+        get;
+        set
+        {
+            if (Set(ref field, value))
+            {
+                InvalidateVisual();
+            }
+        }
+    }
 
     /// <summary>
     /// Gets or sets the vertical scrollbar mode.
@@ -103,6 +126,8 @@ public sealed class ScrollViewer : ContentControl
         VerticalOffset = verticalOffset;
         SyncBars();
         InvalidateVisual();
+        ReevaluateMouseOverAfterScroll();
+        NotifyScrollChanged();
     }
 
     /// <summary>
@@ -112,7 +137,7 @@ public sealed class ScrollViewer : ContentControl
     {
         BorderThickness = 0;
 
-        Padding = new Thickness(16);
+        Padding = new Thickness(8);
 
         _vBar = new ScrollBar { Orientation = Orientation.Vertical, IsVisible = false };
         _hBar = new ScrollBar { Orientation = Orientation.Horizontal, IsVisible = false };
@@ -124,16 +149,59 @@ public sealed class ScrollViewer : ContentControl
         {
             VerticalOffset = v;
             InvalidateVisual();
+            ReevaluateMouseOverAfterScroll();
+            NotifyScrollChanged();
         };
 
         _hBar.ValueChanged += v =>
         {
             HorizontalOffset = v;
             InvalidateVisual();
+            ReevaluateMouseOverAfterScroll();
+            NotifyScrollChanged();
         };
     }
 
     private double DpiScale => GetDpi() / 96.0;
+
+    protected override void OnDpiChanged(uint oldDpi, uint newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+
+        if (oldDpi == 0 || newDpi == 0 || oldDpi == newDpi)
+        {
+            return;
+        }
+
+        double oldScale = oldDpi / 96.0;
+        double newScale = newDpi / 96.0;
+        if (oldScale <= 0 || newScale <= 0 || double.IsNaN(oldScale) || double.IsNaN(newScale) || double.IsInfinity(oldScale) || double.IsInfinity(newScale))
+        {
+            return;
+        }
+
+        // Preserve logical (DIP) scroll offsets across DPI changes.
+        // ScrollController stores metrics/offsets in pixels for stable rounding, so when the DPI scale changes
+        // we must rescale the stored pixel offset to keep the same DIP position visible.
+        _scroll.DpiScale = oldScale;
+        double offsetX = _scroll.GetOffsetDip(0);
+        double offsetY = _scroll.GetOffsetDip(1);
+
+        _scroll.DpiScale = newScale;
+        _scroll.SetMetricsDip(0, _extent.Width, _viewport.Width);
+        _scroll.SetMetricsDip(1, _extent.Height, _viewport.Height);
+
+        bool changed = false;
+        changed |= _scroll.SetOffsetDip(0, offsetX);
+        changed |= _scroll.SetOffsetDip(1, offsetY);
+
+        if (changed)
+        {
+            InvalidateArrange();
+        }
+
+        SyncBars();
+    }
 
     protected override Size MeasureContent(Size availableSize)
     {
@@ -164,63 +232,50 @@ public sealed class ScrollViewer : ContentControl
         double slotW = Math.Max(0, chromeSlot.Width);
         double slotH = Math.Max(0, chromeSlot.Height);
 
-        
-        int barPx = Math.Max(0, LayoutRounding.RoundToPixelInt(Theme.Metrics.ScrollBarHitThickness, dpiScale));
 
-        // Reserve space for scrollbars inside the viewport (WPF-like), but keep it stable by iterating
-        // until visibility decisions stop changing.
-        int reserveW = 0;
-        int reserveH = 0;
-        bool needV = false;
-        bool needH = false;
+        double viewportW0 = Math.Max(0, slotW - Padding.HorizontalThickness);
+        double viewportH0 = Math.Max(0, slotH - Padding.VerticalThickness);
 
-        for (int pass = 0; pass < 2; pass++)
+        var viewportRect = LayoutRounding.SnapConstraintRectToPixels(new Rect(0, 0, viewportW0, viewportH0), dpiScale);
+        _viewport = LayoutRounding.RoundSizeToPixels(viewportRect.Size, dpiScale);
+
+        var measureSize = new Size(
+            HorizontalScroll == ScrollMode.Disabled ? _viewport.Width : double.PositiveInfinity,
+            VerticalScroll == ScrollMode.Disabled ? _viewport.Height : double.PositiveInfinity);
+
+        if (content is IScrollContent scrollContent)
         {
-            double viewportW0 = Math.Max(0, slotW - Padding.HorizontalThickness - (reserveW > 0 ? reserveW / dpiScale : 0));
-            double viewportH0 = Math.Max(0, slotH - Padding.VerticalThickness - (reserveH > 0 ? reserveH / dpiScale : 0));
+            scrollContent.SetViewport(_viewport);
+            _extent = LayoutRounding.RoundSizeToPixels(scrollContent.Extent, dpiScale);
 
-            var viewportRect = LayoutRounding.SnapConstraintRectToPixels(new Rect(0, 0, viewportW0, viewportH0), dpiScale);
-            _viewport = viewportRect.Size;
-
-            var measureSize = new Size(
-                HorizontalScroll == ScrollMode.Disabled ? _viewport.Width : double.PositiveInfinity,
-                VerticalScroll == ScrollMode.Disabled ? _viewport.Height : double.PositiveInfinity);
-
-            content.Measure(measureSize);
-            _extent = content.DesiredSize;
-
-            _scroll.SetMetricsDip(0, _extent.Width, _viewport.Width);
-            _scroll.SetMetricsDip(1, _extent.Height, _viewport.Height);
-
-            needV = _scroll.GetExtentPx(1) > _scroll.GetViewportPx(1);
-            needH = _scroll.GetExtentPx(0) > _scroll.GetViewportPx(0);
-
-            bool showV = IsBarVisible(VerticalScroll, needV);
-            bool showH = IsBarVisible(HorizontalScroll, needH);
-            int nextReserveW = showV ? barPx : 0;
-            int nextReserveH = showH ? barPx : 0;
-
-            if (nextReserveW == reserveW && nextReserveH == reserveH)
-            {
-                _vBar.IsVisible = showV;
-                _hBar.IsVisible = showH;
-                break;
-            }
-
-            reserveW = nextReserveW;
-            reserveH = nextReserveH;
-            _vBar.IsVisible = showV;
-            _hBar.IsVisible = showH;
+            // Scroll-driven content should not require infinite measurement; it virtualizes internally.
+            content.Measure(_viewport);
         }
+        else
+        {
+            content.Measure(measureSize);
+            _extent = LayoutRounding.RoundSizeToPixels(content.DesiredSize, dpiScale);
+        }
+
+        _scroll.SetMetricsDip(0, _extent.Width, _viewport.Width);
+        _scroll.SetMetricsDip(1, _extent.Height, _viewport.Height);
+
+        bool needV = _scroll.GetExtentPx(1) > _scroll.GetViewportPx(1);
+        bool needH = _scroll.GetExtentPx(0) > _scroll.GetViewportPx(0);
+        _vBar.IsVisible = IsBarVisible(VerticalScroll, needV);
+        _hBar.IsVisible = IsBarVisible(HorizontalScroll, needH);
 
         SyncBars();
 
         // Extent/viewport changes (e.g. content becomes empty) can make existing offsets invalid.
         // Clamp them against the latest _extent/_viewport even when scrollbars are hidden.
         // Extent/viewport changes can make existing offsets invalid.
-        _scroll.SetOffsetPx(0, _scroll.GetOffsetPx(0));
-        _scroll.SetOffsetPx(1, _scroll.GetOffsetPx(1));
+        // Clamp using DIP offsets to avoid quantizing the logical offset via px roundtrips,
+        // especially noticeable when DPI changes.
+        _scroll.SetOffsetDip(0, _scroll.GetOffsetDip(0));
+        _scroll.SetOffsetDip(1, _scroll.GetOffsetDip(1));
         SyncBars();
+        NotifyScrollChanged();
 
         // Desired size: cap by available chrome slot (exclude padding here because we inflate it below).
         double capW = Math.Max(0, slotW - Padding.HorizontalThickness);
@@ -236,28 +291,47 @@ public sealed class ScrollViewer : ContentControl
         var borderInset = GetBorderVisualInset();
         var viewport = GetContentViewportBounds(bounds, borderInset);
 
-        // Keep viewport consistent with the one used for clamping offsets and bar ranges.
-        _viewport = viewport.Size;
         var dpiScale = DpiScale;
+        // Keep viewport consistent with the one used for clamping offsets and bar ranges.
+        _viewport = LayoutRounding.RoundSizeToPixels(viewport.Size, dpiScale);
         _scroll.DpiScale = dpiScale;
         _scroll.SetMetricsDip(0, _extent.Width, _viewport.Width);
         _scroll.SetMetricsDip(1, _extent.Height, _viewport.Height);
 
         // Clamp offsets against the latest extent/viewport before arranging children.
-        _scroll.SetOffsetPx(0, _scroll.GetOffsetPx(0));
-        _scroll.SetOffsetPx(1, _scroll.GetOffsetPx(1));
+        // Clamp using DIP offsets to avoid quantizing the logical offset via px roundtrips,
+        // especially noticeable when DPI changes.
+        _scroll.SetOffsetDip(0, _scroll.GetOffsetDip(0));
+        _scroll.SetOffsetDip(1, _scroll.GetOffsetDip(1));
         SyncBars();
 
         if (Content is UIElement content)
         {
-            content.Arrange(new Rect(
-                viewport.X - _scroll.GetOffsetDip(0),
-                viewport.Y - _scroll.GetOffsetDip(1),
-                Math.Max(_extent.Width, viewport.Width),
-                Math.Max(_extent.Height, viewport.Height)));
+            if (content is IScrollContent scrollContent)
+            {
+                scrollContent.SetViewport(_viewport);
+                scrollContent.SetOffset(new Point(_scroll.GetOffsetDip(0), _scroll.GetOffsetDip(1)));
+
+                // Do not translate content via Arrange when it is scroll-driven.
+                // Content renders/arranges internally based on the provided offset.
+                content.Arrange(new Rect(
+                    viewport.X,
+                    viewport.Y,
+                    viewport.Width,
+                    viewport.Height));
+            }
+            else
+            {
+                content.Arrange(new Rect(
+                    viewport.X - _scroll.GetOffsetDip(0),
+                    viewport.Y - _scroll.GetOffsetDip(1),
+                    Math.Max(_extent.Width, viewport.Width),
+                    Math.Max(_extent.Height, viewport.Height)));
+            }
         }
 
         ArrangeBars(GetChromeBounds(bounds, borderInset));
+        NotifyScrollChanged();
     }
 
     protected override void OnRender(IGraphicsContext context)
@@ -267,7 +341,7 @@ public sealed class ScrollViewer : ContentControl
         // Optional background/border (thin style defaults to none).
         if (Background.A > 0 || BorderThickness > 0)
         {
-            
+
             DrawBackgroundAndBorder(context, Bounds, Background, BorderBrush, Theme.Metrics.ControlCornerRadius);
         }
 
@@ -277,7 +351,16 @@ public sealed class ScrollViewer : ContentControl
 
         // Render content clipped to viewport.
         context.Save();
-        context.SetClip(clip);
+        double r = Math.Max(0, ViewportCornerRadius - Math.Min(Padding.Left, Math.Min(Padding.Right, Math.Min(Padding.Top, Padding.Bottom))));
+        if (r > 0)
+        {
+            r = Math.Min(r, Math.Min(clip.Width, clip.Height) / 2);
+            context.SetClipRoundedRect(clip, r, r);
+        }
+        else
+        {
+            context.SetClip(clip);
+        }
         Content?.Render(context);
         context.Restore();
 
@@ -370,15 +453,11 @@ public sealed class ScrollViewer : ContentControl
         }
     }
 
-    void IVisualTreeHost.VisitChildren(Action<Element> visitor)
+    bool IVisualTreeHost.VisitChildren(Func<Element, bool> visitor)
     {
-        if (Content != null)
-        {
-            visitor(Content);
-        }
-
-        visitor(_vBar);
-        visitor(_hBar);
+        if (Content != null && !visitor(Content)) return false;
+        if (!visitor(_vBar)) return false;
+        return visitor(_hBar);
     }
 
     public void ScrollBy(double delta)
@@ -398,6 +477,8 @@ public sealed class ScrollViewer : ContentControl
         }
         SyncBars();
         InvalidateVisual();
+        ReevaluateMouseOverAfterScroll();
+        NotifyScrollChanged();
     }
 
     public void ScrollByHorizontal(double delta)
@@ -416,11 +497,21 @@ public sealed class ScrollViewer : ContentControl
         }
         SyncBars();
         InvalidateVisual();
+        ReevaluateMouseOverAfterScroll();
+        NotifyScrollChanged();
+    }
+
+    private void ReevaluateMouseOverAfterScroll()
+    {
+        if (FindVisualRoot() is Window window)
+        {
+            window.ReevaluateMouseOver();
+        }
     }
 
     private void ArrangeBars(Rect viewport)
     {
-        
+
         double t = Theme.Metrics.ScrollBarHitThickness;
         const double inset = 0;
 
@@ -464,9 +555,25 @@ public sealed class ScrollViewer : ContentControl
         //
         // Expand the clip by 1 device pixel horizontally into the ScrollViewer padding so borders/glyph overhang
         // don't get cut, while still keeping the clip strict against the chrome/border areas.
-        var onePx = 1.0 / DpiScale;
-        var expanded = new Rect(viewport.X - onePx, viewport.Y, viewport.Width + onePx * 2, viewport.Height);
-        return LayoutRounding.MakeClipRect(expanded, DpiScale, rightPx: 0, bottomPx: 0);
+        var dpiScale = DpiScale;
+        var onePx = 1.0 / dpiScale;
+
+        // Avoid expanding past the scroll chrome (or into negative coordinates). Some backends clamp
+        // negative clip origins, which effectively shifts the clip right and can "eat" the leftmost pixel.
+        var borderInset = GetBorderVisualInset();
+        var chrome = GetChromeBounds(Bounds, borderInset);
+        double leftRoom = Math.Max(0, viewport.X - chrome.X);
+        double rightRoom = Math.Max(0, chrome.Right - viewport.Right);
+
+        double expandL = Math.Min(onePx, leftRoom);
+        double expandR = Math.Min(onePx, rightRoom);
+
+        var expanded = new Rect(
+            viewport.X - expandL,
+            viewport.Y,
+            viewport.Width + expandL + expandR,
+            viewport.Height);
+        return LayoutRounding.MakeClipRect(expanded, dpiScale, rightPx: 0, bottomPx: 0);
     }
 
     private static bool IsBarVisible(ScrollMode visibility, bool needed)
@@ -505,6 +612,20 @@ public sealed class ScrollViewer : ContentControl
             _hBar.LargeChange = Theme.Metrics.ScrollBarLargeChange;
             _hBar.Value = _scroll.GetOffsetDip(0);
         }
+    }
+
+    private void NotifyScrollChanged()
+    {
+        var offset = new Point(HorizontalOffset, VerticalOffset);
+        if (_lastNotifiedExtent == _extent && _lastNotifiedViewport == _viewport && _lastNotifiedOffset == offset)
+        {
+            return;
+        }
+
+        _lastNotifiedExtent = _extent;
+        _lastNotifiedViewport = _viewport;
+        _lastNotifiedOffset = offset;
+        ScrollChanged?.Invoke();
     }
 
     protected override void OnDispose()

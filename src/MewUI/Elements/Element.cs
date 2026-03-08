@@ -1,7 +1,8 @@
 using Aprillz.MewUI.Rendering;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace Aprillz.MewUI;
+namespace Aprillz.MewUI.Controls;
 
 /// <summary>
 /// Base class for all UI elements. Provides the core Measure/Arrange layout system.
@@ -44,16 +45,25 @@ public abstract class Element
     public Size DesiredSize { get; private set; }
 
     /// <summary>
-    /// Gets the final bounds calculated during the Arrange pass.
+    /// Gets the final bounds calculated during the Arrange pass, in the parent's coordinate space.
+    /// Prefer <see cref="RenderSize"/> for WPF-like usage.
     /// </summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public Rect Bounds { get; private set; }
 
+    /// <summary>
+    /// Gets the final render size calculated during the Arrange pass.
+    /// Equivalent to WPF's <c>RenderSize</c>.
+    /// </summary>
+    public Size RenderSize => new(Bounds.Width, Bounds.Height);
+ 
     /// <summary>
     /// Gets or sets the parent element.
     /// </summary>
     public Element? Parent
     {
-        get; internal set
+        get;
+        internal set
         {
             if (field != value)
             {
@@ -68,6 +78,42 @@ public abstract class Element
                     NotifyVisualRootChanged(oldRoot, newRoot);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Attaches a child element to this element. Use this in derived controls
+    /// instead of setting Parent directly.
+    /// </summary>
+    /// <param name="child">The child to attach.</param>
+    protected void AttachChild(Element child)
+    {
+        ArgumentNullException.ThrowIfNull(child);
+
+        if (child.Parent == this)
+        {
+            return;
+        }
+
+        if (child.Parent != null)
+        {
+            throw new InvalidOperationException("The element already has a parent.");
+        }
+
+        child.Parent = this;
+    }
+
+    /// <summary>
+    /// Detaches a child element from this element if attached.
+    /// </summary>
+    /// <param name="child">The child to detach.</param>
+    protected void DetachChild(Element child)
+    {
+        ArgumentNullException.ThrowIfNull(child);
+
+        if (child.Parent == this)
+        {
+            child.Parent = null;
         }
     }
 

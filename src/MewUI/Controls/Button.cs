@@ -1,3 +1,4 @@
+using Aprillz.MewUI.Controls.Text;
 using Aprillz.MewUI.Rendering;
 
 namespace Aprillz.MewUI.Controls;
@@ -14,11 +15,12 @@ public partial class Button : Control
 
     protected override Color DefaultBorderBrush => Theme.Palette.ControlBorder;
 
+    protected override double DefaultBorderThickness => Theme.Metrics.ControlBorderThickness;
+
     protected override double DefaultMinHeight => Theme.Metrics.BaseControlHeight;
 
     public Button()
     {
-        BorderThickness = 1;
         Padding = new Thickness(8, 4, 8, 4);
     }
 
@@ -82,26 +84,8 @@ public partial class Button : Control
     {
         var state = GetVisualState(_isPressed, _isPressed);
 
-        // Determine visual state
-        Color bgColor;
-        Color borderColor = PickAccentBorder(Theme, BorderBrush, state, 0.6);
-
-        if (!state.IsEnabled)
-        {
-            bgColor = Theme.Palette.ButtonDisabledBackground;
-        }
-        else if (state.IsPressed)
-        {
-            bgColor = Theme.Palette.ButtonPressedBackground;
-        }
-        else if (state.IsHot)
-        {
-            bgColor = Theme.Palette.ButtonHoverBackground;
-        }
-        else
-        {
-            bgColor = Background;
-        }
+        var bgColor = PickButtonBackground(state);
+        var borderColor = PickAccentBorder(Theme, BorderBrush, state, 0.6);
 
         var bounds = GetSnappedBorderBounds(Bounds);
         double radius = Theme.Metrics.ControlCornerRadius;

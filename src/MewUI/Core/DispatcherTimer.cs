@@ -1,5 +1,3 @@
-using Aprillz.MewUI.Platform;
-
 namespace Aprillz.MewUI;
 
 /// <summary>
@@ -20,8 +18,14 @@ public sealed class DispatcherTimer : IDisposable
         Interval = interval;
     }
 
+    /// <summary>
+    /// Occurs when the timer interval elapses on the UI dispatcher.
+    /// </summary>
     public event Action? Tick;
 
+    /// <summary>
+    /// Gets whether the timer is currently running.
+    /// </summary>
     public bool IsEnabled
     {
         get
@@ -33,6 +37,9 @@ public sealed class DispatcherTimer : IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets or sets the time between <see cref="Tick"/> events.
+    /// </summary>
     public TimeSpan Interval
     {
         get
@@ -60,6 +67,9 @@ public sealed class DispatcherTimer : IDisposable
         }
     }
 
+    /// <summary>
+    /// Starts the timer. If the application dispatcher is not yet available, the timer will start once it becomes available.
+    /// </summary>
     public void Start()
     {
         var dispatcher = TryGetDispatcher();
@@ -79,7 +89,7 @@ public sealed class DispatcherTimer : IDisposable
             return;
         }
 
-        dispatcher.Send(() =>
+        dispatcher.Invoke(() =>
         {
             lock (_gate)
             {
@@ -91,11 +101,14 @@ public sealed class DispatcherTimer : IDisposable
                 _isEnabled = true;
                 UnsubscribeFromDispatcherChanged_NoLock();
                 _scheduled?.Dispose();
-                _scheduled = dispatcher.Schedule(_interval, OnTick);
+                _scheduled = (dispatcher as IDispatcherCore)!.Schedule(_interval, OnTick);
             }
         });
     }
 
+    /// <summary>
+    /// Stops the timer and cancels any scheduled tick.
+    /// </summary>
     public void Stop()
     {
         var dispatcher = TryGetDispatcher();
@@ -111,7 +124,7 @@ public sealed class DispatcherTimer : IDisposable
             return;
         }
 
-        dispatcher.Send(() =>
+        dispatcher.Invoke(() =>
         {
             lock (_gate)
             {
@@ -158,7 +171,7 @@ public sealed class DispatcherTimer : IDisposable
                 return;
             }
 
-            _scheduled = dispatcher.Schedule(_interval, OnTick);
+            _scheduled = (dispatcher as IDispatcherCore)!.Schedule(_interval, OnTick);
         }
     }
 
@@ -170,7 +183,7 @@ public sealed class DispatcherTimer : IDisposable
             return;
         }
 
-        dispatcher.Send(() =>
+        dispatcher.Invoke(() =>
         {
             lock (_gate)
             {
@@ -180,7 +193,7 @@ public sealed class DispatcherTimer : IDisposable
                 }
 
                 _scheduled?.Dispose();
-                _scheduled = dispatcher.Schedule(_interval, OnTick);
+                _scheduled = (dispatcher as IDispatcherCore)!.Schedule(_interval, OnTick);
             }
         });
     }
@@ -207,14 +220,14 @@ public sealed class DispatcherTimer : IDisposable
         Application.DispatcherChanged -= OnDispatcherChanged;
     }
 
-    private void OnDispatcherChanged(IUiDispatcher? dispatcher)
+    private void OnDispatcherChanged(IDispatcher? dispatcher)
     {
         if (dispatcher == null)
         {
             return;
         }
 
-        dispatcher.Send(() =>
+        dispatcher.Invoke(() =>
         {
             lock (_gate)
             {
@@ -224,12 +237,12 @@ public sealed class DispatcherTimer : IDisposable
                 }
 
                 UnsubscribeFromDispatcherChanged_NoLock();
-                _scheduled = dispatcher.Schedule(_interval, OnTick);
+                _scheduled = (dispatcher as IDispatcherCore)!.Schedule(_interval, OnTick);
             }
         });
     }
 
-    private static IUiDispatcher? TryGetDispatcher()
+    private static IDispatcher? TryGetDispatcher()
     {
         if (!Application.IsRunning)
         {

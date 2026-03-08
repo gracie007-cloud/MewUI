@@ -1,7 +1,14 @@
+using Aprillz.MewUI.Controls;
+
 namespace Aprillz.MewUI;
 
-internal interface IVisualTreeHost
+/// <summary>
+/// Provides child traversal for the visual tree.
+/// </summary>
+public interface IVisualTreeHost
 {
-    void VisitChildren(Action<Element> visitor);
+    /// <summary>
+    /// Visits visual children of the current element.
+    /// </summary>
+    bool VisitChildren(Func<Element, bool> visitor);
 }
-

@@ -1,25 +1,46 @@
+using Aprillz.MewUI.Controls;
+
 namespace Aprillz.MewUI.Input;
 
+/// <summary>
+/// Routes window-level raw input events to the appropriate UI elements (hit testing, mouse-over updates, bubbling).
+/// </summary>
 internal static class WindowInputRouter
 {
-    public static void UpdateMouseOver(Window window, ref UIElement? mouseOverElement, UIElement? newLeaf)
+    internal static UIElement? GetInputBubbleParent(Window window, UIElement current)
     {
-        if (ReferenceEquals(mouseOverElement, newLeaf))
+        // Bubble across popup roots back to their owners.
+        // This keeps input semantics closer to WPF: a click/wheel inside a popup can be handled by the owning control.
+        if (window.TryGetPopupOwner(current, out var owner) && !ReferenceEquals(owner, current))
+        {
+            return owner;
+        }
+
+        return current.Parent as UIElement;
+    }
+
+    /// <summary>
+    /// Updates the current mouse-over element and the window's mouse-over chain.
+    /// </summary>
+    public static void UpdateMouseOver(Window window, UIElement? newLeaf)
+    {
+        if (ReferenceEquals(window.MouseOverElement, newLeaf))
         {
             return;
         }
 
-        window.UpdateMouseOverChain(mouseOverElement, newLeaf);
-        mouseOverElement = newLeaf;
+        window.UpdateMouseOverChain(window.MouseOverElement, newLeaf);
+        window.SetMouseOverElement(newLeaf);
     }
 
-    public static UIElement? HitTest(Window window, UIElement? capturedElement, Point positionInWindow)
-        => capturedElement ?? window.HitTest(positionInWindow);
+    public static UIElement? HitTest(Window window, Point positionInWindow)
+        => window.CapturedElement ?? window.HitTest(positionInWindow);
 
+    /// <summary>
+    /// Routes a mouse move to the current hit-tested element and updates mouse-over state.
+    /// </summary>
     public static void MouseMove(
         Window window,
-        ref UIElement? mouseOverElement,
-        UIElement? capturedElement,
         Point positionInWindow,
         Point screenPosition,
         bool leftDown,
@@ -28,17 +49,21 @@ internal static class WindowInputRouter
     {
         window.UpdateLastMousePosition(positionInWindow, screenPosition);
 
-        var element = HitTest(window, capturedElement, positionInWindow);
-        UpdateMouseOver(window, ref mouseOverElement, element);
+        var element = HitTest(window, positionInWindow);
+        UpdateMouseOver(window, element);
 
-        var args = new MouseEventArgs(positionInWindow, screenPosition, global::Aprillz.MewUI.MouseButton.Left, leftDown, rightDown, middleDown);
-        element?.RaiseMouseMove(args);
+        var args = new MouseEventArgs(positionInWindow, screenPosition, MewUI.MouseButton.Left, leftDown, rightDown, middleDown);
+        for (var current = element; current != null && !args.Handled; current = GetInputBubbleParent(window, current))
+        {
+            current.RaiseMouseMove(args);
+        }
     }
 
+    /// <summary>
+    /// Routes a mouse button press/release to the current hit-tested element and manages focus/mouse-over state.
+    /// </summary>
     public static void MouseButton(
         Window window,
-        ref UIElement? mouseOverElement,
-        UIElement? capturedElement,
         Point positionInWindow,
         Point screenPosition,
         MouseButton button,
@@ -50,42 +75,84 @@ internal static class WindowInputRouter
     {
         window.UpdateLastMousePosition(positionInWindow, screenPosition);
 
-        if (isDown)
-        {
-            window.OnBeforeMouseDown(positionInWindow, button);
-        }
-
-        var element = HitTest(window, capturedElement, positionInWindow);
+        var element = HitTest(window, positionInWindow);
         if (isDown)
         {
             window.OnAfterMouseDownHitTest(positionInWindow, button, element);
         }
 
-        UpdateMouseOver(window, ref mouseOverElement, element);
+        UpdateMouseOver(window, element);
 
-        var args = new MouseEventArgs(positionInWindow, screenPosition, button, leftDown, rightDown, middleDown, clickCount: clickCount);
+        var args = new MouseEventArgs(positionInWindow, screenPosition, button, leftDown, rightDown, middleDown, clickCount: clickCount)
+        {
+            OriginalSource = element,
+            Source = element,
+        };
         if (isDown)
         {
+            // Close transient popups before routing the click.
+            // This prevents a popup opened by the click (e.g. ContextMenu) from being immediately closed
+            // by the post-bubbling close policy pass.
+            window.RequestClosePopups(PopupCloseRequest.PointerDown(element));
+
             if (element?.Focusable == true)
             {
                 window.FocusManager.SetFocus(element);
             }
+            else
+            {
+                // WPF-like: focus the nearest focusable ancestor instead of requiring the leaf hit-test target
+                // to be focusable (e.g. clicking a Label inside a focusable control should focus the control).
+                UIElement? focusTarget = null;
+                for (var current = element; current != null; current = GetInputBubbleParent(window, current))
+                {
+                    if (current.Focusable)
+                    {
+                        focusTarget = current;
+                        break;
+                    }
+                }
 
-            element?.RaiseMouseDown(args);
+                if (focusTarget != null)
+                {
+                    window.FocusManager.SetFocus(focusTarget);
+                }
+            }
+
+            for (var current = element; current != null && !args.Handled; current = GetInputBubbleParent(window, current))
+            {
+                args.Source = current;
+                current.RaiseMouseDown(args);
+            }
 
             if (clickCount == 2)
             {
-                var dblArgs = new MouseEventArgs(positionInWindow, screenPosition, button, leftDown, rightDown, middleDown, clickCount: 2);
-                element?.RaiseMouseDoubleClick(dblArgs);
+                args = new MouseEventArgs(positionInWindow, screenPosition, button, leftDown, rightDown, middleDown, clickCount: 2)
+                {
+                    OriginalSource = element,
+                    Source = element,
+                };
+                for (var current = element; current != null && !args.Handled; current = GetInputBubbleParent(window, current))
+                {
+                    args.Source = current;
+                    current.RaiseMouseDoubleClick(args);
+                }
             }
         }
         else
         {
-            element?.RaiseMouseUp(args);
+            for (var current = element; current != null && !args.Handled; current = GetInputBubbleParent(window, current))
+            {
+                args.Source = current;
+                current.RaiseMouseUp(args);
+            }
             window.RequerySuggested();
         }
     }
 
+    /// <summary>
+    /// Routes a mouse wheel event by bubbling from the hit-tested element to the root until handled.
+    /// </summary>
     public static void MouseWheel(
         Window window,
         Point positionInWindow,
@@ -99,11 +166,38 @@ internal static class WindowInputRouter
         window.UpdateLastMousePosition(positionInWindow, screenPosition);
 
         var element = window.HitTest(positionInWindow);
-        var args = new MouseWheelEventArgs(positionInWindow, screenPosition, delta, isHorizontal, leftDown, rightDown, middleDown);
-
-        for (var current = element; current != null && !args.Handled; current = current.Parent as UIElement)
+        var args = new MouseWheelEventArgs(positionInWindow, screenPosition, delta, isHorizontal, leftDown, rightDown, middleDown)
         {
+            OriginalSource = element,
+            Source = element,
+        };
+
+        for (var current = element; current != null && !args.Handled; current = GetInputBubbleParent(window, current))
+        {
+            args.Source = current;
             current.RaiseMouseWheel(args);
+        }
+    }
+
+    /// <summary>
+    /// Routes a KeyDown event by bubbling from the focused element to the root until handled.
+    /// </summary>
+    public static void KeyDown(Window window, KeyEventArgs args)
+    {
+        for (var current = window.FocusManager.FocusedElement; current != null && !args.Handled; current = GetInputBubbleParent(window, current))
+        {
+            current.RaiseKeyDown(args);
+        }
+    }
+
+    /// <summary>
+    /// Routes a KeyUp event by bubbling from the focused element to the root until handled.
+    /// </summary>
+    public static void KeyUp(Window window, KeyEventArgs args)
+    {
+        for (var current = window.FocusManager.FocusedElement; current != null && !args.Handled; current = GetInputBubbleParent(window, current))
+        {
+            current.RaiseKeyUp(args);
         }
     }
 }

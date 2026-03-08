@@ -112,7 +112,6 @@ public sealed class ContextMenu : Control, IPopupOwner
         {
             ItemPadding = Theme.Metrics.ItemPadding;
         }
-        BorderThickness = 1;
         Padding = new Thickness(1);
 
         _vBar = new ScrollBar { Orientation = Orientation.Vertical, IsVisible = false, Parent = this };
@@ -125,6 +124,8 @@ public sealed class ContextMenu : Control, IPopupOwner
     protected override Color DefaultBackground => Theme.Palette.ControlBackground;
 
     protected override Color DefaultBorderBrush => Theme.Palette.ControlBorder;
+
+    protected override double DefaultBorderThickness => Theme.Metrics.ControlBorderThickness;
 
     public void AddItem(string text, Action? onClick = null, bool isEnabled = true, string? shortcutText = null)
     {
@@ -166,7 +167,7 @@ public sealed class ContextMenu : Control, IPopupOwner
         InvalidateVisual();
     }
 
-    internal void ShowAt(UIElement owner, Point positionInWindow)
+    internal void ShowAt(UIElement owner, Point positionInWindow, double? anchorTopY = null)
     {
         ArgumentNullException.ThrowIfNull(owner);
 
@@ -180,7 +181,7 @@ public sealed class ContextMenu : Control, IPopupOwner
         _parentMenu = null;
 
         // Measure without passing infinity into backends that may convert widths to ints.
-        var client = window.ClientSizeDip;
+        var client = window.ClientSize;
         Measure(new Size(Math.Max(0, client.Width), Math.Max(0, client.Height)));
         var desired = DesiredSize;
 
@@ -203,7 +204,10 @@ public sealed class ContextMenu : Control, IPopupOwner
 
         if (y + height > client.Height)
         {
-            y = Math.Max(0, client.Height - height);
+            // Flip above the anchor point (anchorTopY for MenuBar items, or the click Y for context menus).
+            double flipAnchor = anchorTopY ?? positionInWindow.Y;
+            double flippedY = flipAnchor - height;
+            y = flippedY >= 0 ? flippedY : Math.Max(0, client.Height - height);
         }
 
         window.ShowPopup(owner, this, new Rect(x, y, width, height));
@@ -403,6 +407,17 @@ public sealed class ContextMenu : Control, IPopupOwner
             Math.Max(0, itemBounds.Height)));
     }
 
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        if (!e.Handled)
+        {
+            // Prevent bubbling to the popup owner (e.g. TextBase captures the mouse on left-click,
+            // which would swallow the subsequent mouse-up that activates the menu item).
+            e.Handled = true;
+        }
+    }
+
     protected override void OnMouseLeave()
     {
         base.OnMouseLeave();
@@ -479,7 +494,7 @@ public sealed class ContextMenu : Control, IPopupOwner
     {
         base.OnMouseUp(e);
 
-        if (!IsEnabled || e.Handled || e.Button != MouseButton.Left)
+        if (!IsEffectivelyEnabled || e.Handled || e.Button != MouseButton.Left)
         {
             return;
         }
@@ -537,7 +552,7 @@ public sealed class ContextMenu : Control, IPopupOwner
         }
     }
 
-    void IPopupOwner.OnPopupClosed(UIElement popup)
+    void IPopupOwner.OnPopupClosed(UIElement popup, PopupCloseKind kind)
     {
         if (_openSubMenu != null && popup == _openSubMenu)
         {
@@ -573,7 +588,7 @@ public sealed class ContextMenu : Control, IPopupOwner
         }
         subMenuPopup._parentMenu = this;
 
-        var client = window.ClientSizeDip;
+        var client = window.ClientSize;
         subMenuPopup.Measure(new Size(Math.Max(0, client.Width), Math.Max(0, client.Height)));
         var desired = subMenuPopup.DesiredSize;
 
@@ -726,12 +741,11 @@ public sealed class ContextMenu : Control, IPopupOwner
 
     protected override void OnRender(IGraphicsContext context)
     {
-        
         var bounds = GetSnappedBorderBounds(Bounds);
         var dpiScale = GetDpi() / 96.0;
         double radius = Theme.Metrics.ControlCornerRadius;
         var borderInset = GetBorderVisualInset();
-        double itemRadius = Math.Max(0, radius - borderInset);
+        double itemRadius = LayoutRounding.RoundToPixel(Math.Max(0, radius - BorderThickness), dpiScale);
 
         DrawBackgroundAndBorder(context, bounds, Background, BorderBrush, radius);
 
@@ -820,7 +834,7 @@ public sealed class ContextMenu : Control, IPopupOwner
                 {
                     // Submenu chevron indicator (matches ComboBox/TreeView chevron style).
                     var center = new Point(paddedRow.Right - (SubMenuGlyphAreaWidth / 2), paddedRow.Y + paddedRow.Height / 2);
-                    ChevronGlyph.Draw(context, center, size: 3, fg, ChevronDirection.Right);
+                    Glyph.Draw(context, center, size: 3, fg, GlyphKind.ChevronRight);
                 }
             }
 

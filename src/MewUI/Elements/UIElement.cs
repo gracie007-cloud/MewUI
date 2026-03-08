@@ -1,6 +1,6 @@
 using Aprillz.MewUI.Rendering;
 
-namespace Aprillz.MewUI;
+namespace Aprillz.MewUI.Controls;
 
 /// <summary>
 /// Base class for elements that support input handling and visibility.
@@ -47,7 +47,7 @@ public abstract partial class UIElement : Element
         }
     } = true;
 
-    internal bool IsEffectivelyEnabled => IsEnabled && GetSuggestedIsEnabled();
+    public bool IsEffectivelyEnabled => IsEnabled && GetSuggestedIsEnabled();
 
     /// <summary>
     /// Gets or sets whether the element participates in hit testing.
@@ -136,11 +136,6 @@ public abstract partial class UIElement : Element
     /// Occurs when a key is released while the element has focus.
     /// </summary>
     public event Action<KeyEventArgs>? KeyUp;
-
-    /// <summary>
-    /// Occurs when text input is received while the element has focus.
-    /// </summary>
-    public event Action<TextInputEventArgs>? TextInput;
 
     #endregion
 
@@ -281,7 +276,7 @@ public abstract partial class UIElement : Element
     }
 
     /// <summary>
-    /// Controls whether <see cref="SetMouseOver"/> triggers an <see cref="InvalidateVisual"/>.
+    /// Controls whether <see cref="SetMouseOver"/> triggers an <see cref="Element.InvalidateVisual"/>.
     /// Container elements like panels can opt out to avoid redundant redraw on hover changes
     /// when they don't have any hover-dependent visuals.
     /// </summary>
@@ -526,8 +521,6 @@ public abstract partial class UIElement : Element
 
     internal void RaiseKeyUp(KeyEventArgs e) => OnKeyUp(e);
 
-    internal void RaiseTextInput(TextInputEventArgs e) => OnTextInput(e);
-
     // Protected virtual hooks for derived controls (public API surface stays small).
     /// <summary>
     /// Called when a mouse button is pressed.
@@ -570,12 +563,6 @@ public abstract partial class UIElement : Element
     /// </summary>
     /// <param name="e">Key event arguments.</param>
     protected virtual void OnKeyUp(KeyEventArgs e) => KeyUp?.Invoke(e);
-
-    /// <summary>
-    /// Called when text input is received.
-    /// </summary>
-    /// <param name="e">Text input event arguments.</param>
-    protected virtual void OnTextInput(TextInputEventArgs e) => TextInput?.Invoke(e);
 
     #endregion
 

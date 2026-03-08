@@ -1,5 +1,5 @@
 using Aprillz.MewUI.Rendering;
-using Aprillz.MewUI.Text.Text;
+using Aprillz.MewUI.Controls.Text;
 
 namespace Aprillz.MewUI.Controls;
 
@@ -14,12 +14,13 @@ public class TextBox : TextBase
 
     protected override Color DefaultBorderBrush => Theme.Palette.ControlBorder;
 
+    protected override double DefaultBorderThickness => Theme.Metrics.ControlBorderThickness;
+
     protected override double DefaultMinHeight => Theme.Metrics.BaseControlHeight;
 
     public TextBox()
     {
-        BorderThickness = 1;
-        Padding = new Thickness(4);
+        Padding = new Thickness(4,2);
     }
 
     protected override Rect GetInteractionContentBounds()
@@ -192,6 +193,4 @@ public class TextBox : TextBase
         using var measure = BeginTextMeasurement();
         ClampScrollOffset(measure.Context, measure.Font, contentBounds.Width);
     }
-
-    // Key handling is centralized in TextBase.
 }

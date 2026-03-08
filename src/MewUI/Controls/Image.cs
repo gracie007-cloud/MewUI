@@ -1,4 +1,3 @@
-using Aprillz.MewUI.Resources;
 using Aprillz.MewUI.Rendering;
 
 namespace Aprillz.MewUI.Controls;
@@ -8,7 +7,8 @@ namespace Aprillz.MewUI.Controls;
 /// </summary>
 public sealed class Image : FrameworkElement
 {
-    private readonly Dictionary<GraphicsBackend, IImage> _cache = new();
+    private readonly Dictionary<IGraphicsFactory, IImage> _cache =
+        new(ReferenceEqualityComparer<IGraphicsFactory>.Instance);
     private INotifyImageChanged? _notifySource;
 
     /// <summary>
@@ -29,7 +29,7 @@ public sealed class Image : FrameworkElement
     /// <summary>
     /// Gets or sets how the image is stretched to fill available space.
     /// </summary>
-    public ImageStretch StretchMode
+    public Stretch StretchMode
     {
         get;
         set
@@ -40,7 +40,7 @@ public sealed class Image : FrameworkElement
                 InvalidateVisual();
             }
         }
-    } = ImageStretch.Uniform;
+    } = Stretch.Uniform;
 
     /// <summary>
     /// Gets or sets the viewbox region of the source image.
@@ -138,7 +138,7 @@ public sealed class Image : FrameworkElement
     }
 
     /// <summary>
-    /// Tries to read the source pixel color at the given position (window-relative DIPs).
+    /// Tries to read the source pixel color at the given position (local DIPs).
     /// </summary>
     /// <remarks>
     /// This reads pixels from the decoded <see cref="ImageSource"/> data (BGRA32) and maps the position through
@@ -167,7 +167,7 @@ public sealed class Image : FrameworkElement
             return false;
         }
 
-        ComputeRects(srcRect, Bounds, StretchMode, AlignmentX, AlignmentY, out var dest, out var src);
+        ComputeRects(srcRect, new (0, 0, ActualWidth, ActualHeight), StretchMode, AlignmentX, AlignmentY, out var dest, out var src);
         if (dest.Width <= 0 || dest.Height <= 0 || src.Width <= 0 || src.Height <= 0)
         {
             return false;
@@ -185,8 +185,8 @@ public sealed class Image : FrameworkElement
         double sx = src.X + u * src.Width;
         double sy = src.Y + v * src.Height;
 
-        int px = (int)System.Math.Floor(sx);
-        int py = (int)System.Math.Floor(sy);
+        int px = (int)Math.Floor(sx);
+        int py = (int)Math.Floor(sy);
 
         if ((uint)px >= (uint)decoded.WidthPx || (uint)py >= (uint)decoded.HeightPx)
         {
@@ -263,8 +263,8 @@ public sealed class Image : FrameworkElement
 
     private Rect GetViewBoxPixels(int pixelWidth, int pixelHeight)
     {
-        double iw = System.Math.Max(0, pixelWidth);
-        double ih = System.Math.Max(0, pixelHeight);
+        double iw = Math.Max(0, pixelWidth);
+        double ih = Math.Max(0, pixelHeight);
         var full = new Rect(0, 0, iw, ih);
         if (ViewBox is not Rect vb)
         {
@@ -320,7 +320,7 @@ public sealed class Image : FrameworkElement
     private static void ComputeRects(
         Rect sourceRect,
         Rect bounds,
-        ImageStretch stretch,
+        Stretch stretch,
         ImageAlignmentX alignX,
         ImageAlignmentY alignY,
         out Rect dest,
@@ -338,11 +338,11 @@ public sealed class Image : FrameworkElement
 
         switch (stretch)
         {
-            case ImageStretch.Fill:
+            case Stretch.Fill:
                 dest = bounds;
                 return;
 
-            case ImageStretch.Uniform:
+            case Stretch.Uniform:
             {
                 double scale = Math.Min(bounds.Width / sw, bounds.Height / sh);
                 double dw = sw * scale;
@@ -355,7 +355,7 @@ public sealed class Image : FrameworkElement
                 return;
             }
 
-            case ImageStretch.UniformToFill:
+            case Stretch.UniformToFill:
             {
                 double boundsAspect = bounds.Width / bounds.Height;
                 double srcAspect = sw / sh;
@@ -378,7 +378,7 @@ public sealed class Image : FrameworkElement
                 return;
             }
 
-            case ImageStretch.None:
+            case Stretch.None:
             default:
             {
                 // Keep pixel size; center within bounds (and clip).
@@ -400,15 +400,13 @@ public sealed class Image : FrameworkElement
         }
 
         var factory = Application.IsRunning ? Application.Current.GraphicsFactory : Application.DefaultGraphicsFactory;
-        var backend = factory.Backend;
-
-        if (_cache.TryGetValue(backend, out var cached))
+        if (_cache.TryGetValue(factory, out var cached))
         {
             return cached;
         }
 
         var created = Source.CreateImage(factory);
-        _cache[backend] = created;
+        _cache[factory] = created;
         return created;
     }
 

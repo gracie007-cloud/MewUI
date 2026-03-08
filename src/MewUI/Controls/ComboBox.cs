@@ -1,3 +1,4 @@
+using Aprillz.MewUI.Controls.Text;
 using Aprillz.MewUI.Rendering;
 
 namespace Aprillz.MewUI.Controls;
@@ -5,27 +6,26 @@ namespace Aprillz.MewUI.Controls;
 /// <summary>
 /// A drop-down selection control with text header and popup list.
 /// </summary>
-public sealed partial class ComboBox : Control, IPopupOwner
+public sealed partial class ComboBox : DropDownBase
 {
     private readonly TextWidthCache _textWidthCache = new(512);
-    private bool _isDropDownOpen;
     private ListBox? _popupList;
-    private bool _restoreFocusAfterPopupClose;
     private bool _updatingFromSource;
-    private Rect? _lastPopupBounds;
     private bool _suppressItemsSelectionChanged;
-    private IItemsView _itemsSource = ItemsView.Empty;
+    private ISelectableItemsView _itemsSource = ItemsView.EmptySelectable;
     private IDataTemplate? _itemTemplate;
+
+    protected override double DefaultBorderThickness => Theme.Metrics.ControlBorderThickness;
 
     /// <summary>
     /// Gets or sets the items data source.
     /// </summary>
-    public IItemsView ItemsSource
+    public ISelectableItemsView ItemsSource
     {
         get => _itemsSource;
         set
         {
-            value ??= ItemsView.Empty;
+            value ??= ItemsView.EmptySelectable;
             if (ReferenceEquals(_itemsSource, value))
             {
                 return;
@@ -52,7 +52,7 @@ public sealed partial class ComboBox : Control, IPopupOwner
 
             if (_popupList != null)
             {
-                SyncPopupList(_popupList);
+                SyncPopupContent(_popupList);
             }
 
             int newIndex = _itemsSource.SelectedIndex;
@@ -84,6 +84,8 @@ public sealed partial class ComboBox : Control, IPopupOwner
     /// Gets the currently selected item text.
     /// </summary>
     public string? SelectedText => SelectedIndex >= 0 && SelectedIndex < ItemsSource.Count ? ItemsSource.GetText(SelectedIndex) : null;
+
+    public bool ChangeOnWheel { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the placeholder text shown when no item is selected.
@@ -119,17 +121,21 @@ public sealed partial class ComboBox : Control, IPopupOwner
     /// <summary>
     /// Gets or sets the maximum height of the dropdown list.
     /// </summary>
-    public double MaxDropDownHeight
+    public new double MaxDropDownHeight
     {
-        get;
+        get => base.MaxDropDownHeight;
         set
         {
-            if (SetDouble(ref field, value))
+            // Keep Measure invalidation behavior from the previous implementation.
+            if (base.MaxDropDownHeight.Equals(value))
             {
-                InvalidateMeasure();
+                return;
             }
+
+            base.MaxDropDownHeight = value;
+            InvalidateMeasure();
         }
-    } = 160;
+    }
 
     /// <summary>
     /// Gets or sets the item template for the dropdown list. If null, the list uses its default template.
@@ -147,35 +153,8 @@ public sealed partial class ComboBox : Control, IPopupOwner
             _itemTemplate = value;
             if (_popupList != null)
             {
-                SyncPopupList(_popupList);
+                SyncPopupContent(_popupList);
             }
-        }
-    }
-
-    /// <summary>
-    /// Gets or sets whether the dropdown list is open.
-    /// </summary>
-    public bool IsDropDownOpen
-    {
-        get => _isDropDownOpen;
-        set
-        {
-            if (_isDropDownOpen == value)
-            {
-                return;
-            }
-
-            _isDropDownOpen = value;
-            if (_isDropDownOpen)
-            {
-                ShowPopup();
-            }
-            else
-            {
-                ClosePopup();
-            }
-
-            InvalidateVisual();
         }
     }
 
@@ -185,31 +164,10 @@ public sealed partial class ComboBox : Control, IPopupOwner
     public event Action<object?>? SelectionChanged;
 
     /// <summary>
-    /// Gets whether the combobox can receive keyboard focus.
-    /// </summary>
-    public override bool Focusable => true;
-
-    /// <summary>
-    /// Gets the default background color.
-    /// </summary>
-    protected override Color DefaultBackground => Theme.Palette.ControlBackground;
-
-    /// <summary>
-    /// Gets the default border brush color.
-    /// </summary>
-    protected override Color DefaultBorderBrush => Theme.Palette.ControlBorder;
-
-    /// <summary>
-    /// Gets the default minimum height.
-    /// </summary>
-    protected override double DefaultMinHeight => Theme.Metrics.BaseControlHeight;
-
-    /// <summary>
     /// Initializes a new instance of the ComboBox class.
     /// </summary>
     public ComboBox()
     {
-        BorderThickness = 1;
         Padding = new Thickness(8, 4, 8, 4);
         // Do not set explicit Height, otherwise FrameworkElement.MeasureOverride will clamp DesiredSize
         // and the drop-down cannot expand. Use MinHeight as the default header height.
@@ -223,7 +181,7 @@ public sealed partial class ComboBox : Control, IPopupOwner
     {
         if (_popupList != null)
         {
-            SyncPopupList(_popupList);
+            SyncPopupContent(_popupList);
         }
 
         InvalidateMeasure();
@@ -254,19 +212,7 @@ public sealed partial class ComboBox : Control, IPopupOwner
         }
     }
 
-    protected override void OnThemeChanged(Theme oldTheme, Theme newTheme)
-    {
-        base.OnThemeChanged(oldTheme, newTheme);
-
-        // The popup ListBox can exist while the dropdown is closed, so it won't be in the Window visual tree
-        // and would miss InternalTheme broadcasts. Keep it in sync here.
-        if (_popupList != null && _popupList.Parent == null)
-        {
-            _popupList.NotifyThemeChanged(oldTheme, newTheme);
-        }
-    }
-
-    protected override Size MeasureContent(Size availableSize)
+    protected override Size MeasureHeader(Size availableSize)
     {
         var headerHeight = ResolveHeaderHeight();
         double width = 80;
@@ -300,41 +246,16 @@ public sealed partial class ComboBox : Control, IPopupOwner
         return new Size(width, headerHeight);
     }
 
-    protected override void OnRender(IGraphicsContext context)
+    protected override void RenderHeaderContent(IGraphicsContext context, Rect headerRect, Rect innerHeaderRect)
     {
-        var bounds = GetSnappedBorderBounds(Bounds);
-        var borderInset = GetBorderVisualInset();
-        double radius = Theme.Metrics.ControlCornerRadius;
-
-        var bg = IsEnabled ? Background : Theme.Palette.DisabledControlBackground;
-
-        var borderColor = BorderBrush;
-        if (IsEnabled)
-        {
-            // Keep focus highlight while the drop-down popup is open/focused.
-            if (IsFocused || IsFocusWithin || IsDropDownOpen)
-            {
-                borderColor = Theme.Palette.Accent;
-            }
-            else if (IsMouseOver)
-            {
-                borderColor = BorderBrush.Lerp(Theme.Palette.Accent, 0.6);
-            }
-        }
-
-        DrawBackgroundAndBorder(context, bounds, bg, borderColor, radius);
-
-        var headerHeight = ResolveHeaderHeight();
-        var headerRect = new Rect(bounds.X, bounds.Y, bounds.Width, headerHeight);
-        var innerHeaderRect = headerRect.Deflate(new Thickness(borderInset));
-
         // Text
         var textRect = new Rect(innerHeaderRect.X, innerHeaderRect.Y, innerHeaderRect.Width - ArrowAreaWidth, innerHeaderRect.Height)
             .Deflate(Padding);
 
         string text = SelectedText ?? string.Empty;
-        var textColor = IsEnabled ? Foreground : Theme.Palette.DisabledText;
-        if (string.IsNullOrEmpty(text) && !string.IsNullOrEmpty(Placeholder) && !IsFocused)
+        var state = GetVisualState(isPressed: false, isActive: IsDropDownOpen);
+        var textColor = state.IsEnabled ? Foreground : Theme.Palette.DisabledText;
+        if (string.IsNullOrEmpty(text) && !string.IsNullOrEmpty(Placeholder) && !state.IsFocused)
         {
             text = Placeholder;
             textColor = Theme.Palette.PlaceholderText;
@@ -344,271 +265,15 @@ public sealed partial class ComboBox : Control, IPopupOwner
         {
             context.DrawText(text, textRect, GetFont(), textColor, TextAlignment.Left, TextAlignment.Center, TextWrapping.NoWrap);
         }
-
-        // Arrow
-        DrawArrow(context, headerRect, IsEnabled ? textColor : Theme.Palette.DisabledText, IsDropDownOpen);
-
-        if (IsDropDownOpen)
-        {
-            UpdatePopupBounds();
-        }
     }
 
-    protected override void OnLostFocus()
-    {
-        base.OnLostFocus();
-        if (!IsDropDownOpen)
-        {
-            return;
-        }
-
-        var root = FindVisualRoot();
-        if (root is not Window window)
-        {
-            IsDropDownOpen = false;
-            return;
-        }
-
-        if (_popupList != null && window.FocusManager.FocusedElement == _popupList)
-        {
-            return;
-        }
-
-        IsDropDownOpen = false;
-    }
-
-    protected override void OnMouseDown(MouseEventArgs e)
-    {
-        base.OnMouseDown(e);
-
-        if (!IsEnabled || e.Button != MouseButton.Left)
-        {
-            return;
-        }
-
-        Focus();
-
-        var bounds = Bounds;
-        double headerHeight = ResolveHeaderHeight();
-        var headerRect = new Rect(bounds.X, bounds.Y, bounds.Width, headerHeight);
-
-        if (headerRect.Contains(e.Position))
-        {
-            IsDropDownOpen = !IsDropDownOpen;
-            e.Handled = true;
-            return;
-        }
-    }
-
-    protected override void OnKeyDown(KeyEventArgs e)
-    {
-        base.OnKeyDown(e);
-
-        if (!IsEnabled)
-        {
-            return;
-        }
-
-        if (e.Key == Key.Space || e.Key == Key.Enter)
-        {
-            IsDropDownOpen = !IsDropDownOpen;
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Escape && IsDropDownOpen)
-        {
-            IsDropDownOpen = false;
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Down)
-        {
-            if (!IsDropDownOpen)
-            {
-                IsDropDownOpen = true;
-            }
-
-            int count = ItemsSource.Count;
-            if (count > 0)
-            {
-                SelectedIndex = Math.Min(count - 1, SelectedIndex < 0 ? 0 : SelectedIndex + 1);
-            }
-
-            if (_popupList != null)
-            {
-                _popupList.SelectedIndex = SelectedIndex;
-            }
-
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Up)
-        {
-            if (!IsDropDownOpen)
-            {
-                IsDropDownOpen = true;
-            }
-
-            int count = ItemsSource.Count;
-            if (count > 0)
-            {
-                SelectedIndex = Math.Max(0, SelectedIndex <= 0 ? 0 : SelectedIndex - 1);
-            }
-
-            if (_popupList != null)
-            {
-                _popupList.SelectedIndex = SelectedIndex;
-            }
-
-            e.Handled = true;
-        }
-    }
-
-    /// <summary>
-    /// Sets a two-way binding for the SelectedIndex property.
-    /// </summary>
-    /// <param name="get">Function to get the current value.</param>
-    /// <param name="set">Action to set the value.</param>
-    /// <param name="subscribe">Optional action to subscribe to change notifications.</param>
-    /// <param name="unsubscribe">Optional action to unsubscribe from change notifications.</param>
-    public void SetSelectedIndexBinding(
-        Func<int> get,
-        Action<int> set,
-        Action<Action>? subscribe = null,
-        Action<Action>? unsubscribe = null)
-    {
-        SetSelectedIndexBindingCore(get, set, subscribe, unsubscribe);
-    }
-
-    private double ResolveItemHeight()
-    {
-        if (!double.IsNaN(ItemHeight) && ItemHeight > 0)
-        {
-            return ItemHeight;
-        }
-
-        return Math.Max(18, Theme.Metrics.BaseControlHeight - 2);
-    }
-
-    private double ResolveHeaderHeight()
-    {
-        if (!double.IsNaN(Height) && Height > 0)
-        {
-            return Height;
-        }
-
-        var min = MinHeight > 0 ? MinHeight : 0;
-        return Math.Max(Math.Max(24, FontSize + Padding.VerticalThickness + 8), min);
-    }
-
-    private void DrawArrow(IGraphicsContext context, Rect headerRect, Color color, bool isUp)
-    {
-        double centerX = headerRect.Right - ArrowAreaWidth / 2;
-        double centerY = headerRect.Y + headerRect.Height / 2;
-
-        ChevronGlyph.Draw(
-            context,
-            new Point(centerX, centerY),
-            size: 4,
-            color,
-            isUp ? ChevronDirection.Up : ChevronDirection.Down);
-    }
-
-    private const double ArrowAreaWidth = 22;
-
-    private ListBox EnsurePopupList()
+    protected override Rect CalculatePopupBounds(Window window, UIElement popup)
     {
         if (_popupList == null)
         {
-            _popupList = new ListBox();
-            _popupList.SelectionChanged += OnPopupListSelectionChanged;
-            _popupList.ItemActivated += OnPopupListItemActivated;
+            return base.CalculatePopupBounds(window, popup);
         }
 
-        return _popupList;
-    }
-
-    private void SyncPopupList(ListBox list)
-    {
-        list.ItemsSource = ItemsSource;
-        list.SelectedIndex = SelectedIndex;
-        list.ItemHeight = ResolveItemHeight();
-
-        if (ItemTemplate != null)
-        {
-            list.ItemTemplate = ItemTemplate;
-        }
-    }
-
-    private void ShowPopup()
-    {
-        var root = FindVisualRoot();
-        if (root is not Window window)
-        {
-            return;
-        }
-
-        var list = EnsurePopupList();
-        SyncPopupList(list);
-
-        var popupBounds = CalculatePopupBounds(window);
-        window.ShowPopup(this, list, popupBounds);
-        _lastPopupBounds = popupBounds;
-        window.FocusManager.SetFocus(list);
-    }
-
-    private void OnPopupListSelectionChanged(object? _)
-        => SelectedIndex = _popupList?.SelectedIndex ?? -1;
-
-    private void OnPopupListItemActivated(int index)
-    {
-        SelectedIndex = index;
-        _restoreFocusAfterPopupClose = true;
-        IsDropDownOpen = false;
-    }
-
-    private void ClosePopup()
-    {
-        var root = FindVisualRoot();
-        if (root is not Window window)
-        {
-            return;
-        }
-
-        if (_popupList != null)
-        {
-            window.ClosePopup(_popupList);
-        }
-
-        _lastPopupBounds = null;
-    }
-
-    private void UpdatePopupBounds()
-    {
-        if (!IsDropDownOpen || _popupList == null)
-        {
-            return;
-        }
-
-        var root = FindVisualRoot();
-        if (root is not Window window)
-        {
-            return;
-        }
-
-        var popupBounds = CalculatePopupBounds(window);
-        if (_lastPopupBounds is Rect last && popupBounds.Equals(last))
-        {
-            return;
-        }
-
-        window.UpdatePopup(_popupList, popupBounds);
-        _lastPopupBounds = popupBounds;
-    }
-
-    private Rect CalculatePopupBounds(Window window)
-    {
         var bounds = Bounds;
         double width = Math.Max(0, bounds.Width);
         if (width <= 0)
@@ -616,7 +281,7 @@ public sealed partial class ComboBox : Control, IPopupOwner
             width = 120;
         }
 
-        var client = window.ClientSizeDip;
+        var client = window.ClientSize;
         double x = bounds.X;
 
         // Clamp horizontally to client area.
@@ -676,11 +341,149 @@ public sealed partial class ComboBox : Control, IPopupOwner
         return new Rect(x, y, width, height);
     }
 
+    protected override UIElement CreatePopupContent()
+    {
+        _popupList = new ListBox();
+        _popupList.SelectionChanged += OnPopupListSelectionChanged;
+        _popupList.ItemActivated += OnPopupListItemActivated;
+        return _popupList;
+    }
+
+    private void OnPopupListSelectionChanged(object? _)
+    {
+        if (_popupList == null)
+        {
+            return;
+        }
+
+        SelectedIndex = _popupList.SelectedIndex;
+    }
+
+    private void OnPopupListItemActivated(int index)
+    {
+        SelectedIndex = index;
+        IsDropDownOpen = false;
+    }
+
+    protected override void SyncPopupContent(UIElement popup)
+    {
+        if (popup is not ListBox list)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(list.ItemsSource, ItemsSource))
+        {
+            list.ApplyItemsSource(ItemsSource, preserveListBoxSelection: false);
+        }
+
+        list.ItemHeight = ResolveItemHeight();
+
+        // Ensure popup reflects the current ComboBox selection.
+        list.SelectedIndex = SelectedIndex;
+
+        if (ItemTemplate != null)
+        {
+            list.ItemTemplate = ItemTemplate;
+        }
+    }
+
+    protected override UIElement GetPopupFocusTarget(UIElement popup) => popup;
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (!IsEffectivelyEnabled)
+        {
+            base.OnKeyDown(e);
+            return;
+        }
+
+        // ComboBox special-case: Up/Down opens dropdown and moves selection.
+        if (e.Key == Key.Down || e.Key == Key.Up)
+        {
+            if (!IsDropDownOpen)
+            {
+                IsDropDownOpen = true;
+            }
+
+            int count = ItemsSource.Count;
+            if (count > 0)
+            {
+                if (e.Key == Key.Down)
+                {
+                    SelectedIndex = Math.Min(count - 1, SelectedIndex < 0 ? 0 : SelectedIndex + 1);
+                }
+                else
+                {
+                    SelectedIndex = Math.Max(0, SelectedIndex <= 0 ? 0 : SelectedIndex - 1);
+                }
+            }
+
+            if (_popupList != null)
+            {
+                _popupList.SelectedIndex = SelectedIndex;
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        base.OnKeyDown(e);
+    }
+
+    protected override void OnMouseWheel(MouseWheelEventArgs e)
+    {
+        base.OnMouseWheel(e);
+        if (!IsEffectivelyEnabled || !ChangeOnWheel /*|| IsDropDownOpen*/)
+        {
+            return;
+        }
+
+        int count = ItemsSource.Count;
+        if (count == 0)
+        {
+            return;
+        }
+
+        int next = Math.Clamp(SelectedIndex + (e.Delta > 0 ? -1 : 1), 0, count - 1);
+        if (next != SelectedIndex)
+        {
+            SelectedIndex = next;
+        }
+
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Sets a two-way binding for the SelectedIndex property.
+    /// </summary>
+    /// <param name="get">Function to get the current value.</param>
+    /// <param name="set">Action to set the value.</param>
+    /// <param name="subscribe">Optional action to subscribe to change notifications.</param>
+    /// <param name="unsubscribe">Optional action to unsubscribe from change notifications.</param>
+    public void SetSelectedIndexBinding(
+        Func<int> get,
+        Action<int> set,
+        Action<Action>? subscribe = null,
+        Action<Action>? unsubscribe = null)
+    {
+        SetSelectedIndexBindingCore(get, set, subscribe, unsubscribe);
+    }
+
+    private double ResolveItemHeight()
+    {
+        if (!double.IsNaN(ItemHeight) && ItemHeight > 0)
+        {
+            return ItemHeight;
+        }
+
+        return Math.Max(18, Theme.Metrics.BaseControlHeight - 2);
+    }
+
     protected override void OnDispose()
     {
         if (_popupList != null)
         {
-            ClosePopup();
             _popupList.SelectionChanged -= OnPopupListSelectionChanged;
             _popupList.ItemActivated -= OnPopupListItemActivated;
             _popupList.Dispose();
@@ -688,30 +491,7 @@ public sealed partial class ComboBox : Control, IPopupOwner
         }
         _itemsSource.Changed -= OnItemsChanged;
         _itemsSource.SelectionChanged -= OnItemsSelectionChanged;
-    }
 
-    void IPopupOwner.OnPopupClosed(UIElement popup)
-    {
-        if (_popupList != null && popup == _popupList)
-        {
-            _isDropDownOpen = false;
-            InvalidateVisual();
-            _lastPopupBounds = null;
-
-            var root = FindVisualRoot();
-            if (root is Window window && window.FocusManager.FocusedElement == popup)
-            {
-                if (_restoreFocusAfterPopupClose)
-                {
-                    window.FocusManager.SetFocus(this);
-                }
-                else
-                {
-                    window.FocusManager.ClearFocus();
-                }
-            }
-
-            _restoreFocusAfterPopupClose = false;
-        }
+        base.OnDispose();
     }
 }

@@ -1,13 +1,20 @@
 namespace Aprillz.MewUI;
 
+/// <summary>
+/// Computed theme colors derived from a <see cref="ThemeSeed"/> and an accent.
+/// </summary>
 public sealed class Palette
 {
+    /// <summary>Window background color.</summary>
     public Color WindowBackground { get; }
 
+    /// <summary>Default window foreground/text color.</summary>
     public Color WindowText { get; }
 
+    /// <summary>Default control background color.</summary>
     public Color ControlBackground { get; }
 
+    /// <summary>Default control border color.</summary>
     public Color ControlBorder { get; }
 
     public Color ContainerBackground { get; }
@@ -19,6 +26,14 @@ public sealed class Palette
     public Color ButtonPressedBackground { get; }
 
     public Color ButtonDisabledBackground { get; }
+
+    public Color AccentHoverOverlay { get; }
+
+    public Color AccentPressedOverlay { get; }
+
+    public Color AccentBorderHotOverlay { get; }
+
+    public Color AccentBorderActiveOverlay { get; }
 
     public Color Accent { get; }
 
@@ -46,6 +61,9 @@ public sealed class Palette
 
     public ThemeSeed Seed { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Palette"/> class.
+    /// </summary>
     public Palette(
         ThemeSeed baseColors,
         Color accent,
@@ -75,6 +93,14 @@ public sealed class Palette
         var hoverT = isDark ? 0.22 : 0.14;
         var pressedT = isDark ? 0.32 : 0.24;
 
+        AccentHoverOverlay = accent.WithAlpha((byte)Math.Clamp(Math.Round(hoverT * 255.0), 0, 255));
+        AccentPressedOverlay = accent.WithAlpha((byte)Math.Clamp(Math.Round(pressedT * 255.0), 0, 255));
+
+        // Border overlays are typically stronger than background overlays.
+        AccentBorderHotOverlay = accent.WithAlpha((byte)Math.Clamp(Math.Round(0.6 * 255.0), 0, 255));
+        // Used when a control supplies a custom BorderBrush; keep some of the original hue instead of hard-replacing.
+        AccentBorderActiveOverlay = accent.WithAlpha((byte)Math.Clamp(Math.Round(0.85 * 255.0), 0, 255));
+
         SelectionBackground = ComputeSelectionBackground(controlBackground, accent);
         SelectionText = GetDefaultAccentText(SelectionBackground);
 
@@ -83,8 +109,11 @@ public sealed class Palette
         DisabledAccent = ComputeDisabledAccent(windowBackground, accent, DisabledText);
         PlaceholderText = ComputePlaceholderText(windowBackground, DisabledText);
         DisabledControlBackground = ComputeDisabledControlBackground(windowBackground, controlBackground, windowText);
-        ButtonHoverBackground = buttonFace.Lerp(accent, hoverT);
-        ButtonPressedBackground = buttonFace.Lerp(accent, pressedT);
+
+        // Back-compat result colors derived from overlays (keep ButtonFace-based defaults consistent
+        // while allowing controls with custom backgrounds to composite overlays themselves).
+        ButtonHoverBackground = Color.Composite(buttonFace, AccentHoverOverlay);
+        ButtonPressedBackground = Color.Composite(buttonFace, AccentPressedOverlay);
         Focus = accent;
 
         (ScrollBarThumb, ScrollBarThumbHover, ScrollBarThumbActive) = ComputeScrollBarThumbs(windowBackground);
@@ -92,11 +121,17 @@ public sealed class Palette
 
     internal static bool UseAlphaPalette { get; set; } = false;
 
+    /// <summary>
+    /// Creates a copy of this palette with a different accent.
+    /// </summary>
     public Palette WithAccent(Color accent, Color? accentText = null)
     {
         return new Palette(Seed, accent, accentText);
     }
 
+    /// <summary>
+    /// Returns true if a background should be treated as dark.
+    /// </summary>
     public static bool IsDarkBackground(Color color) => (color.R + color.G + color.B) < 128 * 3;
 
     private static Color ComputeControlBorder(Color baseColor, Color windowText, Color accent)
@@ -170,7 +205,7 @@ public sealed class Palette
         var isDark = IsDarkBackground(baseColor);
         byte c = isDark ? (byte)255 : (byte)0;
         return (
-            Color.FromArgb(0x44, c, c, c),
+            Color.FromArgb(0x33, c, c, c),
             Color.FromArgb(0x66, c, c, c),
             Color.FromArgb(0x88, c, c, c)
         );

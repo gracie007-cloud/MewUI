@@ -1,7 +1,8 @@
-using System.Threading;
-
 namespace Aprillz.MewUI;
 
+/// <summary>
+/// Controls the application's render loop scheduling.
+/// </summary>
 public sealed class RenderLoopSettings
 {
     private int _mode;
@@ -12,6 +13,9 @@ public sealed class RenderLoopSettings
     {
     }
 
+    /// <summary>
+    /// Gets or sets the render loop mode.
+    /// </summary>
     public RenderLoopMode Mode
     {
         get => (RenderLoopMode)Volatile.Read(ref _mode);
@@ -25,6 +29,9 @@ public sealed class RenderLoopSettings
         }
     }
 
+    /// <summary>
+    /// Gets or sets the target FPS. A value of 0 indicates no cap.
+    /// </summary>
     public int TargetFps
     {
         get => Volatile.Read(ref _targetFps);
@@ -37,6 +44,9 @@ public sealed class RenderLoopSettings
         }
     }
 
+    /// <summary>
+    /// Gets or sets whether VSync is enabled (when supported by the backend/platform).
+    /// </summary>
     public bool VSyncEnabled
     {
         get => Volatile.Read(ref _vsyncEnabled) != 0;
@@ -50,6 +60,9 @@ public sealed class RenderLoopSettings
         }
     }
 
+    /// <summary>
+    /// Convenience helper to toggle <see cref="RenderLoopMode.Continuous"/>.
+    /// </summary>
     public void SetContinuous(bool enabled)
         => Mode = enabled ? RenderLoopMode.Continuous : RenderLoopMode.OnRequest;
 }

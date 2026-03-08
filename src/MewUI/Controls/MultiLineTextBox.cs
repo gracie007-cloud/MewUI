@@ -1,5 +1,5 @@
 using Aprillz.MewUI.Rendering;
-using Aprillz.MewUI.Text;
+using Aprillz.MewUI.Controls.Text;
 
 namespace Aprillz.MewUI.Controls;
 
@@ -33,11 +33,12 @@ public sealed class MultiLineTextBox : TextBase
 
     protected override Color DefaultBorderBrush => Theme.Palette.ControlBorder;
 
+    protected override double DefaultBorderThickness => Theme.Metrics.ControlBorderThickness;
+
     protected override double DefaultMinHeight => Theme.Metrics.BaseControlHeight;
 
     public MultiLineTextBox()
     {
-        BorderThickness = 1;
         Padding = new Thickness(4);
         AcceptReturn = true;
 
@@ -292,11 +293,8 @@ public sealed class MultiLineTextBox : TextBase
         ApplyViewAnchorIfPending();
     }
 
-    void IVisualTreeHost.VisitChildren(Action<Element> visitor)
-    {
-        visitor(_vBar);
-        visitor(_hBar);
-    }
+    bool IVisualTreeHost.VisitChildren(Func<Element, bool> visitor)
+        => visitor(_vBar) && visitor(_hBar);
 
     protected override void RenderTextContent(IGraphicsContext context, Rect contentBounds, IFont font, Theme theme, in VisualState state)
     {
@@ -318,7 +316,7 @@ public sealed class MultiLineTextBox : TextBase
 
     protected override UIElement? HitTestOverride(Point point)
     {
-        if (!IsEnabled)
+        if (!IsEffectivelyEnabled)
         {
             return null;
         }
@@ -373,13 +371,13 @@ public sealed class MultiLineTextBox : TextBase
     {
         double lineHeight = GetLineHeight();
         int lineCount = Math.Max(1, _lineStarts.Count);
-        var textColor = IsEnabled ? Foreground : theme.Palette.DisabledText;
+        var textColor = IsEffectivelyEnabled ? Foreground : theme.Palette.DisabledText;
 
         if (!WrapEnabled)
         {
             int caretLine = -1;
             int caretLineStart = 0;
-            if (IsFocused && IsEnabled)
+            if (IsFocused && IsEffectivelyEnabled)
             {
                 GetLineFromIndex(CaretPosition, out caretLine, out caretLineStart, out _);
             }
@@ -446,7 +444,7 @@ public sealed class MultiLineTextBox : TextBase
         int rendered = 0;
 
         (int start, int end) selection = default;
-        bool canDrawCaret = IsFocused && IsEnabled;
+        bool canDrawCaret = IsFocused && IsEffectivelyEnabled;
         bool canDrawSelection = HasSelection;
         if (canDrawSelection)
         {
@@ -886,7 +884,7 @@ public sealed class MultiLineTextBox : TextBase
         double y,
         MultiLineTextView.CachedLineMeasure lineMeasure)
     {
-        if (!IsFocused || !IsEnabled)
+        if (!IsFocused || !IsEffectivelyEnabled)
         {
             return;
         }

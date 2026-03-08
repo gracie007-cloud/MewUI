@@ -2,27 +2,43 @@ using Aprillz.MewUI.Rendering;
 
 namespace Aprillz.MewUI.Controls;
 
+/// <summary>
+/// Tab header presenter used by <see cref="TabControl"/> to render and interact with individual tab headers.
+/// </summary>
 internal sealed class TabHeaderButton : ContentControl
 {
     private bool _isPressed;
 
+    /// <summary>
+    /// Gets or sets the tab index this header represents.
+    /// </summary>
     public int Index { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether this tab is currently selected.
+    /// </summary>
     public bool IsSelected { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the associated tab is enabled for interaction.
+    /// </summary>
     public bool IsTabEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Raised when the header is clicked (tab selection request).
+    /// </summary>
     public event Action<int>? Clicked;
 
     protected override Color DefaultBackground => Theme.Palette.ButtonFace;
 
     protected override Color DefaultBorderBrush => Theme.Palette.ControlBorder;
 
+    protected override double DefaultBorderThickness => Theme.Metrics.ControlBorderThickness;
+
     protected override double DefaultMinHeight => Theme.Metrics.BaseControlHeight;
 
     public TabHeaderButton()
     {
-        BorderThickness = 1;
         Padding = new Thickness(8, 4, 8, 4);
     }
 
@@ -61,29 +77,18 @@ internal sealed class TabHeaderButton : ContentControl
         var metrics = GetBorderRenderMetrics(Bounds, radiusDip);
         var bounds = metrics.Bounds;
         var radius = metrics.CornerRadius;
-        var state = GetVisualState(_isPressed, _isPressed);
 
         var host = Parent?.Parent as TabControl;
         var tabBg = host?.GetTabBackground(Theme, IsSelected) ?? (IsSelected ? Theme.Palette.ControlBackground : Theme.Palette.ButtonFace);
         var outline = host?.GetOutlineColor(Theme) ?? Theme.Palette.ControlBorder;
 
         var isEffectivelyEnabled = IsEffectivelyEnabled && IsTabEnabled;
+        var state = GetVisualState(_isPressed, _isPressed, isEffectivelyEnabled);
 
-        Color bg = tabBg;
-        if (!isEffectivelyEnabled && !IsSelected)
-        {
-            bg = Theme.Palette.ButtonDisabledBackground;
-        }
-        else if (state.IsPressed)
-        {
-            bg = Theme.Palette.ButtonPressedBackground;
-        }
-        else if (state.IsHot && !IsSelected)
-        {
-            bg = Theme.Palette.ButtonHoverBackground;
-        }
+        Color bg = IsSelected ? tabBg : PickButtonBackground(state, tabBg);
 
-        var border = IsSelected && isEffectivelyEnabled ? outline : Theme.Palette.ControlBorder;
+        var baseBorder = IsSelected && isEffectivelyEnabled ? outline : Theme.Palette.ControlBorder;
+        var border = PickAccentBorder(Theme, baseBorder, state, hoverMix: 0.4);
 
         // Top-only rounding via clipping:
         // Draw a taller rounded-rect, then clip to the real bounds so the bottom corners are clipped away.
@@ -138,7 +143,7 @@ internal sealed class TabHeaderButton : ContentControl
             return;
         }
 
-        if (e.Button == MouseButton.Left && IsEnabled && IsTabEnabled)
+        if (e.Button == MouseButton.Left && IsEffectivelyEnabled && IsTabEnabled)
         {
             _isPressed = true;
 
@@ -167,7 +172,7 @@ internal sealed class TabHeaderButton : ContentControl
                 window.ReleaseMouseCapture();
             }
 
-            if (IsEnabled && IsTabEnabled && Bounds.Contains(e.Position))
+            if (IsEffectivelyEnabled && IsTabEnabled && Bounds.Contains(e.Position))
             {
                 Clicked?.Invoke(Index);
             }
@@ -190,7 +195,7 @@ internal sealed class TabHeaderButton : ContentControl
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Handled || !IsEnabled || !IsTabEnabled)
+        if (e.Handled || !IsEffectivelyEnabled || !IsTabEnabled)
         {
             return;
         }
@@ -206,7 +211,7 @@ internal sealed class TabHeaderButton : ContentControl
     protected override void OnKeyUp(KeyEventArgs e)
     {
         base.OnKeyUp(e);
-        if (e.Handled || !IsEnabled || !IsTabEnabled)
+        if (e.Handled || !IsEffectivelyEnabled || !IsTabEnabled)
         {
             return;
         }

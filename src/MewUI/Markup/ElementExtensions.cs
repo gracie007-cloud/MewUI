@@ -15,7 +15,15 @@ public static class ElementExtensions
     /// <returns>The window for chaining.</returns>
     public static Window Width(this Window window, double width)
     {
-        window.WindowSize = WindowSize.Resizable(width, window.Height);
+        window.WindowSize = window.WindowSize.Mode switch
+        {
+            WindowSizeMode.Fixed => WindowSize.Fixed(width, ResolveWindowHeight(window)),
+            WindowSizeMode.FitContentWidth => WindowSize.FitContentWidth(width, ResolveWindowHeight(window)),
+            WindowSizeMode.FitContentHeight => WindowSize.FitContentHeight(width, ResolveWindowMaxHeight(window)),
+            WindowSizeMode.FitContentSize => WindowSize.FitContentSize(width, ResolveWindowMaxHeight(window)),
+            _ => WindowSize.Resizable(width, ResolveWindowHeight(window))
+        };
+        window.Width = width;
         return window;
     }
 
@@ -27,7 +35,15 @@ public static class ElementExtensions
     /// <returns>The window for chaining.</returns>
     public static Window Height(this Window window, double height)
     {
-        window.WindowSize = WindowSize.Resizable(window.Width, height);
+        window.WindowSize = window.WindowSize.Mode switch
+        {
+            WindowSizeMode.Fixed => WindowSize.Fixed(ResolveWindowWidth(window), height),
+            WindowSizeMode.FitContentWidth => WindowSize.FitContentWidth(ResolveWindowMaxWidth(window), height),
+            WindowSizeMode.FitContentHeight => WindowSize.FitContentHeight(ResolveWindowWidth(window), height),
+            WindowSizeMode.FitContentSize => WindowSize.FitContentSize(ResolveWindowMaxWidth(window), height),
+            _ => WindowSize.Resizable(ResolveWindowWidth(window), height)
+        };
+        window.Height = height;
         return window;
     }
 
@@ -40,9 +56,30 @@ public static class ElementExtensions
     /// <returns>The window for chaining.</returns>
     public static Window Size(this Window window, double width, double height)
     {
-        window.WindowSize = WindowSize.Resizable(width, height);
+        window.WindowSize = window.WindowSize.Mode switch
+        {
+            WindowSizeMode.Fixed => WindowSize.Fixed(width, height),
+            WindowSizeMode.FitContentWidth => WindowSize.FitContentWidth(width, height),
+            WindowSizeMode.FitContentHeight => WindowSize.FitContentHeight(width, height),
+            WindowSizeMode.FitContentSize => WindowSize.FitContentSize(width, height),
+            _ => WindowSize.Resizable(width, height)
+        };
+        window.Width = width;
+        window.Height = height;
         return window;
     }
+
+    private static double ResolveWindowWidth(Window window)
+        => double.IsNaN(window.WindowSize.Width) ? window.Width : window.WindowSize.Width;
+
+    private static double ResolveWindowHeight(Window window)
+        => double.IsNaN(window.WindowSize.Height) ? window.Height : window.WindowSize.Height;
+
+    private static double ResolveWindowMaxWidth(Window window)
+        => double.IsNaN(window.WindowSize.MaxWidth) ? window.Width : window.WindowSize.MaxWidth;
+
+    private static double ResolveWindowMaxHeight(Window window)
+        => double.IsNaN(window.WindowSize.MaxHeight) ? window.Height : window.WindowSize.MaxHeight;
 
     /// <summary>
     /// Sets the window size uniformly.
@@ -57,15 +94,21 @@ public static class ElementExtensions
     }
 
     /// <summary>
-    /// Sets the window as resizable.
+    /// Sets the window as resizable with optional min/max constraints.
     /// </summary>
     /// <param name="window">Target window.</param>
     /// <param name="width">Width value.</param>
     /// <param name="height">Height value.</param>
+    /// <param name="minWidth">Minimum width constraint.</param>
+    /// <param name="minHeight">Minimum height constraint.</param>
+    /// <param name="maxWidth">Maximum width constraint.</param>
+    /// <param name="maxHeight">Maximum height constraint.</param>
     /// <returns>The window for chaining.</returns>
-    public static Window Resizable(this Window window, double width, double height)
+    public static Window Resizable(this Window window, double width, double height,
+        double minWidth = 0, double minHeight = 0,
+        double maxWidth = double.PositiveInfinity, double maxHeight = double.PositiveInfinity)
     {
-        window.WindowSize = WindowSize.Resizable(width, height);
+        window.WindowSize = WindowSize.Resizable(width, height, minWidth, minHeight, maxWidth, maxHeight);
         return window;
     }
 
@@ -120,6 +163,34 @@ public static class ElementExtensions
         window.WindowSize = WindowSize.FitContentSize(maxWidth, maxHeight);
         return window;
     }
+
+    /// <summary>
+    /// Not supported on <see cref="Window"/>. Use <see cref="Resizable"/> or assign <see cref="Window.WindowSize"/> directly.
+    /// </summary>
+    [Obsolete("Use .Resizable(w, h, minWidth: ...) or assign WindowSize directly.", error: true)]
+    public static Window MinWidth(this Window window, double minWidth)
+        => throw new NotSupportedException("Use .Resizable(w, h, minWidth: ...) or assign WindowSize directly.");
+
+    /// <summary>
+    /// Not supported on <see cref="Window"/>. Use <see cref="Resizable"/> or assign <see cref="Window.WindowSize"/> directly.
+    /// </summary>
+    [Obsolete("Use .Resizable(w, h, minHeight: ...) or assign WindowSize directly.", error: true)]
+    public static Window MinHeight(this Window window, double minHeight)
+        => throw new NotSupportedException("Use .Resizable(w, h, minHeight: ...) or assign WindowSize directly.");
+
+    /// <summary>
+    /// Not supported on <see cref="Window"/>. Use <see cref="Resizable"/> or assign <see cref="Window.WindowSize"/> directly.
+    /// </summary>
+    [Obsolete("Use .Resizable(w, h, maxWidth: ...) or assign WindowSize directly.", error: true)]
+    public static Window MaxWidth(this Window window, double maxWidth)
+        => throw new NotSupportedException("Use .Resizable(w, h, maxWidth: ...) or assign WindowSize directly.");
+
+    /// <summary>
+    /// Not supported on <see cref="Window"/>. Use <see cref="Resizable"/> or assign <see cref="Window.WindowSize"/> directly.
+    /// </summary>
+    [Obsolete("Use .Resizable(w, h, maxHeight: ...) or assign WindowSize directly.", error: true)]
+    public static Window MaxHeight(this Window window, double maxHeight)
+        => throw new NotSupportedException("Use .Resizable(w, h, maxHeight: ...) or assign WindowSize directly.");
 
     /// <summary>
     /// Sets the width.
@@ -280,6 +351,19 @@ public static class ElementExtensions
     #endregion
 
     #region Margin
+
+    /// <summary>
+    /// Sets the margin uniformly.
+    /// </summary>
+    /// <typeparam name="T">Element type.</typeparam>
+    /// <param name="element">Target element.</param>
+    /// <param name="value">Margin value.</param>
+    /// <returns>The element for chaining.</returns>
+    public static T Margin<T>(this T element, Thickness value) where T : FrameworkElement
+    {
+        element.Margin = value;
+        return element;
+    }
 
     /// <summary>
     /// Sets the margin uniformly.

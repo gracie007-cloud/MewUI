@@ -79,6 +79,8 @@ internal sealed class TemplatedItemsHost
 
     public void VisitRealized(Action<Element> visitor) => _presenter.VisitRealized(visitor);
 
+    public void VisitRealized(Action<int, FrameworkElement> visitor) => _presenter.VisitRealized(visitor);
+
     public void Render(IGraphicsContext context)
     {
         _presenter.RenderRange(
@@ -91,6 +93,18 @@ internal sealed class TemplatedItemsHost
             Options.BeforeItemRender,
             Options.GetContainerRect,
             Layout.RebindExisting);
+    }
+
+    public void RenderArranged(IGraphicsContext context)
+    {
+        _presenter.RenderArrangedRange(
+            context,
+            Layout.ContentBounds,
+            Layout.First,
+            Layout.LastExclusive,
+            Layout.ItemHeight,
+            Layout.YStart,
+            Options.BeforeItemRender);
     }
 
     public void Arrange()

@@ -3,6 +3,7 @@ namespace Aprillz.MewUI;
 /// <summary>
 /// Cross-platform key identifiers (independent from Win32 virtual-key codes).
 /// </summary>
+#pragma warning disable CS1591
 public enum Key
 {
     None = 0,
@@ -24,6 +25,31 @@ public enum Key
     End,
     PageUp,
     PageDown,
+
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
+    F13,
+    F14,
+    F15,
+    F16,
+    F17,
+    F18,
+    F19,
+    F20,
+    F21,
+    F22,
+    F23,
+    F24,
 
     D0,
     D1,
@@ -80,4 +106,3 @@ public enum Key
     Divide,
     Decimal,
 }
-

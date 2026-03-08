@@ -1,6 +1,4 @@
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 using Aprillz.MewUI.Controls;
 using Aprillz.MewUI.Input;
@@ -12,10 +10,10 @@ namespace Aprillz.MewUI;
 /// <summary>
 /// Represents a top-level window.
 /// </summary>
-public class Window : ContentControl, ILayoutRoundingHost
+public partial class Window : ContentControl, ILayoutRoundingHost
 {
-    private readonly DispatcherMergeKey _layoutMergeKey = new(UiDispatcherPriority.Layout);
-    private readonly DispatcherMergeKey _renderMergeKey = new(UiDispatcherPriority.Render);
+    private readonly DispatcherMergeKey _layoutMergeKey = new(DispatcherPriority.Layout);
+    private readonly DispatcherMergeKey _renderMergeKey = new(DispatcherPriority.Render);
 
     private enum WindowLifetimeState
     {
@@ -30,10 +28,13 @@ public class Window : ContentControl, ILayoutRoundingHost
     private Size _lastLayoutClientSizeDip = Size.Empty;
     private Thickness _lastLayoutPadding = Thickness.Zero;
     private Element? _lastLayoutContent;
-    private readonly List<PopupEntry> _popups = new();
+    private readonly List<AdornerEntry> _adorners = new();
     private readonly RadioGroupManager _radioGroups = new();
+    private readonly List<Window> _modalChildren = new();
     private readonly List<UIElement> _mouseOverOldPath = new(capacity: 16);
     private readonly List<UIElement> _mouseOverNewPath = new(capacity: 16);
+    private UIElement? _mouseOverElement;
+    private UIElement? _capturedElement;
     private Point _lastMousePositionDip;
     private Point _lastMouseScreenPositionPx;
     private bool _loadedRaised;
@@ -41,16 +42,59 @@ public class Window : ContentControl, ILayoutRoundingHost
     private bool _firstFrameRenderedPending;
     private bool _subscribedToDispatcherChanged;
     private WindowLifetimeState _lifetimeState;
+    private int _modalDisableCount;
     internal Action<Window>? BuildCallback { get; private set; }
 
     internal Point LastMousePositionDip => _lastMousePositionDip;
 
     internal Point LastMouseScreenPositionPx => _lastMouseScreenPositionPx;
 
+    internal UIElement? MouseOverElement => _mouseOverElement;
+
+    internal UIElement? CapturedElement => _capturedElement;
+
+    internal bool HasMouseCapture => _capturedElement != null;
+
+    internal void ClearMouseCaptureState()
+    {
+        if (_capturedElement != null)
+        {
+            _capturedElement.SetMouseCaptured(false);
+            _capturedElement = null;
+        }
+    }
+
+    internal void ClearMouseOverState()
+    {
+        if (_mouseOverElement != null)
+        {
+            UpdateMouseOverChain(_mouseOverElement, null);
+            _mouseOverElement = null;
+        }
+    }
+
+    public void ClearMouseOver()
+    {
+        ClearMouseOverState();
+    }
+
+    internal void SetMouseOverElement(UIElement? element) => _mouseOverElement = element;
+
     internal void UpdateLastMousePosition(Point positionDip, Point screenPositionPx)
     {
         _lastMousePositionDip = positionDip;
         _lastMouseScreenPositionPx = screenPositionPx;
+    }
+
+    internal void ReevaluateMouseOver()
+    {
+        ApplicationDispatcher?.BeginInvoke(DispatcherPriority.Layout, () =>
+        {
+            // When layout/scroll offsets change without an actual mouse move, the element under the cursor can change.
+            // Re-run hit testing at the last known mouse position to keep IsMouseOver state accurate.
+            var leaf = WindowInputRouter.HitTest(this, _lastMousePositionDip);
+            WindowInputRouter.UpdateMouseOver(this, leaf);
+        });
     }
 
     internal void UpdateMouseOverChain(UIElement? oldLeaf, UIElement? newLeaf)
@@ -98,20 +142,33 @@ public class Window : ContentControl, ILayoutRoundingHost
         }
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Window"/> class.
+    /// </summary>
     public Window()
     {
         Padding = new Thickness(16);
+        AdornerLayer = new AdornerLayer(this);
+        _popupManager = new PopupManager(this);
+
+#if DEBUG
+        if (this is not DebugVisualTreeWindow)
+        {
+            InitializeDebugDevTools();
+        }
+#endif
     }
 
     protected override Color DefaultBackground => Theme.Palette.WindowBackground;
 
-    private sealed class PopupEntry
+    public AdornerLayer AdornerLayer { get; }
+
+    private readonly PopupManager _popupManager;
+
+    private sealed class AdornerEntry
     {
+        public required UIElement Adorned { get; init; }
         public required UIElement Element { get; init; }
-
-        public required UIElement Owner { get; set; }
-
-        public Rect Bounds { get; set; }
     }
 
     private sealed class RadioGroupManager
@@ -205,7 +262,7 @@ public class Window : ContentControl, ILayoutRoundingHost
     /// </summary>
     /// <param name="clientPointDip">The client point in DIPs.</param>
     /// <returns>The screen point.</returns>
-    internal Point ClientToScreen(Point clientPointDip)
+    public Point ClientToScreen(Point clientPointDip)
     {
         if (_backend == null || Handle == 0)
         {
@@ -220,7 +277,7 @@ public class Window : ContentControl, ILayoutRoundingHost
     /// </summary>
     /// <param name="screenPointPx">The screen point in pixels.</param>
     /// <returns>The client point in DIPs.</returns>
-    internal Point ScreenToClient(Point screenPointPx)
+    public Point ScreenToClient(Point screenPointPx)
     {
         if (_backend == null || Handle == 0)
         {
@@ -238,6 +295,7 @@ public class Window : ContentControl, ILayoutRoundingHost
         get;
         set
         {
+            var previous = field;
             field = value;
             if (!double.IsNaN(field.Width))
             {
@@ -249,7 +307,10 @@ public class Window : ContentControl, ILayoutRoundingHost
                 Height = field.Height;
             }
 
-            _backend?.SetResizable(field.IsResizable);
+            if (_backend != null && previous.IsResizable != field.IsResizable)
+            {
+                _backend.SetResizable(field.IsResizable);
+            }
         }
     } = WindowSize.Resizable(800, 600);
 
@@ -279,7 +340,37 @@ public class Window : ContentControl, ILayoutRoundingHost
         }
     }
 
+    /// <summary>
+    /// Gets or sets the initial window placement behavior.
+    /// </summary>
     public WindowStartupLocation StartupLocation { get; set; } = WindowStartupLocation.CenterScreen;
+
+    /// <summary>
+    /// Gets or sets the window opacity (0..1).
+    /// </summary>
+    public double Opacity
+    {
+        get;
+        set
+        {
+            field = Math.Clamp(value, 0.0, 1.0);
+            _backend?.SetOpacity(field);
+        }
+    } = 1.0;
+
+    /// <summary>
+    /// Gets or sets whether the window supports per-pixel transparency (platform dependent).
+    /// </summary>
+    public bool AllowsTransparency
+    {
+        get;
+        set
+        {
+            field = value;
+            _backend?.SetAllowsTransparency(field);
+            Invalidate();
+        }
+    }
 
     /// <summary>
     /// Gets the window client width in DIPs.
@@ -287,10 +378,10 @@ public class Window : ContentControl, ILayoutRoundingHost
     public new double Width
     {
         get;
-        private set
+        internal set
         {
             field = value;
-            _backend?.SetClientSize(Width, Height);
+            RequestClientSizeUpdate();
         }
     } = WindowSize.Resizable(800, 600).Width;
 
@@ -300,12 +391,32 @@ public class Window : ContentControl, ILayoutRoundingHost
     public new double Height
     {
         get;
-        private set
+        internal set
         {
             field = value;
-            _backend?.SetClientSize(Width, Height);
+            RequestClientSizeUpdate();
         }
     } = WindowSize.Resizable(800, 600).Height;
+
+    /// <summary>
+    /// Gets the minimum width from <see cref="WindowSize"/>. Use <see cref="WindowSize"/> to configure constraints.
+    /// </summary>
+    public new double MinWidth => WindowSize.MinWidth;
+
+    /// <summary>
+    /// Gets the minimum height from <see cref="WindowSize"/>. Use <see cref="WindowSize"/> to configure constraints.
+    /// </summary>
+    public new double MinHeight => WindowSize.MinHeight;
+
+    /// <summary>
+    /// Gets the maximum width from <see cref="WindowSize"/>. Use <see cref="WindowSize"/> to configure constraints.
+    /// </summary>
+    public new double MaxWidth => WindowSize.MaxWidth;
+
+    /// <summary>
+    /// Gets the maximum height from <see cref="WindowSize"/>. Use <see cref="WindowSize"/> to configure constraints.
+    /// </summary>
+    public new double MaxHeight => WindowSize.MaxHeight;
 
     /// <summary>
     /// Gets whether the window is currently active.
@@ -325,7 +436,45 @@ public class Window : ContentControl, ILayoutRoundingHost
     /// <summary>
     /// Gets the client size in DIPs.
     /// </summary>
-    internal Size ClientSizeDip => _clientSizeDip.IsEmpty ? new Size(Width, Height) : _clientSizeDip;
+    public Size ClientSize => _clientSizeDip.IsEmpty ? new Size(Width, Height) : _clientSizeDip;
+
+    /// <summary>
+    /// Gets or sets the window position in screen coordinates (DIPs).
+    /// </summary>
+    public Point Position
+    {
+        get
+        {
+            if (_backend == null || Handle == 0)
+            {
+                return default;
+            }
+
+            return _backend.GetPosition();
+        }
+        set
+        {
+            if (_backend == null || Handle == 0)
+            {
+                return;
+            }
+
+            _backend.SetPosition(value.X, value.Y);
+        }
+    }
+
+    /// <summary>
+    /// Moves the window to the specified screen position (DIPs).
+    /// </summary>
+    public void MoveTo(double leftDip, double topDip)
+    {
+        if (_backend == null || Handle == 0)
+        {
+            return;
+        }
+
+        _backend.SetPosition(leftDip, topDip);
+    }
 
     /// <summary>
     /// Gets or sets whether layout rounding is enabled.
@@ -342,7 +491,7 @@ public class Window : ContentControl, ILayoutRoundingHost
     /// </summary>
     public IGraphicsFactory GraphicsFactory => Application.IsRunning ? Application.Current.GraphicsFactory : Application.DefaultGraphicsFactory;
 
-    internal IUiDispatcher? ApplicationDispatcher => Application.IsRunning ? Application.Current.Dispatcher : null;
+    internal IDispatcher? ApplicationDispatcher => Application.IsRunning ? Application.Current.Dispatcher : null;
 
     #region Events
 
@@ -397,6 +546,10 @@ public class Window : ContentControl, ILayoutRoundingHost
     /// </summary>
     public event Action<KeyEventArgs>? PreviewKeyDown;
 
+    /// <summary>
+    /// Preview (tunneling) keyboard events for the whole window.
+    /// If <see cref="KeyEventArgs.Handled"/> is set, the focused element will not receive the event.
+    /// </summary>
     public event Action<KeyEventArgs>? PreviewKeyUp;
 
     /// <summary>
@@ -405,6 +558,24 @@ public class Window : ContentControl, ILayoutRoundingHost
     /// </summary>
     public event Action<TextInputEventArgs>? PreviewTextInput;
 
+    /// <summary>
+    /// Preview (tunneling) text composition (IME pre-edit) start for the whole window.
+    /// If <see cref="TextCompositionEventArgs.Handled"/> is set, the focused element will not receive the event.
+    /// </summary>
+    public event Action<TextCompositionEventArgs>? PreviewTextCompositionStart;
+
+    /// <summary>
+    /// Preview (tunneling) text composition (IME pre-edit) update for the whole window.
+    /// If <see cref="TextCompositionEventArgs.Handled"/> is set, the focused element will not receive the event.
+    /// </summary>
+    public event Action<TextCompositionEventArgs>? PreviewTextCompositionUpdate;
+
+    /// <summary>
+    /// Preview (tunneling) text composition (IME pre-edit) end for the whole window.
+    /// If <see cref="TextCompositionEventArgs.Handled"/> is set, the focused element will not receive the event.
+    /// </summary>
+    public event Action<TextCompositionEventArgs>? PreviewTextCompositionEnd;
+
     #endregion
 
     internal void RaisePreviewKeyDown(KeyEventArgs e) => PreviewKeyDown?.Invoke(e);
@@ -412,6 +583,12 @@ public class Window : ContentControl, ILayoutRoundingHost
     internal void RaisePreviewKeyUp(KeyEventArgs e) => PreviewKeyUp?.Invoke(e);
 
     internal void RaisePreviewTextInput(TextInputEventArgs e) => PreviewTextInput?.Invoke(e);
+
+    internal void RaisePreviewTextCompositionStart(TextCompositionEventArgs e) => PreviewTextCompositionStart?.Invoke(e);
+
+    internal void RaisePreviewTextCompositionUpdate(TextCompositionEventArgs e) => PreviewTextCompositionUpdate?.Invoke(e);
+
+    internal void RaisePreviewTextCompositionEnd(TextCompositionEventArgs e) => PreviewTextCompositionEnd?.Invoke(e);
 
     internal void RaiseActivated() => Activated?.Invoke();
 
@@ -497,6 +674,173 @@ public class Window : ContentControl, ILayoutRoundingHost
         _backend.Close();
     }
 
+    /// <summary>
+    /// Attempts to activate the window (bring to front / focus), platform dependent.
+    /// </summary>
+    public void Activate()
+    {
+        if (_lifetimeState == WindowLifetimeState.Closed)
+        {
+            return;
+        }
+
+        if (_backend == null || Handle == 0)
+        {
+            return;
+        }
+
+        _backend.Activate();
+    }
+
+    /// <summary>
+    /// Shows the window as a modal dialog and completes when the dialog is closed.
+    /// </summary>
+    /// <param name="owner">Optional owner window to disable while the dialog is open.</param>
+    public Task ShowDialogAsync(Window? owner = null)
+    {
+        if (_lifetimeState == WindowLifetimeState.Closed)
+        {
+            throw new InvalidOperationException("Cannot show a closed window.");
+        }
+
+        if (owner != null && ReferenceEquals(owner, this))
+        {
+            throw new ArgumentException("Owner cannot be the dialog itself.", nameof(owner));
+        }
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        void OnClosed()
+        {
+            Closed -= OnClosed;
+            if (owner != null)
+            {
+                owner.ReleaseModalDisable();
+                owner.UnregisterModalChild(this);
+                if (owner._lifetimeState != WindowLifetimeState.Closed)
+                {
+                    var target = owner.GetTopModalChild() ?? owner;
+                    target.Activate();
+                }
+            }
+            tcs.TrySetResult();
+        }
+
+        Closed += OnClosed;
+
+        try
+        {
+            if (owner != null)
+            {
+                owner.AcquireModalDisable();
+                owner.RegisterModalChild(this);
+            }
+
+            Show();
+            if (owner != null && _backend != null && Handle != 0)
+            {
+                _backend.SetOwner(owner.Handle);
+            }
+            Activate();
+        }
+        catch (Exception ex)
+        {
+            Closed -= OnClosed;
+            if (owner != null)
+            {
+                owner.ReleaseModalDisable();
+                owner.UnregisterModalChild(this);
+            }
+            tcs.TrySetException(ex);
+        }
+
+        return tcs.Task;
+    }
+
+    private void RegisterModalChild(Window child)
+    {
+        if (child == null || ReferenceEquals(child, this))
+        {
+            return;
+        }
+
+        if (_modalChildren.Contains(child))
+        {
+            return;
+        }
+
+        _modalChildren.Add(child);
+    }
+
+    private void UnregisterModalChild(Window child)
+    {
+        _modalChildren.Remove(child);
+    }
+
+    internal Window? GetTopModalChild()
+    {
+        Window? current = this;
+        Window? result = null;
+
+        while (current != null)
+        {
+            Window? next = null;
+            for (int i = current._modalChildren.Count - 1; i >= 0; i--)
+            {
+                var child = current._modalChildren[i];
+                if (child != null && child._lifetimeState != WindowLifetimeState.Closed)
+                {
+                    next = child;
+                    break;
+                }
+            }
+
+            if (next == null)
+            {
+                break;
+            }
+
+            result = next;
+            current = next;
+        }
+
+        return result;
+    }
+
+    internal void NotifyInputWhenDisabled()
+    {
+        var child = GetTopModalChild();
+        child?.Activate();
+    }
+
+    private void AcquireModalDisable()
+    {
+        if (_lifetimeState == WindowLifetimeState.Closed)
+        {
+            return;
+        }
+
+        _modalDisableCount++;
+        if (_modalDisableCount == 1)
+        {
+            _backend?.SetEnabled(false);
+        }
+    }
+
+    private void ReleaseModalDisable()
+    {
+        if (_modalDisableCount <= 0)
+        {
+            return;
+        }
+
+        _modalDisableCount--;
+        if (_modalDisableCount == 0 && _backend != null)
+        {
+            _backend.SetEnabled(true);
+        }
+    }
+
     private void EnsureBackend()
     {
         if (_lifetimeState == WindowLifetimeState.Closed)
@@ -536,19 +880,19 @@ public class Window : ContentControl, ILayoutRoundingHost
         if (clientSize == _lastLayoutClientSizeDip &&
             padding == _lastLayoutPadding &&
             Content == _lastLayoutContent &&
-            !IsLayoutDirty(Content))
+            !IsLayoutDirty(Content) &&
+            !HasOverlayLayoutDirty())
         {
             return;
         }
 
-#if DEV_DEBUG
-        Debug.WriteLine("PerformLayout");
-#endif
-
         const int maxPasses = 8;
         var contentSize = clientSize.Deflate(padding);
 
-        bool needMeasure = HasMeasureDirty(Content);
+        bool needMeasure = HasMeasureDirty(Content)
+            || clientSize != _lastLayoutClientSizeDip
+            || padding != _lastLayoutPadding
+            || Content != _lastLayoutContent;
         for (int pass = 0; pass < maxPasses; pass++)
         {
             if (needMeasure)
@@ -573,6 +917,61 @@ public class Window : ContentControl, ILayoutRoundingHost
         _lastLayoutClientSizeDip = clientSize;
         _lastLayoutPadding = padding;
         _lastLayoutContent = Content;
+
+        LayoutAdorners();
+        LayoutPopups();
+    }
+
+    private bool HasOverlayLayoutDirty()
+    {
+        // Popups/adorners are not part of the window Content tree, but they still bubble invalidation
+        // up to the Window (Parent = this). If we early-return purely based on Content dirtiness,
+        // overlay elements can get stuck with stale DesiredSize/Bounds until the owner explicitly
+        // re-calls ShowPopup/UpdatePopup.
+        for (int i = 0; i < _adorners.Count; i++)
+        {
+            var element = _adorners[i].Element;
+            if (element.IsMeasureDirty || element.IsArrangeDirty)
+            {
+                return true;
+            }
+        }
+
+        if (_popupManager.HasLayoutDirty())
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private void LayoutAdorners()
+    {
+        if (_adorners.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _adorners.Count; i++)
+        {
+            var adorned = _adorners[i].Adorned;
+            var adorner = _adorners[i].Element;
+
+            if (!adorned.IsVisible || !adorner.IsVisible)
+            {
+                continue;
+            }
+
+            // MewUI bounds are in window coordinates, so we can arrange directly.
+            var bounds = adorned.Bounds;
+            adorner.Measure(new Size(bounds.Width, bounds.Height));
+            adorner.Arrange(bounds);
+        }
+    }
+
+    private void LayoutPopups()
+    {
+        _popupManager.LayoutDirtyPopups();
     }
 
     private static bool HasMeasureDirty(Element root)
@@ -614,6 +1013,9 @@ public class Window : ContentControl, ILayoutRoundingHost
 
     public void Invalidate() => RequestRender();
 
+    /// <summary>
+    /// Requests that the window be redrawn.
+    /// </summary>
     public override void InvalidateVisual() => RequestRender();
 
     private void InvalidateBackend()
@@ -632,6 +1034,9 @@ public class Window : ContentControl, ILayoutRoundingHost
         RequestLayout();
     }
 
+    /// <summary>
+    /// Invalidates arrangement and schedules a layout pass.
+    /// </summary>
     public override void InvalidateArrange()
     {
         base.InvalidateArrange();
@@ -648,11 +1053,11 @@ public class Window : ContentControl, ILayoutRoundingHost
             return;
         }
 
-        dispatcher.PostMerged(_layoutMergeKey, () =>
+        (dispatcher as IDispatcherCore)?.PostMerged(_layoutMergeKey, () =>
         {
             PerformLayout();
             RequestRender();
-        }, UiDispatcherPriority.Layout);
+        }, DispatcherPriority.Layout);
     }
 
     private void RequestRender()
@@ -664,7 +1069,7 @@ public class Window : ContentControl, ILayoutRoundingHost
             return;
         }
 
-        dispatcher.PostMerged(_renderMergeKey, InvalidateBackend, UiDispatcherPriority.Render);
+        (dispatcher as IDispatcherCore)?.PostMerged(_renderMergeKey, InvalidateBackend, DispatcherPriority.Render);
     }
 
     internal bool SetFocusedElement(UIElement element) => FocusManager.SetFocus(element);
@@ -685,13 +1090,37 @@ public class Window : ContentControl, ILayoutRoundingHost
         });
     }
 
+    /// <summary>
+    /// Captures mouse input for the specified element until released.
+    /// </summary>
+    /// <param name="element">Element that should receive captured mouse events.</param>
     public void CaptureMouse(UIElement element)
     {
         EnsureBackend();
-        _backend!.CaptureMouse(element);
+        if (_backend!.Handle == 0)
+        {
+            return;
+        }
+
+        _backend.CaptureMouse();
+
+        if (_capturedElement != null && !ReferenceEquals(_capturedElement, element))
+        {
+            _capturedElement.SetMouseCaptured(false);
+        }
+
+        _capturedElement = element;
+        element.SetMouseCaptured(true);
     }
 
-    public void ReleaseMouseCapture() => _backend?.ReleaseMouseCapture();
+    /// <summary>
+    /// Releases any active mouse capture for this window.
+    /// </summary>
+    public void ReleaseMouseCapture()
+    {
+        _backend?.ReleaseMouseCapture();
+        ClearMouseCaptureState();
+    }
 
     internal void AttachBackend(IWindowBackend backend)
     {
@@ -699,6 +1128,32 @@ public class Window : ContentControl, ILayoutRoundingHost
         _backend.SetTitle(Title);
         _backend.SetResizable(WindowSize.IsResizable);
         _backend.SetIcon(Icon);
+        _backend.SetOpacity(Opacity);
+        _backend.SetAllowsTransparency(AllowsTransparency);
+        RequestClientSizeUpdate();
+    }
+
+    private void RequestClientSizeUpdate()
+    {
+        if (_backend == null)
+        {
+            return;
+        }
+
+        _backend.SetClientSize(Width, Height);
+    }
+
+    internal void ReleaseWindowGraphicsResources(nint windowHandle)
+    {
+        if (windowHandle == 0)
+        {
+            return;
+        }
+
+        if (GraphicsFactory is IWindowResourceReleaser releaser)
+        {
+            releaser.ReleaseWindowResources(windowHandle);
+        }
     }
 
     internal void SetDpi(uint dpi) => Dpi = dpi;
@@ -734,6 +1189,18 @@ public class Window : ContentControl, ILayoutRoundingHost
             return;
         }
 
+        // Close modal children first (best-effort) so modal tasks complete before owner closes.
+        // Copy to avoid modification during Close()->RaiseClosed cascades.
+        if (_modalChildren.Count > 0)
+        {
+            var children = _modalChildren.ToArray();
+            _modalChildren.Clear();
+            for (int i = 0; i < children.Length; i++)
+            {
+                try { children[i]?.Close(); } catch { }
+            }
+        }
+
         _lifetimeState = WindowLifetimeState.Closed;
         UnsubscribeFromDispatcherChanged();
 
@@ -747,7 +1214,7 @@ public class Window : ContentControl, ILayoutRoundingHost
 
     internal void RaiseClientSizeChanged(double widthDip, double heightDip) => ClientSizeChanged?.Invoke(new Size(widthDip, heightDip));
 
-    internal void RenderFrame(nint hdc)
+    internal void RenderFrame(IWindowSurface surface)
     {
         // Some platforms can render before Loaded is raised due to Run/Show/Dispatcher ordering.
         // Ensure Loaded is raised as soon as the dispatcher is available, and always before FirstFrameRendered.
@@ -756,13 +1223,49 @@ public class Window : ContentControl, ILayoutRoundingHost
             RaiseLoaded();
         }
 
+        ArgumentNullException.ThrowIfNull(surface);
         var clientSize = _clientSizeDip.IsEmpty ? new Size(Width, Height) : _clientSizeDip;
-        int pixelWidth = (int)Math.Ceiling(clientSize.Width * DpiScale);
-        int pixelHeight = (int)Math.Ceiling(clientSize.Height * DpiScale);
-        var target = new WindowRenderTarget(Handle, hdc, pixelWidth, pixelHeight, DpiScale);
+        RenderFrameCore(new WindowRenderTarget(surface), clientSize);
 
+    }
+
+    internal void RenderFrameToBitmap(IBitmapRenderTarget bitmapTarget)
+    {
+        if (bitmapTarget == null)
+        {
+            throw new ArgumentNullException(nameof(bitmapTarget));
+        }
+
+        var clientSizeDip = new Size(
+            bitmapTarget.PixelWidth / Math.Max(1.0, bitmapTarget.DpiScale),
+            bitmapTarget.PixelHeight / Math.Max(1.0, bitmapTarget.DpiScale));
+
+        RenderFrameCore(bitmapTarget, clientSizeDip);
+    }
+
+    private void RenderFrameCore(IRenderTarget target, Size clientSize)
+    {
         using var context = GraphicsFactory.CreateContext(target);
-        context.Clear(Background.A > 0 ? Background : Theme.Palette.WindowBackground);
+
+        Color clearColor;
+        if (AllowsTransparency)
+        {
+            // Always clear to transparent black so the output remains premultiplied when composited.
+            clearColor = Color.Transparent;
+        }
+        else
+        {
+            // Default to an opaque window background when the user does not specify one.
+            clearColor = Background.A > 0 ? Background : Theme.Palette.WindowBackground;
+        }
+
+        context.Clear(clearColor);
+
+        if (AllowsTransparency && Background.A > 0)
+        {
+            // Draw the background through the normal pipeline so alpha is handled consistently.
+            context.FillRectangle(new Rect(0, 0, clientSize.Width, clientSize.Height), Background);
+        }
 
         // Ensure nothing paints outside the client area.
         context.Save();
@@ -773,11 +1276,12 @@ public class Window : ContentControl, ILayoutRoundingHost
         {
             Content?.Render(context);
 
-            // Popups render last (on top).
-            for (int i = 0; i < _popups.Count; i++)
+            for (int i = 0; i < _adorners.Count; i++)
             {
-                _popups[i].Element.Render(context);
+                _adorners[i].Element.Render(context);
             }
+
+            _popupManager.Render(context);
         }
         finally
         {
@@ -827,7 +1331,7 @@ public class Window : ContentControl, ILayoutRoundingHost
         Application.DispatcherChanged -= OnDispatcherChanged;
     }
 
-    private void OnDispatcherChanged(IUiDispatcher? dispatcher)
+    private void OnDispatcherChanged(IDispatcher? dispatcher)
     {
         if (dispatcher == null)
         {
@@ -835,7 +1339,7 @@ public class Window : ContentControl, ILayoutRoundingHost
         }
 
         // Ensure Loaded is raised on the UI thread.
-        dispatcher.Send(() =>
+        dispatcher.Invoke(() =>
         {
             UnsubscribeFromDispatcherChanged();
             RaiseLoaded();
@@ -846,7 +1350,8 @@ public class Window : ContentControl, ILayoutRoundingHost
     {
         if (Content == null)
         {
-            DisposePopups();
+            DisposeAdorners();
+            _popupManager.Dispose();
             return;
         }
 
@@ -858,21 +1363,23 @@ public class Window : ContentControl, ILayoutRoundingHost
             }
         });
 
-        DisposePopups();
+        DisposeAdorners();
+        _popupManager.Dispose();
     }
 
-    private void DisposePopups()
+    private void DisposeAdorners()
     {
-        foreach (var popup in _popups)
+        foreach (var adorner in _adorners)
         {
-            if (popup.Element is IDisposable disposable)
+            if (adorner.Element is IDisposable disposable)
             {
                 disposable.Dispose();
             }
 
-            popup.Element.Parent = null;
+            adorner.Element.Parent = null;
         }
-        _popups.Clear();
+
+        _adorners.Clear();
     }
 
     internal void BroadcastThemeChanged(Theme oldTheme, Theme newTheme)
@@ -894,9 +1401,11 @@ public class Window : ContentControl, ILayoutRoundingHost
             });
         }
 
-        for (int i = 0; i < _popups.Count; i++)
+        _popupManager.NotifyThemeChanged(oldTheme, newTheme);
+
+        for (int i = 0; i < _adorners.Count; i++)
         {
-            if (_popups[i].Element is Control c)
+            if (_adorners[i].Element is Control c)
             {
                 c.NotifyThemeChanged(oldTheme, newTheme);
             }
@@ -927,186 +1436,54 @@ public class Window : ContentControl, ILayoutRoundingHost
             });
         }
 
-        for (int i = 0; i < _popups.Count; i++)
+        _popupManager.NotifyDpiChanged(oldDpi, newDpi);
+
+        for (int i = 0; i < _adorners.Count; i++)
         {
-            if (_popups[i].Element is Control c)
+            if (_adorners[i].Element is Control c)
             {
                 c.NotifyDpiChanged(oldDpi, newDpi);
             }
 
-            _popups[i].Element.ClearDpiCacheDeep();
+            _adorners[i].Element.ClearDpiCacheDeep();
         }
-    }
-
-    internal void ClosePopupsIfClickOutside(Point position)
-    {
-        if (_popups.Count == 0)
-        {
-            return;
-        }
-
-        for (int i = _popups.Count - 1; i >= 0; i--)
-        {
-            if (_popups[i].Bounds.Contains(position))
-            {
-                return;
-            }
-        }
-
-        CloseAllPopups();
     }
 
     internal void CloseAllPopups()
-    {
-        for (int i = 0; i < _popups.Count; i++)
-        {
-            var entry = _popups[i];
-            entry.Element.Parent = null;
-            if (entry.Owner is IPopupOwner owner)
-            {
-                owner.OnPopupClosed(entry.Element);
-            }
+        => _popupManager.CloseAllPopups();
 
-            EnsureFocusNotInClosedPopup(entry.Element, entry.Owner);
-        }
-        _popups.Clear();
-        Invalidate();
-    }
+    internal void ShowPopup(UIElement owner, UIElement popup, Rect bounds, bool staysOpen = false)
+        => _popupManager.ShowPopup(owner, popup, bounds, staysOpen);
 
-    internal void ShowPopup(UIElement owner, UIElement popup, Rect bounds)
-    {
-        ArgumentNullException.ThrowIfNull(owner);
-        ArgumentNullException.ThrowIfNull(popup);
-
-        // Replace if already present.
-        for (int i = 0; i < _popups.Count; i++)
-        {
-            if (_popups[i].Element == popup)
-            {
-                _popups[i].Owner = owner;
-                UpdatePopup(popup, bounds);
-                return;
-            }
-        }
-
-        // Popups can be cached/reused (e.g. ComboBox keeps a ListBox instance even while closed).
-        // If a popup is moved between windows (or the window DPI differs), ensure the popup updates its DPI-sensitive
-        // caches (fonts, layout) before measuring/arranging.
-        uint oldDpi = popup.GetDpiCached();
-        var oldTheme = popup is FrameworkElement popupElement
-            ? popupElement.ThemeInternal
-            : Theme;
-        popup.Parent = this;
-        ApplyPopupDpiChange(popup, oldDpi, Dpi);
-        ApplyPopupThemeChange(popup, oldTheme, Theme);
-        var entry = new PopupEntry { Owner = owner, Element = popup, Bounds = bounds };
-        _popups.Add(entry);
-        LayoutPopup(entry);
-        Invalidate();
-    }
-
-    private ToolTip? _toolTip;
-    private UIElement? _toolTipOwner;
+    internal void RequestClosePopups(PopupCloseRequest request)
+        => _popupManager.RequestClosePopups(request);
 
     internal Size MeasureToolTip(string text, Size availableSize)
-    {
-        _toolTip ??= new ToolTip();
-        _toolTip.Text = text ?? string.Empty;
-        _toolTip.Measure(availableSize);
-        return _toolTip.DesiredSize;
-    }
+        => _popupManager.MeasureToolTip(text, availableSize);
+
+    internal Size MeasureToolTip(Element content, Size availableSize)
+        => _popupManager.MeasureToolTip(content, availableSize);
 
     internal void ShowToolTip(UIElement owner, string text, Rect bounds)
-    {
-        ArgumentNullException.ThrowIfNull(owner);
+        => _popupManager.ShowToolTip(owner, text, bounds);
 
-        _toolTip ??= new ToolTip();
-        _toolTip.Text = text ?? string.Empty;
-        _toolTipOwner = owner;
-        ShowPopup(owner, _toolTip, bounds);
-    }
+    internal void ShowToolTip(UIElement owner, Element content, Rect bounds)
+        => _popupManager.ShowToolTip(owner, content, bounds);
 
     internal void CloseToolTip(UIElement? owner = null)
-    {
-        if (_toolTip == null)
-        {
-            return;
-        }
-
-        if (owner != null && !ReferenceEquals(_toolTipOwner, owner))
-        {
-            return;
-        }
-
-        ClosePopup(_toolTip);
-        _toolTipOwner = null;
-    }
+        => _popupManager.CloseToolTip(owner);
 
     internal bool TryGetPopupOwner(UIElement popup, out UIElement owner)
-    {
-        for (int i = 0; i < _popups.Count; i++)
-        {
-            if (_popups[i].Element == popup)
-            {
-                owner = _popups[i].Owner;
-                return true;
-            }
-        }
-
-        owner = popup;
-        return false;
-    }
+        => _popupManager.TryGetPopupOwner(popup, out owner);
 
     internal void UpdatePopup(UIElement popup, Rect bounds)
-    {
-        for (int i = 0; i < _popups.Count; i++)
-        {
-            if (_popups[i].Element != popup)
-            {
-                continue;
-            }
-
-            _popups[i].Bounds = bounds;
-            LayoutPopup(_popups[i]);
-            Invalidate();
-            return;
-        }
-    }
+        => _popupManager.UpdatePopup(popup, bounds);
 
     internal void ClosePopup(UIElement popup)
-    {
-        for (int i = 0; i < _popups.Count; i++)
-        {
-            if (_popups[i].Element != popup)
-            {
-                continue;
-            }
+        => _popupManager.ClosePopup(popup, PopupCloseKind.UserInitiated);
 
-            var entry = _popups[i];
-            _popups[i].Element.Parent = null;
-            _popups.RemoveAt(i);
-            if (entry.Owner is IPopupOwner owner)
-            {
-                owner.OnPopupClosed(entry.Element);
-            }
-
-            EnsureFocusNotInClosedPopup(entry.Element, entry.Owner);
-
-            Invalidate();
-            if (ReferenceEquals(popup, _toolTip))
-            {
-                _toolTipOwner = null;
-            }
-            return;
-        }
-    }
-
-    internal void OnBeforeMouseDown(Point positionInWindow, MouseButton button)
-    {
-        // Centralized "mouse down" policy invoked by platform backends.
-        // Close any open popups when the click happens outside their bounds.
-        ClosePopupsIfClickOutside(positionInWindow);
-    }
+    internal void ClosePopup(UIElement popup, PopupCloseKind kind)
+        => _popupManager.ClosePopup(popup, kind);
 
     internal void OnAfterMouseDownHitTest(Point positionInWindow, MouseButton button, UIElement? element)
     {
@@ -1117,101 +1494,30 @@ public class Window : ContentControl, ILayoutRoundingHost
         {
             FocusManager.ClearFocus();
         }
+
+#if DEBUG
+        DebugOnAfterMouseDownHitTest(positionInWindow, button, element);
+#endif
     }
 
-    private void EnsureFocusNotInClosedPopup(UIElement popup, UIElement owner)
-    {
-        var focused = FocusManager.FocusedElement;
-        if (focused == null)
-        {
-            return;
-        }
+#if DEBUG
+    partial void DebugOnAfterMouseDownHitTest(Point positionInWindow, MouseButton button, UIElement? element);
+#endif
 
-        if (focused != popup && !IsInSubtreeOf(focused, popup))
-        {
-            return;
-        }
-
-        // Prefer restoring focus to the owner, otherwise clear focus to avoid leaving focus on a detached popup.
-        if (owner.Focusable && owner.IsEffectivelyEnabled && owner.IsVisible)
-        {
-            FocusManager.SetFocus(owner);
-        }
-        else
-        {
-            FocusManager.ClearFocus();
-        }
-    }
-
-    private static bool IsInSubtreeOf(UIElement element, UIElement root)
-    {
-        for (Element? current = element; current != null; current = current.Parent)
-        {
-            if (ReferenceEquals(current, root))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private void LayoutPopup(PopupEntry entry)
-    {
-        entry.Element.Measure(new Size(entry.Bounds.Width, entry.Bounds.Height));
-        entry.Element.Arrange(entry.Bounds);
-
-        // Keep the stored bounds consistent with the actually arranged (layout-rounded) bounds,
-        // otherwise hit-testing (e.g. mouse wheel on popup content) can miss by sub-pixel rounding.
-        entry.Bounds = entry.Element.Bounds;
-    }
-
-    private static void ApplyPopupDpiChange(UIElement popup, uint oldDpi, uint newDpi)
-    {
-        if (oldDpi == 0 || newDpi == 0 || oldDpi == newDpi)
-        {
-            return;
-        }
-
-        // Clear DPI caches again (Parent assignment already does this, but be defensive for future changes),
-        // and notify controls so they can recreate DPI-dependent resources (fonts, etc.).
-        popup.ClearDpiCacheDeep();
-        VisitVisualTree(popup, e =>
-        {
-            e.ClearDpiCache();
-            if (e is Control c)
-            {
-                c.NotifyDpiChanged(oldDpi, newDpi);
-            }
-        });
-    }
-
-    private static void ApplyPopupThemeChange(UIElement popup, Theme oldTheme, Theme newTheme)
-    {
-        if (oldTheme == newTheme)
-        {
-            return;
-        }
-
-        VisitVisualTree(popup, e =>
-        {
-            if (e is FrameworkElement element)
-            {
-                element.NotifyThemeChanged(oldTheme, newTheme);
-            }
-        });
-    }
+    internal void OnFocusChanged(UIElement? newFocusedElement)
+        => _popupManager.RequestClosePopups(PopupCloseRequest.FocusChanged(newFocusedElement));
 
     protected override UIElement? OnHitTest(Point point)
     {
-        for (int i = _popups.Count - 1; i >= 0; i--)
+        var popupHit = _popupManager.HitTest(point);
+        if (popupHit != null)
         {
-            if (!_popups[i].Bounds.Contains(point))
-            {
-                continue;
-            }
+            return popupHit;
+        }
 
-            var hit = _popups[i].Element.HitTest(point);
+        for (int i = _adorners.Count - 1; i >= 0; i--)
+        {
+            var hit = _adorners[i].Element.HitTest(point);
             if (hit != null)
             {
                 return hit;
@@ -1219,6 +1525,80 @@ public class Window : ContentControl, ILayoutRoundingHost
         }
 
         return (Content as UIElement)?.HitTest(point);
+    }
+
+    internal void AddAdornerInternal(UIElement adornedElement, UIElement adorner)
+    {
+        ArgumentNullException.ThrowIfNull(adornedElement);
+        ArgumentNullException.ThrowIfNull(adorner);
+
+        // Attach to this window so FindVisualRoot()/theme/DPI work.
+        adorner.Parent = this;
+
+        _adorners.Add(new AdornerEntry
+        {
+            Adorned = adornedElement,
+            Element = adorner
+        });
+
+        RequestLayout();
+        RequestRender();
+    }
+
+    internal bool RemoveAdornerInternal(UIElement adorner)
+    {
+        for (int i = _adorners.Count - 1; i >= 0; i--)
+        {
+            if (ReferenceEquals(_adorners[i].Element, adorner))
+            {
+                _adorners[i].Element.Parent = null;
+                _adorners.RemoveAt(i);
+                RequestLayout();
+                RequestRender();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal int RemoveAllAdornersInternal(UIElement adornedElement)
+    {
+        int removed = 0;
+        for (int i = _adorners.Count - 1; i >= 0; i--)
+        {
+            if (ReferenceEquals(_adorners[i].Adorned, adornedElement))
+            {
+                _adorners[i].Element.Parent = null;
+                _adorners.RemoveAt(i);
+                removed++;
+            }
+        }
+
+        if (removed > 0)
+        {
+            RequestLayout();
+            RequestRender();
+        }
+
+        return removed;
+    }
+
+    internal void ClearAdornersInternal()
+    {
+        if (_adorners.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _adorners.Count; i++)
+        {
+            _adorners[i].Element.Parent = null;
+        }
+
+        _adorners.Clear();
+        RequestLayout();
+        RequestRender();
     }
 
     internal void EnsureTheme(Theme theme)

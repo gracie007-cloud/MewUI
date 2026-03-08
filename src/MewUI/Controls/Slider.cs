@@ -19,6 +19,10 @@ public sealed partial class Slider : RangeBase
     /// </summary>
     protected override Color DefaultBorderBrush => Theme.Palette.ControlBorder;
 
+    protected override double DefaultBorderThickness => Theme.Metrics.ControlBorderThickness;
+
+    public bool ChangeOnWheel { get; set; } = true;
+
     /// <summary>
     /// Gets whether the slider can receive keyboard focus.
     /// </summary>
@@ -31,9 +35,10 @@ public sealed partial class Slider : RangeBase
     {
         Maximum = 100;
         Background = Color.Transparent;
-        BorderThickness = 1;
         Height = 24;
     }
+
+    private double ThumbSize => 14;
 
     /// <summary>
     /// Sets a two-way binding for the Value property.
@@ -51,12 +56,10 @@ public sealed partial class Slider : RangeBase
         SetValueBindingCore(get, set, subscribe, unsubscribe);
     }
 
-    protected override Size MeasureContent(Size availableSize) => new Size(160, Height);
+    protected override Size MeasureContent(Size availableSize) => new Size(ThumbSize * 3, ThumbSize);
 
     protected override void OnRender(IGraphicsContext context)
     {
-        
-
         if (!_isDragging && TryGetBinding(ValueBindingSlot, out ValueBinding<double> valueBinding))
         {
             SetValueFromSource(valueBinding.Get());
@@ -64,21 +67,23 @@ public sealed partial class Slider : RangeBase
 
         var bounds = Bounds;
         var contentBounds = bounds.Deflate(Padding);
+        var state = GetVisualState();
 
         // Track
         double trackHeight = 4;
         double trackY = contentBounds.Y + (contentBounds.Height - trackHeight) / 2;
         var trackRect = new Rect(contentBounds.X, trackY, contentBounds.Width, trackHeight);
 
-        var trackBg = IsEnabled
+        var trackBg = state.IsEnabled
             ? Theme.Palette.ControlBackground.Lerp(Theme.Palette.WindowText, 0.12)
             : Theme.Palette.DisabledControlBackground;
 
         context.FillRoundedRectangle(trackRect, 2, 2, trackBg);
-        if (IsEnabled)
+
+        if (state.IsEnabled && Theme.Metrics.ControlBorderThickness > 0)
         {
             var trackBorder = trackBg.Lerp(Theme.Palette.WindowText, 0.12);
-            context.DrawRoundedRectangle(trackRect, 2, 2, trackBorder, 1);
+            context.DrawRoundedRectangle(trackRect, 2, 2, trackBorder, Theme.Metrics.ControlBorderThickness);
         }
 
         // Filled track
@@ -86,34 +91,35 @@ public sealed partial class Slider : RangeBase
         var fillRect = new Rect(trackRect.X, trackRect.Y, trackRect.Width * t, trackRect.Height);
         if (fillRect.Width > 0)
         {
-            var fillColor = IsEnabled ? Theme.Palette.Accent : Theme.Palette.DisabledAccent;
+            var fillColor = state.IsEnabled ? Theme.Palette.Accent : Theme.Palette.DisabledAccent;
             context.FillRoundedRectangle(fillRect, 2, 2, fillColor);
         }
 
         // Thumb
-        double thumbSize = 14;
-        double thumbX = trackRect.X + trackRect.Width * t - thumbSize / 2;
-        thumbX = Math.Clamp(thumbX, contentBounds.X - thumbSize / 2, contentBounds.Right - thumbSize / 2);
+        double thumbX = trackRect.X + trackRect.Width * t - ThumbSize / 2;
+        thumbX = Math.Clamp(thumbX, contentBounds.X - ThumbSize / 2, contentBounds.Right - ThumbSize / 2);
 
-        double thumbY = contentBounds.Y + (contentBounds.Height - thumbSize) / 2;
-        var thumbRect = new Rect(thumbX, thumbY, thumbSize, thumbSize);
+        double thumbY = contentBounds.Y + (contentBounds.Height - ThumbSize) / 2;
+        var thumbRect = new Rect(thumbX, thumbY, ThumbSize, ThumbSize);
 
-        var thumbFill = IsEnabled ? Theme.Palette.ControlBackground : Theme.Palette.DisabledControlBackground;
+        var thumbFill = PickControlBackground(GetVisualState(), Theme.Palette.ControlBackground);
 
         context.FillEllipse(thumbRect, thumbFill);
 
-        var state = GetVisualState(IsFocused, IsFocused);
-        Color thumbBorder = PickAccentBorder(Theme, BorderBrush, state, 0.6);
+        var thumbState = GetVisualState(_isDragging, _isDragging);
+        Color thumbBorder = PickAccentBorder(Theme, BorderBrush, thumbState, 0.6);
 
-
-        context.DrawEllipse(thumbRect, thumbBorder, 1);
+        if (BorderThickness > 0)
+        {
+            context.DrawEllipse(thumbRect, thumbBorder, BorderThickness);
+        }
     }
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
 
-        if (!IsEnabled || e.Button != MouseButton.Left)
+        if (!IsEffectivelyEnabled || e.Button != MouseButton.Left)
         {
             return;
         }
@@ -135,7 +141,7 @@ public sealed partial class Slider : RangeBase
     {
         base.OnMouseMove(e);
 
-        if (!IsEnabled || !_isDragging || !IsMouseCaptured || !e.LeftButton)
+        if (!IsEffectivelyEnabled || !_isDragging || !IsMouseCaptured || !e.LeftButton)
         {
             return;
         }
@@ -164,11 +170,24 @@ public sealed partial class Slider : RangeBase
         e.Handled = true;
     }
 
+    protected override void OnMouseWheel(MouseWheelEventArgs e)
+    {
+        base.OnMouseWheel(e);
+        if (!IsEffectivelyEnabled || !ChangeOnWheel)
+        {
+            return;
+        }
+
+        double step = GetKeyboardSmallStep();
+        SetValueInternal(Value + (e.Delta > 0 ? step : -step), true);
+        e.Handled = true;
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
 
-        if (e.Handled || !IsEnabled)
+        if (e.Handled || !IsEffectivelyEnabled)
         {
             return;
         }

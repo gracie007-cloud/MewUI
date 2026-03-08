@@ -1,3 +1,4 @@
+using Aprillz.MewUI.Controls.Text;
 using Aprillz.MewUI.Rendering;
 
 namespace Aprillz.MewUI.Controls;
@@ -15,13 +16,14 @@ public partial class CheckBox : Control
     public CheckBox()
     {
         Background = Color.Transparent;
-        BorderThickness = 1;
         Padding = new Thickness(2);
     }
 
     public override bool Focusable => true;
 
     protected override Color DefaultBorderBrush => Theme.Palette.ControlBorder;
+
+    protected override double DefaultBorderThickness => Theme.Metrics.ControlBorderThickness;
 
     /// <summary>
     /// Gets or sets the checkbox label text.
@@ -117,7 +119,7 @@ public partial class CheckBox : Control
         double boxY = contentBounds.Y + (contentBounds.Height - boxSize) / 2;
         var boxRect = new Rect(contentBounds.X, boxY, boxSize, boxSize);
 
-        var fill = state.IsEnabled ? Theme.Palette.ControlBackground : Theme.Palette.DisabledControlBackground;
+        var fill = PickControlBackground(state, Theme.Palette.ControlBackground);
         var radius = Math.Max(0, Theme.Metrics.ControlCornerRadius * 0.5);
 
         var borderColor = PickAccentBorder(Theme, BorderBrush, state, 0.6);
@@ -131,8 +133,13 @@ public partial class CheckBox : Control
             var p1 = new Point(boxRect.X + 3, boxRect.Y + boxRect.Height * 0.55);
             var p2 = new Point(boxRect.X + boxRect.Width * 0.45, boxRect.Bottom - 3);
             var p3 = new Point(boxRect.Right - 3, boxRect.Y + 3);
-            context.DrawLine(p1, p2, markColor, 2);
-            context.DrawLine(p2, p3, markColor, 2);
+
+            var g = new PathGeometry();
+            g.MoveTo(p1);
+            g.LineTo(p2);
+            g.LineTo(p3); 
+            context.DrawPath(g, markColor, 2);
+
         }
         else if (_isChecked == null)
         {
@@ -156,7 +163,7 @@ public partial class CheckBox : Control
     {
         base.OnMouseDown(e);
 
-        if (!IsEnabled || e.Button != MouseButton.Left)
+        if (!IsEffectivelyEnabled || e.Button != MouseButton.Left)
         {
             return;
         }
@@ -191,7 +198,7 @@ public partial class CheckBox : Control
             window.ReleaseMouseCapture();
         }
 
-        if (IsEnabled && Bounds.Contains(e.Position))
+        if (IsEffectivelyEnabled && Bounds.Contains(e.Position))
         {
             ToggleFromInput();
         }
@@ -204,7 +211,7 @@ public partial class CheckBox : Control
     {
         base.OnKeyUp(e);
 
-        if (!IsEnabled)
+        if (!IsEffectivelyEnabled)
         {
             return;
         }

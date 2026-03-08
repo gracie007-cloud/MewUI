@@ -1,3 +1,5 @@
+using Aprillz.MewUI.Controls;
+
 namespace Aprillz.MewUI.Input;
 
 /// <summary>
@@ -42,9 +44,36 @@ public sealed class FocusManager
         oldElement?.SetFocused(false);
         element?.SetFocused(true);
 
+        // WPF-like policy: close non-stays-open popups when focus moves outside both the popup and its owner.
+        _window.OnFocusChanged(element);
+
+        // If focus moved into a templated control (e.g. TreeView/GridView item template),
+        // let the nearest items host update selection and scroll the owning item into view.
+        NotifyFocusIntoViewHosts(element);
+
         _window.RequerySuggested();
 
         return true;
+    }
+
+    private void NotifyFocusIntoViewHosts(UIElement? focusedElement)
+    {
+        if (focusedElement == null)
+        {
+            return;
+        }
+
+        // Walk up the visual tree: the nearest host should win.
+        for (Element? current = focusedElement; current != null; current = current.Parent)
+        {
+            if (current is IFocusIntoViewHost host)
+            {
+                if (host.OnDescendantFocused(focusedElement))
+                {
+                    return;
+                }
+            }
+        }
     }
 
     private static UIElement? ResolveDefaultFocusTarget(UIElement? element)
@@ -70,7 +99,7 @@ public sealed class FocusManager
             return null;
         }
 
-        if (root is Controls.TabControl tabControl)
+        if (root is TabControl tabControl)
         {
             var fromContent = FindFirstFocusable(tabControl.SelectedTab?.Content);
             if (fromContent != null)
@@ -96,17 +125,42 @@ public sealed class FocusManager
             UIElement? found = null;
             host.VisitChildren(child =>
             {
-                if (found != null)
-                {
-                    return;
-                }
-
                 found = FindFirstFocusable(child);
+                return found == null;
             });
             return found;
         }
 
         return null;
+    }
+
+    internal static UIElement? FindLastFocusable(Element? root)
+    {
+        if (root == null)
+        {
+            return null;
+        }
+
+        var result = new UIElement?[1];
+        CollectLastFocusable(root, result);
+        return result[0];
+    }
+
+    private static void CollectLastFocusable(Element element, UIElement?[] result)
+    {
+        if (element is UIElement uiElement && IsFocusable(uiElement))
+        {
+            result[0] = uiElement;
+        }
+
+        if (element is IVisualTreeHost host)
+        {
+            host.VisitChildren(child =>
+            {
+                CollectLastFocusable(child, result);
+                return true;
+            });
+        }
     }
 
     private static bool IsFocusable(UIElement element) =>
@@ -122,13 +176,21 @@ public sealed class FocusManager
     /// </summary>
     public bool MoveFocusNext()
     {
+        // Always try virtualized navigation first so that off-screen items
+        // are scrolled into view and focused before falling back to the flat list.
+        if (FocusedElement != null && TryMoveVirtualizedFocus(FocusedElement, moveForward: true))
+        {
+            return true;
+        }
+
         var focusable = CollectFocusableElements(_window.Content);
         if (focusable.Count == 0)
         {
             return false;
         }
 
-        int currentIndex = FocusedElement != null ? focusable.IndexOf(FocusedElement) : -1;
+        var anchor = ResolveFocusNavigationAnchor(FocusedElement, focusable);
+        int currentIndex = anchor != null ? focusable.IndexOf(anchor) : -1;
         int nextIndex = (currentIndex + 1) % focusable.Count;
 
         return SetFocus(focusable[nextIndex]);
@@ -139,16 +201,77 @@ public sealed class FocusManager
     /// </summary>
     public bool MoveFocusPrevious()
     {
+        if (FocusedElement != null && TryMoveVirtualizedFocus(FocusedElement, moveForward: false))
+        {
+            return true;
+        }
+
         var focusable = CollectFocusableElements(_window.Content);
         if (focusable.Count == 0)
         {
             return false;
         }
 
-        int currentIndex = FocusedElement != null ? focusable.IndexOf(FocusedElement) : focusable.Count;
+        var anchor = ResolveFocusNavigationAnchor(FocusedElement, focusable);
+        int currentIndex = anchor != null ? focusable.IndexOf(anchor) : focusable.Count;
         int prevIndex = (currentIndex - 1 + focusable.Count) % focusable.Count;
 
         return SetFocus(focusable[prevIndex]);
+    }
+
+    private bool TryMoveVirtualizedFocus(UIElement focusedElement, bool moveForward)
+    {
+        for (Element? current = focusedElement; current != null; current = current.Parent)
+        {
+            if (current is IVirtualizedTabNavigationHost host)
+            {
+                return host.TryMoveFocusFromDescendant(focusedElement, moveForward);
+            }
+        }
+
+        return false;
+    }
+
+    private UIElement? ResolveFocusNavigationAnchor(UIElement? focusedElement, List<UIElement> focusableInWindow)
+    {
+        if (focusedElement == null)
+        {
+            return null;
+        }
+
+        if (focusableInWindow.Contains(focusedElement))
+        {
+            return focusedElement;
+        }
+
+        // Focus may be inside a popup. For tab navigation, anchor to the popup owner
+        // so we move to the next element after the owning control (WPF-like behavior).
+        var visited = new HashSet<UIElement>();
+
+        Element? current = focusedElement;
+        for (int i = 0; i < 32 && current != null; i++)
+        {
+            if (current is UIElement ui && !visited.Add(ui))
+            {
+                break;
+            }
+
+            if (current is UIElement currentUi && _window.TryGetPopupOwner(currentUi, out var owner) && !ReferenceEquals(owner, currentUi))
+            {
+                current = owner;
+            }
+            else
+            {
+                current = current.Parent;
+            }
+
+            if (current is UIElement candidate && focusableInWindow.Contains(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private List<UIElement> CollectFocusableElements(Element? root)
@@ -218,7 +341,7 @@ public sealed class FocusManager
 
     private void CollectFocusableElementsCore(Element? element, List<UIElement> result)
     {
-        if (element is Controls.TabControl tabControl)
+        if (element is TabControl tabControl)
         {
             int before = result.Count;
             CollectFocusableElementsCore(tabControl.SelectedTab?.Content, result);
@@ -240,7 +363,11 @@ public sealed class FocusManager
 
         if (element is IVisualTreeHost host)
         {
-            host.VisitChildren(child => CollectFocusableElementsCore(child, result));
+            host.VisitChildren(child =>
+            {
+                CollectFocusableElementsCore(child, result);
+                return true;
+            });
         }
     }
 
